@@ -1,6 +1,6 @@
 # freeCappuccino
 
-##This is development version of freeCappuccino, a place for refactoring where a lot of unfinished code will be found.
+### This is development version of freeCappuccino, a place for refactoring where a lot of unfinished code will be found.
 
 freeCappuccino is a three-dimensional unstructured finite volume code for Computational Fluid Dynamics which comes in serial and parallel version.
 
