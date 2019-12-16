@@ -1,5 +1,4 @@
 src/finiteVolume/boundary
-src/finiteVolume/fluxes
 src/finiteVolume/fvEqnDiscretization/Velocity
 src/finiteVolume/fvEqnDiscretization/Pressure
 src/finiteVolume/fvEqnDiscretization/ScalarEqns

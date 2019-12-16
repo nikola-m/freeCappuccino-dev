@@ -22,7 +22,7 @@ module Spalart_Allmaras
   real(dp), parameter :: Cb1 = 0.1355_dp
   real(dp), parameter :: Cb2 = 0.622_dp
   real(dp), parameter :: sigma = 2.0_dp/3.0_dp
-  real(dp), parameter :: Cw1 = Cb1/cappa**2 + (1.0_dp+Cb2)/sigma
+  real(dp), parameter :: Cw1 = 3.2390678167757287 ! = Cb1/cappa**2 + (1.0_dp+Cb2)/sigma
   real(dp), parameter :: Cw2 = 0.3_dp
   real(dp), parameter :: Cw3 = 2.0_dp
   real(dp), parameter :: Cv1 = 7.1_dp
@@ -128,12 +128,12 @@ subroutine calcsc(Fi,dFidxi,ifi)
   !=====================================
   do inp=1,numCells
 
-    nu_tilda = te(inp)
-    nu = viscos/densit
-    xi = nu_tilda / nu 
-    fv1 = xi**3 / (xi**3 + Cv1**3)
-    fv2 = 1.0_dp - xi / (1.0_dp + xi*fv1)
-    strain_tilda = vorticity(inp) + (nu_tilda / (cappa*wallDistance(inp))**2) * fv2
+    nu_tilda = te(inp)   ! we store nu_tilda in tke field.
+    nu = viscos/densit   ! kinematic viscosity
+    xi = nu_tilda / nu   ! xi parameter
+    fv1 = xi**3 / (xi**3 + Cv1**3) ! parameter
+    fv2 = 1.0_dp - xi / (1.0_dp + xi*fv1) ! parameter
+    strain_tilda = vorticity(inp) + (nu_tilda / (cappa*wallDistance(inp))**2) * fv2 ! Shat
 
     ! Limiting strain - this is very important, there are other ways besides clipping implemented here.
     ! Clipping implemented here originates from a note referencing private communication with P. Spalart on turbmodels.larc.nasa.gov website
@@ -151,7 +151,6 @@ subroutine calcsc(Fi,dFidxi,ifi)
     su(inp)=genp*vol(inp)  
 
 
-
     ! > Cross diffusion: 
     dnutdx=dTEdxi(1,inp)
     dnutdy=dTEdxi(2,inp)
@@ -160,30 +159,30 @@ subroutine calcsc(Fi,dFidxi,ifi)
     su(inp) = su(inp) + ( Cb2/sigma * (dnutdx**2+dnutdy**2+dnutdz**2) ) * vol(inp)
 
 
-
     ! > Add destruction term to the lhs:
-    r = min(nu_tilda/(strain_tilda*(cappa*wallDistance(inp))**2 + small),10.0_dp)
-    g = r + Cw2*(r**6-r)
-    fw = g*((1.0_dp+Cw3**6)/(g**6+Cw3**6))**one_sixth
-    sp(inp) = den(inp) * (Cw1*fw-(Cb1/cappa**2)*ft2)*(nu_tilda/wallDistance(inp))**2 * vol(inp)/(nu_tilda+small)
+
+    r = min(nu_tilda/(strain_tilda*(cappa*wallDistance(inp))**2 + small),10.0_dp) ! r parameter
+
+    g = r + Cw2*(r**6-r) ! g parameter
+
+    fw = g*((1.0_dp+Cw3**6)/(g**6+Cw3**6))**one_sixth ! fw parameter
+
+    ! > estruction term
+    sp(inp) = (Cw1*fw-(Cb1/cappa**2)*ft2)*(nu_tilda/wallDistance(inp))**2 * den(inp)*vol(inp)/(nu_tilda+small)
 
     ! > If production negative move it to the lhs:
     sp(inp) = sp(inp)-genn*vol(inp)/(nu_tilda+small)
 
-
-      !
-      !=====================================
-      ! UNSTEADY TERM
-      !=====================================
-      if( bdf ) then
-        apotime = den(inp)*vol(inp)/timestep
-        su(inp) = su(inp) + apotime*teo(inp)
-        sp(inp) = sp(inp) + apotime
-      elseif( bdf2 ) then
-        apotime=den(inp)*vol(inp)/timestep
-        su(inp) = su(inp) + apotime*( 2*teo(inp) - 0.5_dp*teoo(inp) )
-        sp(inp) = sp(inp) + 1.5_dp*apotime
-      endif
+    ! > UNSTEADY TERM
+    if( bdf ) then
+      apotime = den(inp)*vol(inp)/timestep
+      su(inp) = su(inp) + apotime*teo(inp)
+      sp(inp) = sp(inp) + apotime
+    elseif( bdf2 ) then
+      apotime=den(inp)*vol(inp)/timestep
+      su(inp) = su(inp) + apotime*( 2*teo(inp) - 0.5_dp*teoo(inp) )
+      sp(inp) = sp(inp) + 1.5_dp*apotime
+    endif
 
   ! End of volume source terms
   enddo
@@ -198,6 +197,13 @@ subroutine calcsc(Fi,dFidxi,ifi)
   do i=1,numInnerFaces                                                       
     ijp = owner(i)
     ijn = neighbour(i)
+
+    nu_tilda = te(ijp)   ! we store nu_tilda in tke field.
+    nu = viscos/densit   ! kinematic viscosity
+    xi = nu_tilda / nu   ! xi parameter
+    fv1 = xi**3 / (xi**3 + Cv1**3) ! parameter  
+    ! expression which will give correct diff coef when inserted into routine below:  
+    prtr = ( 3.0_dp + 3*xi -  2*den(ijp) )/( 2*xi*den(ijp)*fv1 ) 
 
     call facefluxsc( ijp, ijn, &
                      xf(i), yf(i), zf(i), arx(i), ary(i), arz(i), &
@@ -247,6 +253,13 @@ subroutine calcsc(Fi,dFidxi,ifi)
         ijp = owner(iface)
         ijb = iBndValueStart(ib) + i
 
+        nu_tilda = te(ijp)   ! we store nu_tilda in tke field.
+        nu = viscos/densit   ! kinematic viscosity
+        xi = nu_tilda / nu   ! xi parameter
+        fv1 = xi**3 / (xi**3 + Cv1**3) ! parameter  
+        ! expression which will give correct diff coef when inserted into routine below:  
+        prtr = ( 3.0_dp + 3*xi -  2*den(ijp) )/( 2*xi*den(ijp)*fv1 ) 
+
         call facefluxsc( ijp, ijb, &
                          xf(iface), yf(iface), zf(iface), arx(iface), ary(iface), arz(iface), &
                          flmass(iface), &
@@ -265,6 +278,13 @@ subroutine calcsc(Fi,dFidxi,ifi)
         iface = startFace(ib) + i
         ijp = owner(iface)
         ijb = iBndValueStart(ib) + i
+
+        nu_tilda = te(ijp)   ! we store nu_tilda in tke field.
+        nu = viscos/densit   ! kinematic viscosity
+        xi = nu_tilda / nu   ! xi parameter
+        fv1 = xi**3 / (xi**3 + Cv1**3) ! parameter  
+        ! expression which will give correct diff coef when inserted into routine below:  
+        prtr = ( 3.0_dp + 3*xi -  2*den(ijp) )/( 2*xi*den(ijp)*fv1 ) 
 
         call facefluxsc( ijp, ijb, &
                          xf(iface), yf(iface), zf(iface), arx(iface), ary(iface), arz(iface), &
@@ -286,67 +306,24 @@ subroutine calcsc(Fi,dFidxi,ifi)
         ijb = iBndValueStart(ib) + i
         iWall = iWall + 1
 
-        ! if (ifi .eq. ite) then
-        ! !
-        ! ! > Wall boundary conditions for turbulence kinetic energy eq.
-        ! !
+        nu_tilda = te(ijp)   ! we store nu_tilda in tke field.
+        nu = viscos/densit   ! kinematic viscosity
+        xi = nu_tilda / nu   ! xi parameter
+        fv1 = xi**3 / (xi**3 + Cv1**3) ! parameter  
+        ! expression which will give correct diff coef when inserted into routine below:  
+        prtr = ( 3.0_dp + 3*xi -  2*den(ijp) )/( 2*xi*den(ijp)*fv1 ) 
 
-        !   viss=viscos
-        !   if(ypl(iWall).gt.ctrans) viss=visw(iWall)
+        ! Condition for nu_tilda at wall
+        te(ijb) = 0.0_dp
 
-        !   ! Face area 
-        !   are = sqrt(arx(iface)**2+ary(iface)**2+arz(iface)**2)
+        call facefluxsc( ijp, ijb, &
+                         xf(iface), yf(iface), zf(iface), arx(iface), ary(iface), arz(iface), &
+                         flmass(iface), &
+                         FI, dFidxi, prtr, cap, can, suadd )
 
-        !   ! Face normals
-        !   nxf = arx(iface)/are
-        !   nyf = ary(iface)/are
-        !   nzf = arz(iface)/are
+        Sp(ijp) = Sp(ijp)-can
 
-        !   ! Magnitude of a cell center velocity projected on boundary face normal
-        !   Vnp = U(ijp)*nxf+V(ijp)*nyf+W(ijp)*nzf
-
-        !   ! Tangential velocity components 
-        !   xtp = U(ijp)-Vnp*nxf
-        !   ytp = V(ijp)-Vnp*nyf
-        !   ztp = W(ijp)-Vnp*nzf
-
-        !   ! Its magnitude
-        !   Vtp = xtp*xtp+ytp*ytp+ztp*ztp
-
-        !   ! Tangent direction - unit vector
-        !   xtp = xtp/vtp
-        !   ytp = ytp/vtp
-        !   ztp = ztp/vtp
-
-        !   ! projektovanje razlike brzina na pravac tangencijalne brzine u cell centru ijp
-        !   Ut2 = abs( (U(ijb)-U(ijp))*xtp + (V(ijb)-V(ijp))*ytp + (W(ijb)-W(ijp))*ztp )
-
-        !   Tau = viss*Ut2/dnw(iWall)
-
-        !   ! Production of TKE in wall adjecent cell
-        !   ! First substract the standard production from source term
-        !   su(ijp)=su(ijp)-gen(ijp)*vol(ijp)
-        !   ! Calculate production for wall adjecent cell
-        !   gen(ijp)=abs(tau)*cmu25*sqrt(te(ijp))/(dnw(iWall)*cappa)
-        !   ! Add this production to source vector
-        !   su(ijp)=su(ijp)+gen(ijp)*vol(ijp)
-
-        ! else
-        ! !
-        ! ! > Wall boundary conditions for dissipation rate of turbulence kinetic energy eq.
-        ! !
-
-        !   ! Wall boundaries approximated with wall functions
-        !   ! for correct values of dissipation all coefficients have
-        !   ! to be zero, su equal the dissipation, and diagonal element a(diag(ijp)) = 1
-
-        !   a( ioffset(ijp):ioffset(ijp+1)-1 ) = 0.0_dp
-        !   sp(ijp) = 1.0_dp
-
-        !   ed(ijp)=cmu75*te(ijp)**1.5/(cappa*dnw(iWall))
-        !   su(ijp)=ed(ijp)
-
-        ! endif
+        Su(ijp) = Su(ijp)-can*Fi(ijb) + suadd
 
       enddo
 
