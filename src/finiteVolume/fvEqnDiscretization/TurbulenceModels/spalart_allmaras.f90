@@ -30,7 +30,7 @@ module Spalart_Allmaras
   real(dp), parameter :: Ct4 = 0.5_dp
 
   real(dp), parameter :: one_sixth = 1.0_dp/6.0_dp
-  logical :: notf2 = .false. ! Set to to .true. for SA model without f_t2 term. Also for DES and DDES.
+  logical :: notf2 = .false. ! Set to .true. for SA model without f_t2 term. Also for DES and DDES.
   
 
   private 
@@ -203,7 +203,7 @@ subroutine calcsc(Fi,dFidxi,ifi)
     xi = nu_tilda / nu   ! xi parameter
     fv1 = xi**3 / (xi**3 + Cv1**3) ! parameter  
     ! expression which will give correct diff coef when inserted into routine below:  
-    prtr = ( 3.0_dp + 3*xi -  2*den(ijp) )/( 2*xi*den(ijp)*fv1 ) 
+    prtr = ( 3.0_dp + 3*xi -  2*den(ijp) )/( 2*xi*den(ijp)*fv1 + small) 
 
     call facefluxsc( ijp, ijn, &
                      xf(i), yf(i), zf(i), arx(i), ary(i), arz(i), &
@@ -258,7 +258,7 @@ subroutine calcsc(Fi,dFidxi,ifi)
         xi = nu_tilda / nu   ! xi parameter
         fv1 = xi**3 / (xi**3 + Cv1**3) ! parameter  
         ! expression which will give correct diff coef when inserted into routine below:  
-        prtr = ( 3.0_dp + 3*xi -  2*den(ijp) )/( 2*xi*den(ijp)*fv1 ) 
+        prtr = ( 3.0_dp + 3*xi -  2*den(ijp) )/( 2*xi*den(ijp)*fv1 + small ) 
 
         call facefluxsc( ijp, ijb, &
                          xf(iface), yf(iface), zf(iface), arx(iface), ary(iface), arz(iface), &
@@ -284,12 +284,12 @@ subroutine calcsc(Fi,dFidxi,ifi)
         xi = nu_tilda / nu   ! xi parameter
         fv1 = xi**3 / (xi**3 + Cv1**3) ! parameter  
         ! expression which will give correct diff coef when inserted into routine below:  
-        prtr = ( 3.0_dp + 3*xi -  2*den(ijp) )/( 2*xi*den(ijp)*fv1 ) 
+        prtr = ( 3.0_dp + 3*xi -  2*den(ijp) )/( 2*xi*den(ijp)*fv1 + small ) 
 
         call facefluxsc( ijp, ijb, &
                          xf(iface), yf(iface), zf(iface), arx(iface), ary(iface), arz(iface), &
                          flmass(iface), &
-                         FI, dFidxi, prtr, cap, can, suadd )
+                         FI, dFidxi, prtr, cap, can, suadd)
 
         Sp(ijp) = Sp(ijp)-can
 
@@ -297,35 +297,35 @@ subroutine calcsc(Fi,dFidxi,ifi)
 
       end do
 
-    elseif ( bctype(ib) == 'wall') then
+    ! elseif ( bctype(ib) == 'wall') then
 
-      do i=1,nfaces(ib)
+    !   do i=1,nfaces(ib)
 
-        iface = startFace(ib) + i
-        ijp = owner(iface)
-        ijb = iBndValueStart(ib) + i
-        iWall = iWall + 1
+    !     iface = startFace(ib) + i
+    !     ijp = owner(iface)
+    !     ijb = iBndValueStart(ib) + i
+    !     iWall = iWall + 1
 
-        nu_tilda = te(ijp)   ! we store nu_tilda in tke field.
-        nu = viscos/densit   ! kinematic viscosity
-        xi = nu_tilda / nu   ! xi parameter
-        fv1 = xi**3 / (xi**3 + Cv1**3) ! parameter  
-        ! expression which will give correct diff coef when inserted into routine below:  
-        prtr = ( 3.0_dp + 3*xi -  2*den(ijp) )/( 2*xi*den(ijp)*fv1 ) 
+    !     nu_tilda = te(ijp)   ! we store nu_tilda in tke field.
+    !     nu = viscos/densit   ! kinematic viscosity
+    !     xi = nu_tilda / nu   ! xi parameter
+    !     fv1 = xi**3 / (xi**3 + Cv1**3) ! parameter  
+    !     ! expression which will give correct diff coef when inserted into routine below:  
+    !     prtr = ( 3.0_dp + 3*xi -  2*den(ijp) )/( 2*xi*den(ijp)*fv1 + small ) 
 
-        ! Condition for nu_tilda at wall
-        te(ijb) = 0.0_dp
+    !     ! Condition for nu_tilda at wall
+    !     te(ijb) = 0.0_dp
 
-        call facefluxsc( ijp, ijb, &
-                         xf(iface), yf(iface), zf(iface), arx(iface), ary(iface), arz(iface), &
-                         flmass(iface), &
-                         FI, dFidxi, prtr, cap, can, suadd )
+    !     call facefluxsc( ijp, ijb, &
+    !                      xf(iface), yf(iface), zf(iface), arx(iface), ary(iface), arz(iface), &
+    !                      flmass(iface), &
+    !                      FI, dFidxi, prtr, cap, can, suadd )
 
-        Sp(ijp) = Sp(ijp)-can
+    !     Sp(ijp) = Sp(ijp)-can
 
-        Su(ijp) = Su(ijp)-can*Fi(ijb) + suadd
+    !     Su(ijp) = Su(ijp)-can*Fi(ijb) + suadd
 
-      enddo
+    !   enddo
 
     endif
     

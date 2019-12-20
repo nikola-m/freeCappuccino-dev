@@ -1,41 +1,45 @@
-!
-! Module for manipulation of unstructured meshes.
-!
-module geometry
 
+module geometry
+!
+! Purpose: Module for manipulation of unstructured meshes.
+!
 use types
 use utils, only: get_unit, file_row_count, r8vec_print_some, i4vec_print2
 
 implicit none
 
 ! NOTE:
+!***
 ! In variable arrays, field variables defined at cell centres are written in positions from 1 to numCells, after that we write
 ! variable values for boundary faces from numCells+1 to numTotal.  
+!***
 
 ! General mesh data
-integer :: numNodes                           ! no. of nodes in mesh
-integer :: numCells                           ! no. of cells in the mesh
-integer :: numFaces                           ! no. of INNER+BOUNDARY faces in the mesh
-integer :: numInnerFaces                      ! no. of INNER cells faces in the mesh
-integer :: numBoundaryFaces                   ! self explanatory
-integer :: numTotal                           ! number of volume field values + number of boundary field values numCells+numBoundaryFaces
+integer :: numNodes         ! no. of nodes in mesh
+integer :: numCells         ! no. of cells in the mesh
+integer :: numFaces         ! no. of INNER+BOUNDARY faces in the mesh
+integer :: numInnerFaces    ! no. of INNER cells faces in the mesh
+integer :: numBoundaryFaces ! self explanatory
+integer :: numTotal         ! number of volume field values + number of boundary field values numCells+numBoundaryFaces
 
 ! To define boundary regions
 integer :: numBoundaries
 integer, dimension(:), allocatable :: nfaces,startFace,iBndValueStart
 character(len=15), dimension(:), allocatable :: bcname, bctype
 
-integer :: nwal                               ! Total no. of boundary faces of type 'wall'
-integer :: nsym                               ! Total no. of boundary faces of type 'symmetry'
-integer :: ninl                               ! No. of inlet boundary faces
-integer :: nout                               ! No. of outlet boundary faces
+integer :: nwal ! Total no. of boundary faces of type 'wall'
+integer :: nsym ! Total no. of boundary faces of type 'symmetry'
+integer :: ninl ! No. of inlet boundary faces
+integer :: nout ! No. of outlet boundary faces
                  
 
-integer, parameter :: nomax = 30              ! Max no. of nodes in face - determines size of some arrays, just change this if necessary.
+integer, parameter :: nomax = 30 ! Max no. of nodes in face - determines size of some arrays, just change this if necessary.
 real(dp), parameter :: tiny = 1e-30
 
 ! Mesh file units
-integer :: points_file, faces_file, owner_file, neighbour_file, boundary_file 
+integer :: points_file, cells_file, faces_file, owner_file, neighbour_file, boundary_file 
+
+integer, parameter :: interpolation_coeff_variant = 1 ! (1,2) look at the code below.
 
 
 ! Mesh geometry
@@ -71,6 +75,602 @@ integer, dimension(:), allocatable :: neighbour ! Index of the neighbour cell  -
 public 
 
 contains
+
+
+
+subroutine read_mesh_native
+!
+!  Purpose: 
+!    Reads mesh in native freeCappuccino format and provides basic geometrical mesh description.
+!
+!  Description:
+!    Mesh is described in files of polyMesh format almost identical to the one used by OpenFoam.
+!    The difference is that present one is adapted for Fortran numbering (starting from 1), etc.
+!    Mesh files are 'points', 'faces', 'owner, 'neighbour', 'boundary'.
+!    There is also a 'cells' file which is used only for Paraview postprocessing, i.e. when we write 
+!    Praview unstructured .vtu files, when we need to give cell connectivity. Also, such information
+!    is usually given by mesh generators, so we don't want to waste this information.
+!    For the purposes of Finite Volume Computation, as it is implemented in freeCappuccino, the cell
+!    connectivity is not necessary.
+!
+!  Date:
+!    26/11/2015; Jan-2019; Dec-2019.
+!
+!  Author:
+!    Nikola Mirkov (E-mail: largeddysimulation@gmail.com
+!
+  implicit none
+
+  ! Locals
+  integer :: i,k
+  integer :: ib,iwall,isym
+  integer :: iface
+  integer :: inp,inn,ijp
+
+  character(len=80) :: line_string
+
+  integer, dimension(:,:), allocatable :: node  ! It will store global node numbers of face vertices
+  integer, dimension(:), allocatable :: nnodes  ! no. of nodes in face
+
+  ! Parameters
+  real(dp), parameter :: half = 0.5_dp
+  real(dp), parameter :: third = 1./3._dp
+
+  real(dp) :: px,py,pz, qx,qy,qz, nx,ny,nz, cx,cy,cz
+  real(dp) :: riSi
+  real(dp) :: are,areasum
+  real(dp) :: xpn,ypn,zpn
+  real(dp) :: xjp,yjp,zjp
+  real(dp) :: dpn,djn,djp
+  real(dp) :: nxf,nyf,nzf
+
+  ! Array for temporary storage of doubles
+  real(dp), dimension(:), allocatable :: r8tmp
+ 
+
+!******************************************************************************
+! > OPEN polyMesh format files: 'points', 'faces', 'owner', 'neighbour'.
+!..............................................................................
+
+  call get_unit( points_file )
+  open( unit = points_file,file = 'polyMesh/points' )
+  rewind points_file
+
+  call get_unit( cells_file )
+  open( unit = cells_file,file = 'polyMesh/cells' )
+  rewind cells_file
+
+  call get_unit( faces_file )
+  open( unit = faces_file, file='polyMesh/faces' )
+  rewind faces_file
+
+  call get_unit( owner_file )
+  open( unit = owner_file, file='polyMesh/owner' )
+  rewind owner_file
+
+  call get_unit( neighbour_file )
+  open( unit = neighbour_file, file='polyMesh/neighbour' )
+  rewind neighbour_file
+
+  call get_unit( boundary_file )
+  open( unit = boundary_file, file='polyMesh/boundary' )
+  rewind boundary_file
+
+!
+! > Read boundary conditions file. 
+!
+
+!   Discussion: 
+!   Boundary conditions file consists of header and numBoundaries number of subsequent lines each containing:  
+!   boundary condition given name, bc type, number of faces belonging to that bc and starting face for that bc.
+!   Possible boundary contiions types are: inlet, outlet, symmtery, wall, wallIsoth, wallAdiab, wallQFlux, prOutlet, etc. 
+!   Please check are all of these implemented, because this is still in the development. Contact me if you have any questions.
+!
+
+  ! Number of rows in the file excluding #comment in header to find the number of prescribed boundaries.
+  call file_row_count ( boundary_file, numBoundaries )
+
+  read(boundary_file,'(a)') line_string ! First line is header.
+  ! read(boundary_file,*) numBoundaries ! it doesn't need to read the number of boundaries because of the above
+
+  ! Allocate 
+  allocate ( bcname(numBoundaries) )
+  allocate ( bctype(numBoundaries) )
+  allocate ( nFaces(numBoundaries) )
+  allocate ( startFace(numBoundaries) )
+  allocate ( iBndValueStart(numBoundaries))
+
+  nwal = 0
+  nsym = 0
+  ninl = 0
+
+  do i=1,numBoundaries
+    read(boundary_file,*) bcname(i), bctype(i), nfaces(i) ,startFace(i)
+
+    ! We need total number of some bctype faces like wall and symmetry to make things easier for bc implementation
+    ! so lets count them. 
+    if( bctype(i) == 'wall') then
+      nwal = nwal + nfaces(i)
+    elseif( bctype(i) == 'symmetry') then
+      nsym = nsym + nfaces(i)
+    elseif( bctype(i) == 'inlet') then
+      ninl = ninl + nfaces(i)
+    elseif( bctype(i) == 'outlet') then
+      nout = nout + nfaces(i)
+    endif
+  enddo  
+
+
+!
+! > Find out numCells, numNodes, numFaces, numInnerFaces, etc.
+!
+
+  read(cells_file, *) numCells
+  close( cells_file)
+
+  read(points_file, *) numNodes
+
+  read(owner_file, *) numFaces
+
+  read(neighbour_file, *) numInnerFaces
+
+
+  ! Number of boundary faces
+  numBoundaryFaces = numFaces - numInnerFaces
+
+  ! Size of arrays storing variables numCells+numBoundaryFaces
+  numTotal = numCells + numBoundaryFaces
+
+  ! NOTE:
+  ! The variable values defined at boundary faces are stored in variable arrays after numCells. The length of variable arrays therefore becomes numTotal = numCells + numBoundaryFaces
+  ! It is therefore important to do the following also:
+  ! Define where are the boundary field values located in the variable array, for each boundary region.
+  do i=1,numBoundaries
+      iBndValueStart(i) = numCells + (startFace(i) - numInnerFaces)
+  enddo 
+
+!
+! > Write report on mesh size into log file
+!
+  write ( *, '(a)' ) ' '
+  write ( *, '(a)' ) ' '
+  write ( *, '(a)' ) '  Mesh data: '
+
+  write ( *, '(a)' ) ' '
+  write ( *, '(a,i0)' ) '  Number of nodes, numNodes = ', numNodes
+
+  write ( *, '(a)' ) ' '
+  write ( *, '(a,i0)' ) '  Number of cells, numCells = ', numCells
+
+  write ( *, '(a)' ) ' '
+  write ( *, '(a,i0)' ) '  Number of cell-faces, numFaces = ', numFaces
+
+  write ( *, '(a)' ) ' '
+  write ( *, '(a,i0)' ) '  Number of inner cell-faces, numInnerFaces = ', numInnerFaces
+
+  write ( *, '(a)' ) ' '
+  write ( *, '(a,i0)' ) '  Number of cell-faces on boundary, numBoundaryFaces = ', numBoundaryFaces
+
+  write ( *, '(a)' ) ' '
+  write ( *, '(a)' ) '  Boundary information (bcname, bctype, nFaces, startFace):'
+  write ( *, '(a)' ) ' '
+  
+  do i=1,numBoundaries
+    write(*,'(2x,a,1x,a,1x,2(i0,1x))') bcname(i), bctype(i), nfaces(i) ,startFace(i)
+  enddo  
+  write ( *, '(a)' ) ' '
+
+
+
+!******************************************************************************
+! > Allocate arrays for Mesh description
+!..............................................................................
+
+  ! Nodal coordinates
+  allocate ( x(numNodes) )
+  allocate ( y(numNodes) )
+  allocate ( z(numNodes) )
+
+  ! Coordinates of cell centers
+  allocate ( xc(numCells) )
+  allocate ( yc(numCells) )
+  allocate ( zc(numCells) )
+
+  ! Cell volumes
+  allocate ( vol(numCells) )
+
+  ! Face area vector components
+  allocate ( arx(numFaces) )
+  allocate ( ary(numFaces) )
+  allocate ( arz(numFaces) )
+
+  ! Coordinates of cell face centers
+  allocate ( xf(numFaces) )
+  allocate ( yf(numFaces) ) 
+  allocate ( zf(numFaces) )
+
+  ! Interpolation factor for inner faces
+  allocate ( facint(numInnerFaces) ) 
+
+  ! Indices of owner cell (inner+boundary faces) and indices of neighbours for every inner cell-face.
+  allocate ( owner(numFaces) )
+  allocate ( neighbour(numInnerFaces) )
+
+  ! Array stroring the walue of distance to the nearest wall, needed only in some turb. models (maybe allocate only when needed)
+  allocate ( wallDistance(numCells) )
+
+  ! We need this only for wall and symmetry BCs, so it is not bad to have nsym and nwal parameters, which count home many of them 
+  ! are there.
+  allocate ( dns(nsym) )      
+  allocate ( srds(nsym) )  
+  allocate ( dnw(nwal) )      
+  allocate ( srdw(nwal) )                             
+
+
+!******************************************************************************
+! > Read and process Mesh files 
+!..............................................................................
+
+  ! The 'points' file
+  do i=1,numNodes
+    read(points_file,*) x(i),y(i),z(i) 
+  end do
+
+
+  ! The 'owner' file
+  do i=1,numFaces
+    read(owner_file,*) owner(i)
+  end do
+
+
+  ! The 'neighbour' file
+  do i=1,numInnerFaces
+    read(neighbour_file,*) neighbour(i)
+  end do
+
+  ! The 'faces' file
+
+  read( faces_file, * )  line_string ! we don't need this info on first line
+
+  ! Allocate tmp array of number of nodes for each face - nnodes, and node array
+  allocate( nnodes(numFaces) )
+  allocate( node(4,numFaces) )
+
+  do iface=1,numFaces
+    read( faces_file, * ) nnodes(iface),(node(k,iface), k=1,nnodes(iface) )
+  enddo  
+
+  ! Allocate tmp array of doubles 
+  allocate( r8tmp(numCells))
+  r8tmp = 0.0_dp
+
+
+  !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  ! > Cell volumes, cell centers and cell face centers
+  !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  do iface=1,numFaces
+
+    inp = owner(iface)
+
+    ! Initialize total area of polygon.
+    areasum = 0.0_dp
+
+    ! We decompose a polygon to a series of triangles, all having first node in common.
+    do i=1, nnodes(iface)-2 
+      ! Vectors to vertices
+      ! 2-1
+      px = x( node(i+1,iface) )-x( node(1,iface) )
+      py = y( node(i+1,iface) )-y( node(1,iface) )
+      pz = z( node(i+1,iface) )-z( node(1,iface) )
+      ! 3-1
+      qx = x( node(i+2,iface) )-x( node(1,iface) )
+      qy = y( node(i+2,iface) )-y( node(1,iface) )
+      qz = z( node(i+2,iface) )-z( node(1,iface) )
+
+
+      call triangle_area_vector( px,py,pz, qx,qy,qz, nx,ny,nz )
+
+      !
+      ! > Cell-face area vector components (Area vector lies in direction of face normal)
+      ! 
+
+      arx(iface) = arx(iface) + nx
+      ary(iface) = ary(iface) + ny
+      arz(iface) = arz(iface) + nz
+
+      ! Face center for a triangle
+      cx = third*( x( node(i+2,iface) ) + x( node(i+1,iface) ) + x( node(1,iface) ) )
+      cy = third*( y( node(i+2,iface) ) + y( node(i+1,iface) ) + y( node(1,iface) ) )
+      cz = third*( z( node(i+2,iface) ) + z( node(i+1,iface) ) + z( node(1,iface) ) ) 
+
+      !
+      ! > Cell-face centroid components - accumulation stage
+      !
+
+      are = sqrt(nx**2 + ny**2 + nz**2)
+
+      xf(iface) = xf(iface) + (are*cx)
+      yf(iface) = yf(iface) + (are*cy)
+      zf(iface) = zf(iface) + (are*cz)
+
+      ! Accumulate triangle areas to get total area of the polygon
+      areasum = areasum + are
+
+
+      !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+      ! > Compute cell volumes and cell centers
+      !
+      ! We compute cell volumes by aaplying divergence theorem to the position vector,
+      ! see eq. (5) in [1].
+      ! Cell center coordinates of an arbitrary polyhedron are computed using eq.(15) of ref. [1].
+      !
+      ! [1] Z.J. Wang - Improved Formulation for Geometric Properties of Arbitrary Polyhedra
+      !     AIAA Journal, Vol. 37, No. 10, October 1999
+      !
+      !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+      riSi = ( cx*nx + cy*ny + cz*nz )
+
+      vol(inp) = vol(inp) + third * riSi 
+
+      xc(inp) = xc(inp) + 0.75_dp * riSi * cx
+      yc(inp) = yc(inp) + 0.75_dp * riSi * cy
+      zc(inp) = zc(inp) + 0.75_dp * riSi * cz
+
+      ! We use r8tmp array to store accumulated denominator
+      r8tmp(inp) = r8tmp(inp) + riSi
+
+
+      if ( iface <= numInnerFaces ) then 
+        inn = neighbour(iface)
+
+        riSi = -( cx*nx + cy*ny + cz*nz )
+
+        vol(inn) = vol(inn) + third * riSi
+
+        xc(inn) = xc(inn) + 0.75_dp * riSi * cx
+        yc(inn) = yc(inn) + 0.75_dp * riSi * cy
+        zc(inn) = zc(inn) + 0.75_dp * riSi * cz
+
+        ! We use r8tmp array to store accumulated denominator
+        r8tmp(inn) = r8tmp(inn) + riSi
+
+      endif
+
+    enddo
+
+    !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    ! > Cell-face centroid components - final
+    !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+    xf(iface) = xf(iface) / areasum
+    yf(iface) = yf(iface) / areasum
+    zf(iface) = zf(iface) / areasum
+  
+  enddo
+
+  !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  ! > Cell centroid components - final
+  !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+  ! Do one more loop over cell volumes to divide accumulated cell center values by
+  ! denominator accumulated in wallDistance array for convenience.
+  do inp=1,numCells
+    xc(inp) = xc(inp) / r8tmp(inp)
+    yc(inp) = yc(inp) / r8tmp(inp)
+    zc(inp) = zc(inp) / r8tmp(inp)
+  enddo
+
+  ! Thank you.
+  deallocate(r8tmp)
+
+
+  !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  ! > Interpolation factor
+  !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+  if ( interpolation_coeff_variant == 2 ) then
+
+    !
+    ! > Interpolation factor > inner faces - Variant 1.
+    !
+    do iface=1,numInnerFaces
+
+      inp = owner(iface)
+      inn = neighbour(iface)
+
+      xpn = xc(inn)-xc(inp)
+      ypn = yc(inn)-yc(inp)
+      zpn = zc(inn)-zc(inp)
+
+      dpn = sqrt( xpn**2 + ypn**2 + zpn**2 ) 
+
+      !
+      ! > > Intersection point j' of line connecting centers with cell face, we are taking only three points assuming that other are co-planar
+      !
+      call find_intersection_point(&
+                                   ! plane defined by three face vertices:
+                                   x( node(1,iface) ), y( node(1,iface) ), z( node(1,iface) ),&
+                                   x( node(2,iface) ), y( node(2,iface) ), z( node(2,iface) ), &
+                                   x( node(3,iface) ), y( node(3,iface) ), z( node(3,iface) ), &
+                                   ! line defined by cell center and neighbour center:
+                                   xc(inp),yc(inp),zc(inp), &
+                                   xc(inn),yc(inn),zc(inn), &
+                                   ! intersection point (output):
+                                   xjp,yjp,zjp &
+                                  )
+      xpn = xjp - xc(inp)
+      ypn = yjp - yc(inp)
+      zpn = zjp - zc(inp)
+
+      djn = sqrt( xpn**2 + ypn**2 + zpn**2 )
+
+      ! Interpolation factor |P Pj'|/|P Pj| where P is cell center, Pj neighbour cell center and j' intersection point.
+      facint(iface) = djn / dpn 
+      
+    enddo
+
+  else 
+
+    !
+    ! > Interpolation factor > inner faces - Variant 2.
+    !
+    do iface=1,numInnerFaces
+
+      inp = owner(iface)
+      inn = neighbour(iface)
+
+      xpn = xc(inn)-xc(inp)
+      ypn = yc(inn)-yc(inp)
+      zpn = zc(inn)-zc(inp)
+
+      dpn = sqrt( xpn**2 + ypn**2 + zpn**2 ) 
+
+      xpn = xf(iface) - xc(inp)
+      ypn = yf(iface) - yc(inp)
+      zpn = zf(iface) - zc(inp)
+
+      djp = sqrt( xpn**2 + ypn**2 + zpn**2 )
+
+      xpn = xf(iface) - xc(inn)
+      ypn = yf(iface) - yc(inn)
+      zpn = zf(iface) - zc(inn)
+
+      djn = sqrt( xpn**2 + ypn**2 + zpn**2 )
+
+      ! Interpolation factor |PF + PjF|/|P Pj| where P is cell center, Pj neighbour cell center and F is face centroid.
+      facint(iface) =  ( djp + djn ) / dpn 
+      
+    enddo
+
+  endif
+  
+  deallocate(nnodes)
+  deallocate(node)  
+
+
+  ! Loop over wall boundaries to calculate normal distance from cell center of the first cell layer - dnw, and
+  ! loop over symmetry boundaries to calculate normal distance from cell center of the first cell layer - dns.
+
+  iWall = 0
+  iSym = 0
+
+  do ib=1,numBoundaries
+
+    if ( bctype(ib) == 'symmetry') then
+
+      ! Symmetry
+      do i=1,nfaces(ib)
+
+        iface = startFace(ib) + i
+        ijp = owner(iface)
+        iSym = iSym + 1
+
+        ! Face area 
+        are = sqrt(arx(iface)**2+ary(iface)**2+arz(iface)**2)
+
+        ! Face normals
+        nxf = arx(iface)/are
+        nyf = ary(iface)/are
+        nzf = arz(iface)/are
+
+        ! We need the minus sign because of the direction of normal vector to boundary face which is positive if it faces out.
+        dns(iSym) = (xf(iface)-xc(ijp))*nxf + (yf(iface)-yc(ijp))*nyf + (zf(iface)-zc(ijp))*nzf
+
+        ! Cell face area divided by distance to the cell center
+        srds(iSym) = are/dns(iSym)
+
+      end do
+
+    elseif ( bctype(ib) == 'wall') then
+
+      do i=1,nfaces(ib)
+
+        iface = startFace(ib) + i
+        ijp = owner(iface)
+        iWall = iWall + 1
+
+        ! Face area 
+        are = sqrt(arx(iface)**2+ary(iface)**2+arz(iface)**2)
+
+        ! Face normals
+        nxf = arx(iface)/are
+        nyf = ary(iface)/are
+        nzf = arz(iface)/are
+
+        ! We need the minus sign because of the direction of normal vector to boundary face which is positive if it faces out.
+        dnw(iWall) = (xf(iface)-xc(ijp))*nxf + (yf(iface)-yc(ijp))*nyf + (zf(iface)-zc(ijp))*nzf
+
+        ! Cell face area divided by distance to the cell center
+        srdw(iWall) = are/dnw(iWall)
+
+      enddo
+
+    endif 
+
+  enddo
+
+
+!******************************************************************************
+! > Report on geometrical quantities > I will leave this for debug purposes.
+!..............................................................................
+
+  write ( *, '(a)' ) ' '
+  write ( *, '(a)' ) '  Cell data: '
+
+  call r8vec_print_some ( numCells, vol, 1, 10, &
+      '  First 10 elements of cell volumes array:' )
+
+  call r8vec_print_some ( numCells, xc, 1, 10, &
+      '  First 10 elements of cell x-centers array:' )
+
+  call r8vec_print_some ( numCells, yc, 1, 10, &
+      '  First 10 elements of cell y-centers array:' )
+
+  call r8vec_print_some ( numCells, zc, 1, 10, &
+      '  First 10 elements of cell z-centers array:' )
+
+  write ( *, '(a)' ) ' '
+  write ( *, '(a)' ) '  Face data: '
+
+  call i4vec_print2 ( 10, owner, neighbour, '  First 10 lines of owner and neighbour arrays:' )
+
+  call r8vec_print_some ( numFaces, arx, 1, 10, &
+      '  First 10 elements of Arx array:' )
+
+  call r8vec_print_some ( numFaces, ary, 1, 10, &
+      '  First 10 elements of Ary array:' )
+
+  call r8vec_print_some ( numFaces, arz, 1, 10, &
+      '  First 10 elements of Arz array:' )
+
+    call r8vec_print_some ( numFaces, xf, 1, 10, &
+      '  First 10 elements of xf array:' )
+
+  call r8vec_print_some ( numFaces, yf, 1, 10, &
+      '  First 10 elements of yf array:' )
+
+  call r8vec_print_some ( numFaces, zf, 1, 10, &
+      '  First 10 elements of zf array:' )
+
+  call r8vec_print_some ( numInnerFaces, facint, 1, 10, &
+      '  First 10 elements of interpolation factor (facint) array:' )
+
+  write ( *, '(a)' ) ' '
+  
+!
+!  > CLOSE polyMesh format file: 'points', 'faces', 'owner', 'neighbour', 'boundary'.
+!
+  close ( points_file )
+  close ( faces_file )
+  close ( owner_file )
+  close ( neighbour_file)
+  close ( boundary_file)
+!+-----------------------------------------------------------------------------+
+
+end subroutine read_mesh_native
+
 
 
 subroutine read_mesh
@@ -156,7 +756,7 @@ subroutine read_mesh
 !
  
 
-  ! Number of rows in the file excluding #comment in header to conclude the number of prescribed boundaries
+  ! Number of rows in the file excluding #comment in header to find the number of prescribed boundaries
   call file_row_count ( boundary_file, numBoundaries )
 
   read(boundary_file,'(a)') line_string ! Firts line is header.
@@ -174,7 +774,7 @@ subroutine read_mesh
   ninl = 0
 
   do i=1,numBoundaries
-    read(boundary_file,*) bcname(i), bctype(i), nfaces(i) ,startFace(i) ! Now it reads four things btw
+    read(boundary_file,*) bcname(i), bctype(i), nfaces(i) ,startFace(i)
 
     ! We need total number of some bctype faces like wall and symmetry to make things easier for bc implementation
     ! so lets count them. 
@@ -409,7 +1009,7 @@ subroutine read_mesh
   write ( *, '(a)' ) ' '
   
   do i=1,numBoundaries
-    write(*,'(2x,a,1x,a,1x,2(i0,1x))') bcname(i), bctype(i), nfaces(i) ,startFace(i) ! Now it reads four things btw
+    write(*,'(2x,a,1x,a,1x,2(i0,1x))') bcname(i), bctype(i), nfaces(i) ,startFace(i)
   enddo  
   write ( *, '(a)' ) ' '
 

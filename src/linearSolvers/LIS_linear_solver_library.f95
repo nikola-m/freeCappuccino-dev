@@ -103,7 +103,7 @@ contains
 
 
 
-subroutine solve_csr(numCells,nnz,ioffset,ja,aval,su,phi)
+subroutine solve_csr(numCells,nnz,ioffset,ja,aval,phi,su)
 !
 ! A subroutine which handles linear system solution using LIS library.
 !

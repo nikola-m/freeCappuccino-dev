@@ -47,7 +47,7 @@ subroutine calcuvw
   ! real(dp) :: Vnp
 
   
-  ScndOrderWallBC_Model = .true.
+  ! ScndOrderWallBC_Model = .true.
 
   ! Initialize sources
   su = 0.0_dp

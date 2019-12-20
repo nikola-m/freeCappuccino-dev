@@ -39,6 +39,9 @@ subroutine bicgstab(fi,ifi)
   
   res = 0.0_dp
 
+  ! Vector form
+  ! res( 1:numCells ) = su( 1:numCells ) - a( ioffset(i),ioffset(i+1)-1 ) * fi( ja( ioffset(i),ioffset(i+1)-1 ) )
+
   do i=1,numCells
     res(i) = su(i) 
     do k = ioffset(i),ioffset(i+1)-1

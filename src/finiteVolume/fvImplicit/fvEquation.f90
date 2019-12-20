@@ -1,4 +1,4 @@
-module fv_equation
+module fvEquation
 !
 ! Definition of Finite Volume Method linear equation object, and oparations over it.
 !
@@ -6,21 +6,49 @@ use types
 use geometry
 use sparse_matrix
 use tensor_fields
+use linear_solver, only: spsolve
 
 implicit none
 
 !
-! The fvEquation derived data type (all objects from fvm_discretisation_module belong to this type.)
+! The fvEquation derived data type (all objects from fvImplicit belong to this type.)
 !
 type, extends(csrMatrix) :: fvEquation
-  real(dp), dimension(:), allocatable :: source
-  real(dp), dimension(:), allocatable :: o   ! Past time values of solution vector field 
-  real(dp), dimension(:), allocatable :: oo  ! Second level past times for BDF2 time differencing scheme
+
+  ! Field related 
+  ! type(volScalarField) :: phi 
+  real(dp), dimension(:), allocatable :: x    ! Solution vector
+  real(dp), dimension(:), allocatable :: o    ! Past time values of solution vector field 
+  real(dp), dimension(:), allocatable :: oo   ! Second level past times for BDF2 time differencing scheme
+  real(dp), dimension(:), allocatable :: su    ! right hand side vector (vector of sources)
+  real(dp), dimension(:), allocatable :: sp   ! vector of sources that goes into main matrix diagonal (vector of sources)
+  real(dp), dimension(:), allocatable :: res  ! Residual vector for linear solvers
+
+  ! Linear solution control parameters
+  character( len = 20 ) :: solver ! Name of designated solver like 'iccg', etc.
+  integer :: itr_max              ! Max no. of iterations
+  integer :: tol_abs              ! Absolute tolerance level to be reached before exiting iterations.
+  integer :: tol_rel              ! Relative tolerance level to be reached before exiting iterations. 
+
 end type fvEquation
 
 
 
 type, extends(csrMatrix) :: fvVectorEquation
+
+  ! Solution vector component fields
+  real(dp), dimension(:), allocatable :: u
+  real(dp), dimension(:), allocatable :: v
+  real(dp), dimension(:), allocatable :: w
+
+  ! Past time values of solution vector field 
+  real(dp), dimension(:), allocatable :: uo
+  real(dp), dimension(:), allocatable :: vo
+  real(dp), dimension(:), allocatable :: wo
+
+  real(dp), dimension(:), allocatable :: uoo
+  real(dp), dimension(:), allocatable :: voo
+  real(dp), dimension(:), allocatable :: woo
 
   ! Source terms that go into main diagonal
   real(dp), dimension(:), allocatable :: spu
@@ -32,15 +60,13 @@ type, extends(csrMatrix) :: fvVectorEquation
   real(dp), dimension(:), allocatable :: sv
   real(dp), dimension(:), allocatable :: sw
 
-  ! Past time values of solution vector field 
-  real(dp), dimension(:), allocatable :: xo
-  real(dp), dimension(:), allocatable :: yo
-  real(dp), dimension(:), allocatable :: zo
+  real(dp), dimension(:), allocatable :: res ! Residula vector
 
-
-  real(dp), dimension(:), allocatable :: xoo
-  real(dp), dimension(:), allocatable :: yoo
-  real(dp), dimension(:), allocatable :: zoo
+  ! Linear solution control parameters
+  character( len = 20 ) :: solver ! Name of designated solver like 'iccg', etc.
+  integer :: itr_max              ! Max no. of iterations
+  integer :: tol_abs              ! Absolute tolerance level to be reached before exiting iterations.
+  integer :: tol_rel              ! Relative tolerance level to be reached before exiting iterations. 
 
 end type fvVectorEquation
 
@@ -75,43 +101,30 @@ public
 contains
 
 
-
-function new_csrMatrix( )
-    implicit none
-    integer :: i
-    type(csrMatrix) :: new_csrMatrix
-    
-    allocate(new_csrMatrix%ioffset ( numCells+1 ))
-    allocate(new_csrMatrix%ja ( nnz ))
-    allocate(new_csrMatrix%coef ( nnz ))
-
-    do i=1,numCells+1
-      new_csrMatrix % ioffset(i) = ioffset(i)
-    enddo
-    do i=1,nnz
-      new_csrMatrix % ja(i) = ja(i)
-    enddo
-
-end function new_csrMatrix
-
-
 function new_fvEquation( ) result(fvEqn)
     implicit none
     integer :: i
     type(fvEquation) :: fvEqn
 
     allocate(fvEqn % ioffset ( numCells+1 ))
+    allocate(fvEqn % diag ( numCells ))
     allocate(fvEqn % ja ( nnz ))
-    allocate(fvEqn % coef ( nnz ))
+    allocate(fvEqn % a ( nnz ))
 
-    allocate(fvEqn % source ( numCells ))
+    allocate(fvEqn % s ( numCells ))
+    allocate(fvEqn % sp ( numCells ))
+    allocate(fvEqn % res ( numCells ))
 
+    allocate(fvEqn % x ( numTotal ))
     allocate(fvEqn % o ( numTotal ))
     allocate(fvEqn % oo ( numTotal ))
 
     do i=1,numCells+1
       fvEqn % ioffset(i) = ioffset(i)
     enddo
+    do i=1,numCells+1
+      fvEqn % diag(i) = diag(i)
+    enddo    
     do i=1,nnz
       fvEqn % ja(i) = ja(i)
     enddo
@@ -135,13 +148,19 @@ function new_fvVectorEquation( ) result(fvEqn)
     allocate(fvEqn % spv ( numCells ))
     allocate(fvEqn % spw ( numCells ))
 
-    allocate(fvEqn % xo ( numTotal ))
-    allocate(fvEqn % yo ( numTotal ))
-    allocate(fvEqn % zo ( numTotal ))
+    allocate(fvEqn % res ( numCells ))
 
-    allocate(fvEqn % xoo ( numTotal ))
-    allocate(fvEqn % yoo ( numTotal ))
-    allocate(fvEqn % zoo ( numTotal ))
+    allocate(fvEqn % u ( numTotal ))
+    allocate(fvEqn % v ( numTotal ))
+    allocate(fvEqn % w ( numTotal ))
+
+    allocate(fvEqn % uo ( numTotal ))
+    allocate(fvEqn % vo ( numTotal ))
+    allocate(fvEqn % wo ( numTotal ))
+
+    allocate(fvEqn % uoo ( numTotal ))
+    allocate(fvEqn % voo ( numTotal ))
+    allocate(fvEqn % woo ( numTotal ))
 
     do i=1,numCells+1
       fvEqn % ioffset(i) = ioffset(i)
@@ -176,7 +195,7 @@ function add_source_to_fvEquation(fvEqnIn,source) result( fvEqnOut )
   fvEqnOut = new_fvEquation()
 
   do i=1,numCells
-      fvEqnOut % source(i) = fvEqnIn % source(i) + source % mag(i)
+      fvEqnOut % su(i) = fvEqnIn % su(i) + source % mag(i)
   enddo
 
 end function add_source_to_fvEquation
@@ -404,4 +423,22 @@ function substract_fvVectorEquations(fvEqn1,fvEqn2) result( fvEqn )
 end function substract_fvVectorEquations
 
 
-end module fv_equation
+subroutine solve_fvEqn( fvEqn )
+!
+! Purpose:
+!   Solve linear system of equations resulting from finite volume discrretization.
+!
+! Description:
+!   A version of the linear solver routine that uses finite volume eqaution derived type - fvEqn as an input
+!   
+  implicit none
+!
+! Parameters
+!
+  type fvEquation :: fvEqn 
+
+  call spsolve(fvEqn%solver, fvEqn%phi%mag, fvEqn%su, fvEqn%itr_max, fvEqn%tol_abs, fvEqn%tol_rel, fvEqn%phi%field_name)
+
+end subroutine
+
+end module fvEquation
