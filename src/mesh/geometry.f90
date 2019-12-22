@@ -39,7 +39,7 @@ real(dp), parameter :: tiny = 1e-30
 ! Mesh file units
 integer :: points_file, cells_file, faces_file, owner_file, neighbour_file, boundary_file 
 
-integer, parameter :: interpolation_coeff_variant = 1 ! (1,2) look at the code below.
+integer, parameter :: interpolation_coeff_variant = 2 ! (1,2) look at the code below.
 
 
 ! Mesh geometry
@@ -470,7 +470,7 @@ subroutine read_mesh_native
   ! > Interpolation factor
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-  if ( interpolation_coeff_variant == 2 ) then
+  if ( interpolation_coeff_variant == 1 ) then
 
     !
     ! > Interpolation factor > inner faces - Variant 1.
@@ -521,12 +521,6 @@ subroutine read_mesh_native
       inp = owner(iface)
       inn = neighbour(iface)
 
-      xpn = xc(inn)-xc(inp)
-      ypn = yc(inn)-yc(inp)
-      zpn = zc(inn)-zc(inp)
-
-      dpn = sqrt( xpn**2 + ypn**2 + zpn**2 ) 
-
       xpn = xf(iface) - xc(inp)
       ypn = yf(iface) - yc(inp)
       zpn = zf(iface) - zc(inp)
@@ -539,8 +533,8 @@ subroutine read_mesh_native
 
       djn = sqrt( xpn**2 + ypn**2 + zpn**2 )
 
-      ! Interpolation factor |PF + PjF|/|P Pj| where P is cell center, Pj neighbour cell center and F is face centroid.
-      facint(iface) =  ( djp + djn ) / dpn 
+      ! Interpolation factor |PjF|/|PF + PjF|  where P is cell center, Pj neighbour cell center and F is face centroid.
+      facint(iface) =  djp / ( djp + djn ) 
       
     enddo
 

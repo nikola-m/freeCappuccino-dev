@@ -43,7 +43,6 @@ program cappuccino
 !-----------------------------------------------------------
 !  Initialization, mesh definition, sparse matrix allocation
 !-----------------------------------------------------------
-
   call openfiles
 
   call read_input_file

@@ -51,7 +51,7 @@ function new_csrMatrix( ) result(csr)
   ! Option 1.
 
   allocate(csr%ioffset ( numCells+1 ))
-  allocate(csrx%ja ( nnz ))
+  allocate(csr%ja ( nnz ))
   allocate(csr%diag ( numCells ))
   allocate(csr%a ( nnz ))
 
