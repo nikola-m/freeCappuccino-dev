@@ -18,29 +18,6 @@ public
 contains
 
 
- pure integer function paraview_cell_type(nnodes)
-!
-! Element type in Paraview corresponding to number of nodes.
-!
- implicit none
- integer, intent(in) :: nnodes
- 
-
-  if(nnodes.eq.1) then 
-   paraview_cell_type = 1
-  elseif(nnodes.eq.2) then 
-   paraview_cell_type =  3
-  elseif(nnodes.eq.3) then 
-   paraview_cell_type = 5
-  elseif(nnodes.eq.4) then 
-   paraview_cell_type = 9
-  else
-   paraview_cell_type = 0
-  endif
-
- end function
-
-
  pure integer function paraview_ntype(NTYPE)
 !
 ! Element type in Paraview corresponding to Cappuccino type of element given by NTYPE.
@@ -411,6 +388,7 @@ subroutine vtm_write_scalar_field ( scalar_name, scalar_field, timechar )
   open( unit = cells_file, file='polyMesh/cells' )
   rewind cells_file
 
+  read(cells_file, *) ch ! A line where numCells is.
 
   write ( output_unit, '(a)' )    '<VTKFile type="UnstructuredGrid" version="0.1" byte_order="BigEndian">'
   write ( output_unit, '(2x,a)' ) '<UnstructuredGrid>'

@@ -27,7 +27,7 @@ module linear_solver
   use parameters
   use geometry, only: numCells
   use sparse_matrix, only: nnz, ioffset, ja, a, diag
-  use fvEquation
+  ! use fvEquation
 
   implicit none
 
