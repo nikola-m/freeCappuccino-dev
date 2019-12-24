@@ -1,0 +1,7 @@
+#!/bin/bash
+# Make programm
+#make
+# Run program
+mv polyMesh polyMesh-OF
+mkdir polyMesh
+./foamToCappuccino

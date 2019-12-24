@@ -1,0 +1,52 @@
+December  8 2019   5:31:12.812 PM
+ 
+                       _     _ _   ___   _____                                 _              
+                      | |   (_) | |__ \ / ____|                               (_)             
+  __ _  __ _ _ __ ___ | |__  _| |_   ) | |     __ _ _ __  _ __  _   _  ___ ___ _ _ __   ___   
+ / _` |/ _` | '_ ` _ \| '_ \| | __| / /| |    / _` | '_ \| '_ \| | | |/ __/ __| | '_ \ / _ \  
+| (_| | (_| | | | | | | |_) | | |_ / /_| |___| (_| | |_) | |_) | |_| | (_| (__| | | | | (_) | 
+ \__, |\__,_|_| |_| |_|_.__/|_|\__|____|\_____\__,_| .__/| .__/ \__,_|\___\___|_|_| |_|\___/  
+  __/ |                                            | |   | |                                  
+ |___/                                             |_|   |_|                                  
+ 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+gambitToCappuccino
+  A preprocessor program for the Cappuccino code.
+ 
+  Reads mesh in Gambit .neu format and produces  
+  mesh files for freeCappuccino solver.          
+ 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+ 
+Enter the filename prefix:
+2cylinder
+ 
+  Input file is "2cylinder.neu".
+ 
+      NUMNP     NELEM     NGRPS    NBSETS     NDFCD     NDFVL
+      2135     10080         2         4         3         3
+ 
+ 
+   Gambit file:
+    Total no. of HEX cells:       0
+    Total no. of TET cells:   10080
+    Total no. of PYR cells:       0
+    Total no. of PRI cells:       0
+   +--------------------------------=
+    Total no. of cells:   10080
+ 
+  Normal end of reading .neu file.
+ 
+  Sort fVert: Begin
+  Sort fVert: End
+ 
+  Quicksort fVert: Begin
+  Quicksort fVert: End
+ 
+  Match faces, find owner neighbour: Start
+  Match faces, find owner neighbour: End
+ 
+gambitToCappuccino:
+  Normal end of execution.
+ 
+December  8 2019   5:31:16.865 PM
