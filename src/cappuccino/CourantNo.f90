@@ -1,12 +1,24 @@
+subroutine CourantNo
 !
-! Calculate and output the mean and maximum Courant Numbers.
+! Purpose: 
+!   Calculate and output the mean and maximum Courant Numbers.
 !
+  use types
+  use parameters, only: CoNum,meanCoNum, CoNumFixValue, CoNumFix, timestep, ltransient, itime, time
+  use geometry, only: numCells, numInnerFaces, owner, neighbour, numBoundaries, bctype, nfaces, startFace, Vol
+  use sparse_matrix, only: res
+  use variables, only: flmass
 
- if (ltransient) then
- CoNum = 0.0_dp
- meanCoNum = 0.0_dp
+  implicit none
 
- res = 0.0_dp
+  integer :: i, ijp, ijn, inp, ib, iface
+  real(dp):: suma,dt
+
+  if (ltransient) then
+  CoNum = 0.0_dp
+  meanCoNum = 0.0_dp
+
+  res = 0.0_dp
 
   !
   ! Suface sum of magnitude (i.e. absolute value) of mass flux phi, over inner faces only
@@ -61,7 +73,7 @@
   meanCoNum = 0.5*meanCoNum/suma*timestep
 
   !// If we keep the value of Courant Number fixed
-  if( CoNumFix .and. itime.ne.itimes ) then
+  if( CoNumFix ) then
       dt = timestep
       timestep = CoNumFixValue/CoNum * timestep
 
@@ -71,12 +83,13 @@
 
   time = time + timestep
 
- write(6,'(a)') ' '
- write(6,'(a,i0,a,es10.3,a,es10.3)') "  Time step no. : ",ITIME," dt : ",timestep," Time = ",time
- write(6,'(a)') ' '
- write(6,'(2(a,es10.3))') "  Courant Number mean: ", meanCoNum," max: ", CoNum
- write(6,'(a)') ' '
+  write(6,'(a)') ' '
+  write(6,'(a,i0,2(a,es10.3))') "  Time step no. : ",itime," dt : ",timestep," Time = ",time
+  write(6,'(a)') ' '
+  write(6,'(2(a,es10.3))') "  Courant Number mean: ", meanCoNum," max: ", CoNum
+  write(6,'(a)') ' '
 
 
 endif
-!// ************************************************************************* //
+
+end subroutine

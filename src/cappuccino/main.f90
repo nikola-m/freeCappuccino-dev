@@ -22,12 +22,10 @@ program cappuccino
 
   implicit none
 
-  integer :: iter, i, ijp, ijn, inp, ib, iface
+  integer :: iter
   integer :: narg
   integer :: itimes, itimee
-  real(dp):: magUbarStar, rUAw, gragPplus, flowDirection
   real(dp):: source
-  real(dp):: suma,dt
   real :: start, finish
 !                                                                       
 !******************************************************************************
@@ -78,7 +76,7 @@ program cappuccino
     if(itime.eq.itimes) call bcin
 
     ! Courant number report:
-    include 'CourantNo.h'
+    call CourantNo
 
     ! 
     !===============================================
@@ -138,9 +136,7 @@ program cappuccino
           if(source.lt.sormax.or.iter.ge.maxit) then 
 
             ! Correct driving force for a constant mass flow rate simulation:
-            if(const_mflux) then
-              include 'constant_mass_flow_forcing.f90'
-            endif
+            if(const_mflux) call constant_mass_flow_forcing
 
             ! Write field values after nzapis iterations or at the end of time-dependent simulation:
             if(mod(itime,nzapis).eq.0  .or. itime.eq.numstep) then

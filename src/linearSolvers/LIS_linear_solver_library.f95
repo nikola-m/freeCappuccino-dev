@@ -12,7 +12,7 @@ module LIS_linear_solver_library
 !
 ! LIS_INTEGER i,n
 ! LIS_MATRIX A
-! n = 4
+! n = XXXX
 ! call lis_matrix_create(0,A,ierr)
 ! call lis_matrix_set_size(A,0,n,ierr)
 ! do i=1,n
@@ -87,36 +87,49 @@ module LIS_linear_solver_library
 !
 
 
-use types
-use geometry
-use sparse_matrix
+  use types
+  use geometry, only: numCells,numTotal
+  use sparse_matrix, only: nnz, ioffset, ja, a, diag
 
-#include "lisf.h"
+  #include "lisf.h"
 
-implicit none
+  implicit none
 
-character(len=70) :: options
+  character(len=70) :: lis_solver_options
 
-public
+  public
+
 
 contains
 
 
-
-subroutine solve_csr(numCells,nnz,ioffset,ja,aval,phi,su)
+! subroutine solve_csr(numCells,nnz,ioffset,ja,aval,phi,su)
+subroutine lis_spsolve( numCells, nnz, ioffset, ja, a, fi, rhs, itr_max, tol_abs, tol_rel, chvar)
 !
 ! A subroutine which handles linear system solution using LIS library.
 !
   use types
   implicit none
 
-  integer, intent(in) :: numCells
-  integer, intent(in) :: nnz
-  integer, dimension(numCells+1), intent(in) :: ioffset
-  integer, dimension(nnz), intent(in) :: ja
-  real(dp), dimension(nnz), intent(in) :: aval
-  real(dp), dimension(numCells), intent(in) :: su
-  real(dp), dimension(numCells), intent(inout) :: phi
+  ! integer, intent(in) :: numCells
+  ! integer, intent(in) :: nnz
+  ! integer, dimension(numCells+1), intent(in) :: ioffset
+  ! integer, dimension(nnz), intent(in) :: ja
+  ! real(dp), dimension(nnz), intent(in) :: aval
+  ! real(dp), dimension(numCells), intent(in) :: su
+  ! real(dp), dimension(numCells), intent(inout) :: phi
+  integer, intent(in) :: n                              ! Number of unknowns, length of a solution vector
+  integer, intent(in) :: nnz                            ! Number of non-zero elements in sparse matrix
+  integer, dimension(n+1), intent(in) :: ioffset        ! The offsets of each row in coef array
+  integer, dimension(nnz), intent(in) :: ja             ! Columns array
+  real(dp), dimension(nnz), intent(in) :: a             ! Coefficient array
+  integer, dimension(n), intent(in) :: diag             ! Position of diagonal elements in coeff. array
+  real(dp), dimension(n), intent(inout) :: fi           ! On input-current field; on output-the solution vector
+  real(dp), dimension(n), intent(in) :: rhs             ! The right hand side of the linear system
+  integer, intent(in) :: itr_max                        ! Maximum number of iterations
+  real(dp), intent(in) :: tol_abs                       ! Absolute tolerance level for residual
+  real(dp), intent(in) :: tol_rel                       ! Relative tolerance level for residual
+  character( len=* ), intent(in) :: chvar               ! Character string containing name of the solved field, printed on stdout
 
 
   LIS_MATRIX :: A
@@ -124,15 +137,16 @@ subroutine solve_csr(numCells,nnz,ioffset,ja,aval,phi,su)
   LIS_SOLVER :: solver
   LIS_INTEGER :: ierr
   LIS_INTEGER :: i,nz_num,cell_num,row,icell
-  !LIS_INTEGER, allocatable :: ptr(:),index(:)
-  !LIS_SCALAR, dimension(:), allocatable :: value
   LIS_SCALAR :: xval
-  ! LIS_INTEGER :: nsol
   LIS_INTEGER :: iter,iter_double,iter_quad
-  ! real(dp) :: time,itime,ptime,p_c_time,p_i_time
   LIS_REAL :: resid,res0
+  ! LIS_INTEGER, allocatable :: ptr(:),index(:)
+  ! LIS_SCALAR, dimension(:), allocatable :: value
+  ! LIS_INTEGER :: nsol
+  ! real(dp) :: time,itime,ptime,p_c_time,p_i_time
   ! character(len=256) :: resname!,solname ! filenames for solution vector and residual vector
-  ! character(len=20) :: solvername
+  character(len=10) :: solver_type
+  character(len=10) :: preconditioner
   real(dp), parameter :: zero = 0.0d0
   integer, parameter :: numthrd = 2 ! hard coded number of threads
 
@@ -146,7 +160,7 @@ subroutine solve_csr(numCells,nnz,ioffset,ja,aval,phi,su)
 
   ! Sizes
   nz_num = nnz
-  cell_num = numCells
+  cell_num = n
 
 ! > 2. Matrix creation
 
@@ -160,7 +174,7 @@ subroutine solve_csr(numCells,nnz,ioffset,ja,aval,phi,su)
    row  = row+1 
    icell = icell + 1
    endif
-   call lis_matrix_set_value(LIS_INS_VALUE,row,ja(i),aval(i),A,ierr)
+   call lis_matrix_set_value(LIS_INS_VALUE,row,ja(i),a(i),A,ierr)
  enddo
  call lis_matrix_set_type(A,LIS_MATRIX_CSR,ierr)
  call lis_matrix_assemble(A,ierr)
@@ -170,39 +184,42 @@ subroutine solve_csr(numCells,nnz,ioffset,ja,aval,phi,su)
 !  allocate(index(nz_num))
 !  allocate(value(nz_num))
 !...or new version of Fortran will allocate uppon the assignement
-!  ptr(:) = ioffset(:)
-!  index(:) = ja(:)
-!  value(:) = aval(:)
-
- !call lis_matrix_set_csr(nz_num,ptr,index,value,A, ierr)
- !call lis_matrix_set_type(A,LIS_MATRIX_CSR,ierr)
- !call lis_matrix_set_csr(nz_num,ioffset,ja,aval,A, ierr)
- !call lis_matrix_set_type(A,LIS_MATRIX_CSR,ierr)
- !call lis_matrix_assemble(A,ierr)
+!  ptr = ioffset
+!  index = ja
+!  value = a
+!
+! call lis_matrix_set_csr(nz_num,ptr,index,value,A, ierr)
+! call lis_matrix_set_type(A,LIS_MATRIX_CSR,ierr)
+! call lis_matrix_assemble(A,ierr)
 
 ! > 3. Vector creation
 
 ! rhs vector
  call lis_vector_create(0,b,ierr)
- call lis_vector_set_size(b,0,cell_num,ierr)
- do i=1,cell_num
-   call lis_vector_set_value(LIS_INS_VALUE,i,su(i),b,ierr)
+ call lis_vector_set_size( b,0,cell_num,ierr )
+ do i=1,n
+   call lis_vector_set_value( LIS_INS_VALUE,i,rhs(i),b,ierr )
  enddo
 
 ! solution vector
- call lis_vector_create(0,x,ierr)
- call lis_vector_set_size(x,0,cell_num,ierr)
- do i=1,cell_num
-   call lis_vector_set_value(LIS_INS_VALUE,i,0.0d0,x,ierr)
+ call lis_vector_create( 0,x,ierr )
+ call lis_vector_set_size( x,0,cell_num,ierr )
+ ! Initialize solutio vector
+ do i=1,n
+   call lis_vector_set_value( LIS_INS_VALUE,i,fi(i),x,ierr )
  enddo
 
 
 
 ! > 6. Solver creation and setting solver options
- call lis_solver_create(solver,ierr)
+ call lis_solver_create( solver,ierr )
+
+ solver_type = 'cg' ! 'gs',...
+ preconditioner = 'ssor'
+
  ! call lis_solver_set_option("-print mem",solver,ierr)
- call lis_solver_set_option(options,solver,ierr)
- call lis_solver_set_option("-i cg -p ssor",solver,ierr)
+ call lis_solver_set_option( trim( lis_solver_options ),solver,ierr )
+ call lis_solver_set_option( "-i cg -p ssor",solver,ierr)
  ! call lis_solver_set_option("-i gs",solver,ierr)
  ! call lis_solver_set_option("-maxiter 1000",solver,ierr)
 
@@ -213,20 +230,22 @@ subroutine solve_csr(numCells,nnz,ioffset,ja,aval,phi,su)
 
   call lis_solver_get_residualnorm(solver,res0,ierr)
 
+  res_init = res0
+
   call lis_solve(A,b,x,solver,ierr)
 
   ! write solution 
-  !solname = "rjesenje.txt"
-  !call lis_output_vector(x,LIS_FMT_MM,solname,ierr);
+  ! solname = "rjesenje.txt"
+  ! call lis_output_vector(x,LIS_FMT_MM,solname,ierr);
 
   ! write residual history
   ! resname = "residual.txt"
   ! call lis_solver_output_rhistory(solver, resname, ierr)
 
   ! > Write it in our solution vector
-  do i=1,cell_num
+  do i=1,n
    call lis_vector_get_value(x, i, xval, ierr)
-   phi(i) = xval
+   fi(i) = xval
   enddo
 
 
@@ -238,17 +257,17 @@ subroutine solve_csr(numCells,nnz,ioffset,ja,aval,phi,su)
       ! call lis_solver_get_solvername(nsol,solvername,ierr)
 
       ! if( debug ) then
-        ! write(6,'(2a,i4)')     solvername(1:5),': number of iterations = ',iter
-        ! write(6,'(2a,es11.4)') solvername(1:5),': elapsed time         = ',time
-        ! write(6,'(2a,es11.4)') solvername(1:5),':   preconditioner     = ',ptime
-        ! write(6,'(2a,es11.4)') solvername(1:5),':     matrix creation  = ',p_c_time
-        ! write(6,'(2a,es11.4)') solvername(1:5),':   linear solver      = ',itime
-        ! write(6,'(2a,es11.4)') solvername(1:5),': residual             = ',resid
+        ! write(6,'(2a,i4)')     trim( solvername ),': number of iterations = ',iter
+        ! write(6,'(2a,es11.4)') trim( solvername ),': elapsed time         = ',time
+        ! write(6,'(2a,es11.4)') trim( solvername ),':   preconditioner     = ',ptime
+        ! write(6,'(2a,es11.4)') trim( solvername ),':     matrix creation  = ',p_c_time
+        ! write(6,'(2a,es11.4)') trim( solvername ),':   linear solver      = ',itime
+        ! write(6,'(2a,es11.4)') trim( solvername ),': residual             = ',resid
       ! endif
 
   ! Write linear solver report:
-  write(6,'(3a,1PE10.3,a,1PE10.3,a,I0)') '  LIS_LIBRARY:  Solving for ','p', &
-  ', Initial residual = ',res0,', Final residual = ',resid,', No Iterations ',iter
+  write(*,'(3a,1PE10.3,a,1PE10.3,a,I0)') '  LIS['//trim(solver_type)//'('//trim(preconditioner)//')]:  Solving for ', &
+  trim( chvar ),', Initial residual = ',res0,', Final residual = ',resid,', No Iterations ',iter
 
 ! > 8. Finalization
 
@@ -264,6 +283,6 @@ subroutine solve_csr(numCells,nnz,ioffset,ja,aval,phi,su)
 
  call lis_finalize(ierr)
 
-end subroutine solve_csr
+end subroutine lis_spsolve
 
 end module LIS_linear_solver_library

@@ -334,21 +334,22 @@ subroutine vtm_write_scalar_field ( scalar_name, scalar_field, timechar )
   integer, dimension(8) :: node
 
   ! Open folder with data for postprocessing in Paraview
-  call execute_command_line("mkdir VTK")
-  call execute_command_line("mkdir VTK/boundary")  
+  ! call execute_command_line("mkdir VTK")
+  call execute_command_line("mkdir VTK/"//trim( timechar ) )
+  call execute_command_line("mkdir VTK/"//trim( timechar )//"/boundary")  
 
 !
 ! > Open and write a .vtm file for multi-block datasets for interior + boundary regions data.
 !
   call get_unit( output_unit )
 
-  open(unit=output_unit,file='VTK/scalar_name'//'.vtm')
+  open(unit=output_unit,file='VTK/scalar_name_'//trim( timechar )//'.vtm')
 
   write ( output_unit, '(a)' )    '<?xml version="1.0"?>'
   write ( output_unit, '(2x,a)' ) '<VTKFile type="vtkMultiBlockDataSet" version="1.0" byte_order="LittleEndian">'
   write ( output_unit, '(4x,a)' ) '<vtkMultiBlockDataSet>'
   write ( output_unit, '(6x,a)' ) '<Block index="0" name="Cells">'
-  write ( output_unit, '(8x,a)' ) '<DataSet index="0" name="interior" file="interior.vtu" format="appended">'
+  write ( output_unit, '(8x,a)' ) '<DataSet index="0" name="interior" file="'//trim(timechar)//'/interior.vtu" format="appended">'
   write ( output_unit, '(8x,a)' ) '</DataSet>'
   write ( output_unit, '(6x,a)' ) '</Block>'
   write ( output_unit, '(6x,a)' ) '<Block index="1" name="Boundaries">'
@@ -357,8 +358,8 @@ subroutine vtm_write_scalar_field ( scalar_name, scalar_field, timechar )
 
     call i4_to_s_left ( i-1, ch2 )
 
-    write ( output_unit, '(8x,a)' ) &
-    '<DataSet index="'//trim(ch2)//'" name="'//trim( bcname(i) )//'" file="boundary/'//trim( bcname(i) )//'.vtu" format="appended">'
+    write ( output_unit, '(8x,a)' ) '<DataSet index="'//trim(ch2)//'" name="'//trim( bcname(i) )//&
+    &'" file="'//trim(timechar)//'/boundary/'//trim( bcname(i) )//'.vtu" format="appended">'
     
     write ( output_unit, '(8x,a)' ) '</DataSet>'
 
@@ -375,7 +376,7 @@ subroutine vtm_write_scalar_field ( scalar_name, scalar_field, timechar )
 !
   call get_unit( output_unit )
 
-  open(unit=output_unit,file='VTK/interior'//'.vtu')
+  open(unit=output_unit,file='VTK/'//trim(timechar)//'/interior.vtu')
 
 !
 ! > Header
@@ -480,7 +481,7 @@ subroutine vtm_write_scalar_field ( scalar_name, scalar_field, timechar )
 !
   call get_unit( output_unit )
 
-  open(unit=output_unit,file='VTK/boundary.vtm')
+  open(unit=output_unit,file='VTK/boundary_'//trim(timechar)//'.vtm')
 
   write ( output_unit, '(a)' )    '<?xml version="1.0"?>'
   write ( output_unit, '(2x,a)' ) '<VTKFile type="vtkMultiBlockDataSet" version="1.0" byte_order="LittleEndian">'
@@ -491,8 +492,8 @@ subroutine vtm_write_scalar_field ( scalar_name, scalar_field, timechar )
 
     call i4_to_s_left ( i-1, ch2 )
 
-    write ( output_unit, '(8x,a)' ) &
-    '<DataSet index="'//trim(ch2)//'" name="'//trim( bcname(i) )//'" file="boundary/'//trim( bcname(i) )//'.vtu" format="appended">'
+    write ( output_unit, '(8x,a)' )'<DataSet index="'//trim(ch2)//'" name="'//trim( bcname(i) )//&
+    &'" file="'//trim(timechar)//'/boundary/'//trim( bcname(i) )//'.vtu" format="appended">'
     
     write ( output_unit, '(8x,a)' ) '</DataSet>'
 
@@ -533,7 +534,7 @@ subroutine vtm_write_scalar_field ( scalar_name, scalar_field, timechar )
 
     call get_unit( output_unit )
 
-    open(unit=output_unit,file='VTK/boundary/'//trim( bcname(ib) )//'.vtu')
+    open(unit=output_unit,file='VTK/'//trim(timechar)//'/boundary/'//trim( bcname(ib) )//'.vtu')
 
     !
     ! > Header
@@ -594,7 +595,8 @@ subroutine vtm_write_scalar_field ( scalar_name, scalar_field, timechar )
 
       do i=1,nFaces(ib)
 
-        call read_line_faces_file_polyMesh(faces_file,nnodes,node,4)
+        call read_line_faces_file_polyMesh(faces_file,nnodes,node,4) 
+
         !read( faces_file, * ) nnodes,(node(k), k=1,nnodes )
 
         write( output_unit, '(10x,4i8)') (node(k)-1, k=1,nnodes )  

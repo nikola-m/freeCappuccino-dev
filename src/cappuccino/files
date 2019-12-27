@@ -14,6 +14,7 @@ bicgstab.f90
 dpcg.f90
 mgmres.f90
 gauss-seidel.f90
+linear_solvers.f90
 temperature.f90
 concentration.f90
 k_epsilon_std.f90
@@ -36,6 +37,8 @@ calcstress.f90
 calc_strain_and_vorticity.f90
 calcuvw.f90
 calc_statistics.f90
+CourantNo.f90
+constant_mass_flow_forcing.f90
 updateVelocityAtBoundary.f90
 correct_turbulence.f90
 correct_turbulence_inlet.f90

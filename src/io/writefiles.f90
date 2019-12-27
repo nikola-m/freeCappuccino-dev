@@ -14,22 +14,23 @@ subroutine writefiles
   use statistics
   use sparse_matrix
   use output
+  use utils, only: i4_to_s_left
 
   implicit none
 !
 !***********************************************************************
 !
   integer :: output_unit
-  ! integer :: i,ijb
+  character( len = 10) :: timech
 
   ! Write in a char variable current timestep number and create a folder with this name
-  write(timechar,'(i6)') itime
+  call i4_to_s_left ( itime, timech )
 
   !+-----------------------------------------------------------------------------+
 
   call get_unit( output_unit )
 
-  open(unit=output_unit,file='VTK/innerField-'//trim(adjustl(timechar))//'.vtu')
+  open(unit=output_unit,file='VTK/innerField_'//trim( timech )//'.vtu')
 
 
   ! Header
@@ -79,6 +80,7 @@ subroutine writefiles
 
   close( output_unit )
 
+  call vtm_write_scalar_field ( 'u-vel', u, timech )
 
   ! ! Recirculate output
   ! call get_unit( output_unit )

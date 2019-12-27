@@ -1,22 +1,36 @@
-         !# Correct driving force for a constant mass flow rate.......................
+subroutine constant_mass_flow_forcing
+! 
+! Purpose:
+!  Correct driving force for a constant mass flow rate.
+! 
+  use types
+  use parameters, only: magUbar, gradPcmf
+  use variables, only: U
+  use sparse_matrix, only: apu
+  use fieldManipulation, only: volumeWeightedAverage
 
-         ! # Extract the velocity in the flow direction
-         ! magUbarStar = ( flowDirection & U ).weightedAverage( mesh.V() )
-         magUbarStar = volumeWeightedAverage(U)
+  implicit none
 
-         ! # Calculate the pressure gradient increment needed to
-         ! # adjust the average flow-rate to the correct value
-         ! gragPplus = ( magUbar - magUbarStar ) / rUA.weightedAverage( mesh.V() )
-         rUAw = volumeWeightedAverage(APU)
-         gragPplus = ( magUbar - magUbarStar ) / rUAw
+  real(dp):: magUbarStar, rUAw, gragPplus, flowDirection
 
-         ! #  Correction
-         ! U.ext_assign( U + flowDirection * rUA * gragPplus )
-         flowDirection = 1.0_dp
-         U =  U + flowDirection * APU * gragPplus
+   ! # Extract the velocity in the flow direction
+   ! magUbarStar = ( flowDirection & U ).weightedAverage( mesh.V() )
+   magUbarStar = volumeWeightedAverage(U)
 
-         ! # Pressure gradient force that will drive the flow - we use it in calcuvw.
-         gradPcmf  = gradPcmf + gragPplus
+   ! # Calculate the pressure gradient increment needed to
+   ! # adjust the average flow-rate to the correct value
+   ! gragPplus = ( magUbar - magUbarStar ) / rUA.weightedAverage( mesh.V() )
+   rUAw = volumeWeightedAverage(APU)
+   gragPplus = ( magUbar - magUbarStar ) / rUAw
 
-         write(6,'(2(a,es13.6))') "Uncorrected Ubar = ",magUbarStar," pressure gradient = ",gradPcmf
-         !............................................................................
+   ! #  Correction
+   ! U.ext_assign( U + flowDirection * rUA * gragPplus )
+   flowDirection = 1.0_dp
+   U =  U + flowDirection * APU * gragPplus
+
+   ! # Pressure gradient force that will drive the flow - we use it in calcuvw.
+   gradPcmf  = gradPcmf + gragPplus
+
+   write(6,'(2(a,es13.6))') "Uncorrected Ubar = ",magUbarStar," pressure gradient = ",gradPcmf
+
+end subroutine

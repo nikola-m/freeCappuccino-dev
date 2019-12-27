@@ -1,4 +1,4 @@
-module linear_solver
+module linear_solvers
 
 !********************************************************************************************************************************132
 !
@@ -12,6 +12,7 @@ module linear_solver
 !    where all the solution parameters are provided within the data type, or it can accept a CSR matrix with other
 !    required parameters listed in a subroutine call. 
 !    The list of available linear solvers inlcude: 
+!      - Gauss-Seidell
 !      - Incomplete Cholesky Precodnitioned Conjugate Gradient - iccg
 !      - Diagonally Preconditioned CG - dpcg
 !      - Restarted GMRES with ILU preconditioner  - pmgmres_ilu,
@@ -25,9 +26,8 @@ module linear_solver
 !
   use types
   use parameters
-  use geometry, only: numCells
+  use geometry, only: numCells,numTotal
   use sparse_matrix, only: nnz, ioffset, ja, a, diag
-  ! use fvEquation
 
   implicit none
 
@@ -36,10 +36,10 @@ module linear_solver
 contains
 
 
-subroutine spsolve(solver, fi, rhs, itr_max, tol_abs, tol_rel, chvar)
+subroutine spsolve(solver, fi, rhs, res0, itr_max, tol_abs, tol_rel, chvar)
 !
 !  Purpose:
-!   Main routine for solution of sparse linear systems
+!   Main routine for solution of sparse linear systems, adjusted to use global variables of freeCappuccino.
 !
 !  Discussion:
 !    Call specific algorithm for iterative solution of linear systems based on given input.
@@ -51,45 +51,144 @@ subroutine spsolve(solver, fi, rhs, itr_max, tol_abs, tol_rel, chvar)
   character( len = *) :: solver                       ! Char string for linear solver name.
   real(dp), dimension(numTotal), intent(inout) :: fi  ! On input-current field; on output-the solution vector
   real(dp), dimension(numCells), intent(in) :: rhs    ! The right hand side of the linear system
+  real(dp), intent(out) :: res0                       ! Output - initial residual of the linear system in L1 norm 
   integer, intent(in) :: itr_max                      ! Maximum number of iterations
-  integer, intent(in) :: tol_abs                      ! Absolute tolerance level for residual
-  logical :: verbose
+  real(dp), intent(in) :: tol_abs                     ! Absolute tolerance level for residual
+  real(dp), intent(in) :: tol_rel                     ! Relative tolerance level for residual
+  character( len=* ), intent(in) :: chvar             ! Character string containing name of the solved field, printed on stdout
 
-  ! Picks up the value of LTEST given in input file.
-  verbose = ltest
- 
 
-  if( solver .eq. 'dcg' ) then
+  if( solver .eq. 'gauss-seidell') then
 
-    call dpcg( numCells, nnz, ioffset, ja, a, diag, fi, rhs, itr_max, tol_abs, tol_rel, chvar )
+    call GaussSeidel( numCells, nnz, ioffset, ja, a, diag, fi(1:numCells), rhs, res0, itr_max, tol_abs, tol_rel, chvar, ltest )
+
+  elseif( solver .eq. 'dcg' ) then
+
+    call dpcg( numCells, nnz, ioffset, ja, a, diag, fi(1:numCells), rhs, res0, itr_max, tol_abs, tol_rel, chvar, ltest )
 
   elseif( solver .eq. 'iccg' ) then 
 
-    call iccg( numCells, nnz, ioffset, ja, a, diag, fi, rhs, itr_max, tol_abs, tol_rel, chvar )
+    call iccg( numCells, nnz, ioffset, ja, a, diag, fi(1:numCells), rhs, res0, itr_max, tol_abs, tol_rel, chvar, ltest )
 
   elseif( solver .eq. 'bicgstab_ilu' ) then  
 
-    call bicgstab( numCells, nnz, ioffset, ja, a, diag, fi, rhs, itr_max, tol_abs, tol_rel, chvar ) 
-
-  elseif( solver .eq. 'lis' ) then 
-
-    call solve_csr( numCells, nnz, ioffset, ja, a, fi, rhs, itr_max, tol_abs, tol_rel, chvar)
+    call bicgstab( numCells, nnz, ioffset, ja, a, diag, fi(1:numCells), rhs, res0, itr_max, tol_abs, tol_rel, chvar, ltest ) 
 
   elseif( solver .eq. 'pmgmres_ilu' ) then 
 
+    ! ** NOTE for GMRES(m) **
     ! Here we have hardcoded the restart parameter - m in restarted GMRES algorithm - GMRES(m), to m=4. 
     ! Play with this number if you want, the greaer like m=20, better the convergence, but much more memory is required.
 
-    call pmgmres_ilu ( numCells, nnz, ioffset, ja, a, diag, fi, rhs, itr_max, 4, tol_abs, tol_rel, chvar, verbose )
+    call pmgmres_ilu( numCells, nnz, ioffset, ja, a, diag, fi(1:numCells), rhs, res0, itr_max, 4, tol_abs, tol_rel, chvar, ltest )
     
   endif
 
 
 end subroutine
 
+
 !***********************************************************************
 !
-subroutine dpcg(fi,ifi)
+subroutine GaussSeidel( n, nnz, ioffset, ja, a, diag, fi, rhs, res0, itr_max, tol_abs, tol_rel, chvar, verbose )
+!
+!***********************************************************************
+!
+!    This routine incorporates the  
+!    Gauss-Seidel solver for sparse matrices in CSR sparse matrix format
+!
+!    Writen by nikola mirkov, 2016. nmirkov@vinca.rs
+!
+!***********************************************************************
+!
+  implicit none
+!
+!***********************************************************************
+!
+  integer, intent(in) :: n                              ! Number of unknowns, length of a solution vector
+  integer, intent(in) :: nnz                            ! Number of non-zero elements in sparse matrix
+  integer, dimension(n+1), intent(in) :: ioffset        ! The offsets of each row in coef array
+  integer, dimension(nnz), intent(in) :: ja             ! Columns array
+  real(dp), dimension(nnz), intent(in) :: a             ! Coefficient array
+  integer, dimension(n), intent(in) :: diag             ! Position of diagonal elements in coeff. array
+  real(dp), dimension(n), intent(inout) :: fi           ! On input-current field; on output-the solution vector
+  real(dp), dimension(n), intent(in) :: rhs             ! The right hand side of the linear system
+  real(dp), intent(out) :: res0                         ! Output - initial residual of the linear system in L1 norm
+  integer, intent(in) :: itr_max                        ! Maximum number of iterations
+  real(dp), intent(in) :: tol_abs                       ! Absolute tolerance level for residual
+  real(dp), intent(in) :: tol_rel                       ! Relative tolerance level for residual
+  character( len=* ), intent(in) :: chvar               ! Character string containing name of the solved field, printed on stdout
+  logical, intent(in) :: verbose                        ! Boolean saying do we print residual of each iteration to stdout.
+
+!
+! Local variables
+!
+  integer :: i, k, l, itr_used
+  real(dp) :: rsm, resl
+  real(dp), dimension(n) :: res                         ! Residual vector
+
+!
+! Start iterations
+!
+
+  itr_used = 0
+
+  do l=1,itr_max
+
+!
+! Calculate initial residual vector and update the solution right away
+!
+  do i=1,n
+    res(i) = rhs(i) 
+    do k = ioffset(i),ioffset(i+1)-1
+      res(i) = res(i) -  a(k) * fi( ja(k) ) 
+    enddo
+    fi(i) = fi(i) + res(i)/(a( diag(i) )+small)   
+  enddo
+
+
+! L1-norm of residual
+  if(l.eq.1)  then
+    res0=sum( abs(res) )
+
+    if( res0.lt.tol_abs ) then
+      write(*,'(3a,1PE10.3,a,1PE10.3,a)') '  Gauss-Seidel:  Solving for ',trim( chvar ), &
+      ', Initial residual = ',res0,', Final residual = ',res0,', No Iterations 1'
+      return
+    endif  
+
+  endif
+
+  if( verbose .and. l.eq.1 ) write(*,'(20x,a,1pe10.3)') 'res0 = ',res0  
+
+  ! L1-norm of residual
+  resl = sum( abs(res) )
+
+  itr_used = itr_used + 1
+  
+!
+! Check convergence
+!
+  rsm = resl/(res0+small)
+  if( verbose ) write(*,'(19x,3a,i4,a,1pe10.3,a,1pe10.3)') ' fi=',trim( chvar ),' sweep = ',l,' resl = ',resl,' rsm = ',rsm
+  if( rsm.lt.tol_rel .or. resl.lt.tol_abs ) exit ! Criteria for exiting iterations.
+
+
+!
+! End of iteration loop
+!
+  end do
+
+! Write linear solver report:
+  write(*,'(3a,1PE10.3,a,1PE10.3,a,I0)') '  Gauss-Seidel:  Solving for ',trim( chvar ), &
+  ', Initial residual = ',res0,', Final residual = ',resl,', No Iterations ',itr_used 
+
+end subroutine
+
+
+!***********************************************************************
+!
+subroutine dpcg( n, nnz, ioffset, ja, a, diag, fi, rhs, res0, itr_max, tol_abs, tol_rel, chvar, verbose )
 !
 !***********************************************************************
 !
@@ -100,32 +199,32 @@ subroutine dpcg(fi,ifi)
 !
 !***********************************************************************
 !
-  use types 
-  use parameters
-  use geometry, only: numCells, numTotal
-  use sparse_matrix
-  use title_mod
-
   implicit none
 !
 !***********************************************************************
 !
-  integer, intent(in) :: ifi
-  real(dp), dimension(numTotal), intent(inout) :: fi 
-
+  integer, intent(in) :: n                              ! Number of unknowns, length of a solution vector
+  integer, intent(in) :: nnz                            ! Number of non-zero elements in sparse matrix
+  integer, dimension(n+1), intent(in) :: ioffset        ! The offsets of each row in coef array
+  integer, dimension(nnz), intent(in) :: ja             ! Columns array
+  real(dp), dimension(nnz), intent(in) :: a             ! Coefficient array
+  integer, dimension(n), intent(in) :: diag             ! Position of diagonal elements in coeff. array
+  real(dp), dimension(n), intent(inout) :: fi           ! On input-current field; on output-the solution vector
+  real(dp), dimension(n), intent(in) :: rhs             ! The right hand side of the linear system
+  real(dp), intent(out) :: res0                         ! Output - initial residual of the linear system in L1 norm
+  integer, intent(in) :: itr_max                        ! Maximum number of iterations
+  real(dp), intent(in) :: tol_abs                       ! Absolute tolerance level for residual
+  real(dp), intent(in) :: tol_rel                       ! Relative tolerance level for residual
+  character( len=* ), intent(in) :: chvar               ! Character string containing name of the solved field, printed on stdout
+  logical, intent(in) :: verbose                        ! Boolean saying do we print residual of each iteration to stdout.
 !
 ! Local variables
 !
-  integer :: i, k, ns, l, itr_used
-  real(dp), dimension(numCells) :: pk,zk
-  real(dp) :: rsm, resmax, res0, resl
-  real(dp) :: s0, sk, alf, bet, pkapk, tol
-
-! residual tolerance
-  resmax = sor(ifi)
-  tol=1e-13
-
-  itr_used = 0
+  integer :: i, k, l, itr_used
+  real(dp), dimension(n) :: pk,zk
+  real(dp) :: rsm, resl
+  real(dp) :: s0, sk, alf, bet, pkapk
+  real(dp), dimension(n) :: res                         ! Residual vector
 
 !
 ! Initalize working arrays
@@ -137,37 +236,215 @@ subroutine dpcg(fi,ifi)
 !
 ! Calculate initial residual vector and the norm
 !
-  do i=1,numCells
-    res(i) = su(i) 
+  do i=1,n
+    res(i) = rhs(i) 
     do k = ioffset(i),ioffset(i+1)-1
-      res(i) = res(i) -  a(k) * fi(ja(k)) 
+      res(i) = res(i) -  a(k) * fi( ja(k) ) 
+    enddo
+  enddo
+
+  ! L1-norm of the residual
+  res0=sum( abs(res) )
+  
+    if(res0.lt.tol_abs) then
+      write(*,'(3a,1PE10.3,a,1PE10.3,a)') '  PCG(Jacobi):  Solving for ',trim( chvar ), &
+      ', Initial residual = ',res0,', Final residual = ',res0,', No Iterations 0'
+      return
+    endif
+!
+! If verbose==true, print the norm 
+!
+  if( verbose ) write(*,'(20x,a,1pe10.3)') 'res0 = ',res0
+
+  s0=1.e20
+
+  itr_used = 0
+
+!
+! Start iterations
+!
+
+  do l=1,itr_max
+!
+! Solve for zk(ijk) -- diagonal preconditioner
+!
+  do i=1,n
+    zk(i) = res(i) / a( diag(i) )
+  enddo
+  
+  ! Inner product
+  sk = sum( res*zk ) !..or  dot_product(res,zk)
+
+!
+! Calculate beta
+!
+  bet=sk/s0
+
+!
+! Calculate new search vector pk
+!
+  pk = zk + bet*pk
+
+!
+! Calculate scalar product (pk.a pk) and alpha (overwrite zk)
+!
+  do i=1,n
+    zk(i) = 0.0_dp 
+    do k = ioffset(i),ioffset(i+1)-1
+      zk(i) = zk(i) + a(k) * pk( ja(k) ) 
+    enddo
+  enddo
+
+  ! Inner product
+  pkapk=sum( pk*zk )
+
+  alf=sk/pkapk
+
+  ! Update solution vector
+  fi(1:n) = fi(1:n) + alf*pk
+
+  ! Update residual vector
+  res = res - alf*zk
+
+  ! L1-norm of residual - current value
+  resl = sum( abs( res ) )
+
+  s0=sk
+
+  itr_used = itr_used + 1
+  
+!
+! Check convergence
+!
+
+  rsm = resl/(res0+small) ! Relative residual - current value
+
+  if( verbose ) write(*,'(19x,3a,i4,a,1pe10.3,a,1pe10.3)') ' fi=',trim( chvar) ,' sweep = ',l,' resl = ',resl,' rsm = ',rsm
+
+  if( rsm.lt.tol_rel .or. resl.lt.tol_abs ) exit ! Criteria for exiting iterations.
+
+!
+! End of iteration loop
+!
+  end do
+
+! Write linear solver report:
+  write(*,'(3a,1PE10.3,a,1PE10.3,a,I0)') &
+  '  PCG(Jacobi):  Solving for ',trim(chvar),', Initial residual = ',res0,', Final residual = ',resl,', No Iterations ',itr_used
+
+end subroutine
+
+
+!***********************************************************************
+!
+subroutine iccg( n, nnz, ioffset, ja, a, diag, fi, rhs, res0, itr_max, tol_abs, tol_rel, chvar, verbose )
+!
+!***********************************************************************
+!
+!    This routine incorporates the incomplete Cholesky preconditioned 
+!    Conjugate Gradient solver for symmetric matrices in CSR sparse matrix format
+!
+!    Writen by nikola mirkov, 2016. nmirkov@vinca.rs
+!
+!***********************************************************************
+!
+  implicit none
+!
+!***********************************************************************
+!
+  integer, intent(in) :: n                              ! Number of unknowns, length of a solution vector
+  integer, intent(in) :: nnz                            ! Number of non-zero elements in sparse matrix
+  integer, dimension(n+1), intent(in) :: ioffset        ! The offsets of each row in coef array
+  integer, dimension(nnz), intent(in) :: ja             ! Columns array
+  real(dp), dimension(nnz), intent(in) :: a             ! Coefficient array
+  integer, dimension(n), intent(in) :: diag             ! Position of diagonal elements in coeff. array
+  real(dp), dimension(n), intent(inout) :: fi           ! On input-current field; on output-the solution vector
+  real(dp), dimension(n), intent(in) :: rhs             ! The right hand side of the linear system
+  real(dp), intent(out) :: res0                         ! Output - initial residual of the linear system in L1 norm
+  integer, intent(in) :: itr_max                        ! Maximum number of iterations
+  real(dp), intent(in) :: tol_abs                       ! Absolute tolerance level for residual
+  real(dp), intent(in) :: tol_rel                       ! Relative tolerance level for residual
+  character( len=* ), intent(in) :: chvar               ! Character string containing name of the solved field, printed on stdout
+  logical, intent(in) :: verbose                        ! Boolean saying do we print residual of each iteration to stdout.
+
+!
+! Local variables
+!
+  integer :: i, k, l, itr_used
+  real(dp) :: rsm, resl
+  real(dp) :: s0, sk, alf, bet, pkapk
+  real(dp), dimension(n) :: pk,zk,d
+  real(dp), dimension(n) :: res                         ! Residual vector
+
+!
+! Initalize working arrays
+!
+  pk = 0.0_dp
+  zk = 0.0_dp
+  d = 0.0_dp
+  res = 0.0_dp
+!
+! Calculate initial residual vector and the norm
+!
+
+  do i=1,n
+    res(i) = rhs(i) 
+    do k = ioffset(i),ioffset(i+1)-1
+      res(i) = res(i) -  a(k) * fi( ja(k) ) 
     enddo
   enddo
 
   ! L^1-norm of residual
-  res0=sum(abs(res))
-  
-    if(res0.lt.tol) then
-      write(6,'(3a,1PE10.3,a,1PE10.3,a,I0)') '  PCG(Jacobi):  Solving for ',trim(chvarSolver(ifi)), &
-      ', Initial residual = ',res0,', Final residual = ',res0,', No Iterations ',0
+  res0=sum( abs(res) )
+
+    ! Initially converged solution
+    if( res0.lt.tol_abs ) then
+      write(*,'(3a,1PE10.3,a,1PE10.3,a)') '  PCG(IC0):  Solving for ',trim( chvar ), &
+      ', Initial residual = ',res0,', Final residual = ',res0,', No Iterations 0'
       return
-    endif
+    endif  
+
+  if( verbose ) write(*,'(20x,a,1pe10.3)') 'res0 = ',res0
+
 !
-! If ltest=true, print the norm 
+! Calculate elements of diagonal preconditioning matrix
 !
-  if(ltest) write(66,'(20x,a,1pe10.3)') 'res0 = ',res0
+  do i=1,n
+    d(i) = a( diag(i) )
+    do k = ioffset(i), diag(i)-1
+      d(i) = d(i) - a( k )**2 * d( ja( k )) 
+    end do
+    d(i) =  1.0_dp / d(i)
+  enddo
 
   s0=1.e20
+
+  itr_used = 0
+  
 !
 ! Start iterations
 !
-  ns=nsw(ifi)
-  do l=1,ns
+  do l=1,itr_max
 !
-! Solve for zk(ijk) -- diagonal preconditioner
+! Solve for zk(ijk) -- forward substitution
 !
-  do i=1,numCells
-    zk(i) = res(i) / a( diag(i) )
+  do i=1,n
+    zk(i) = res(i)
+    do k = ioffset(i), diag(i)-1
+      zk(i) = zk(i) -  a( k ) * zk( ja( k ))
+    end do
+    zk(i) = zk(i)*d(i)
+  enddo
+
+  zk = zk/(d+small)     
+!
+! Backward substitution
+!
+  do i=n,1,-1
+    do k = diag(i)+1, ioffset(i+1)-1
+      zk(i) = zk(i) - a( k ) * zk( ja( k ))
+    end do
+    zk(i) = zk(i)*d(i)
   enddo
   
   ! Inner product
@@ -186,7 +463,7 @@ subroutine dpcg(fi,ifi)
 !
 ! Calculate scalar product (pk.a pk) and alpha (overwrite zk)
 !
-  do i=1,numCells
+  do i=1,n
     zk(i) = 0.0_dp 
     do k = ioffset(i),ioffset(i+1)-1
       zk(i) = zk(i) + a(k) * pk( ja(k) ) 
@@ -199,13 +476,13 @@ subroutine dpcg(fi,ifi)
   alf=sk/pkapk
 
   ! Update solution vector
-  fi(1:numCells) = fi(1:numCells) + alf*pk
+  fi(1:n) = fi(1:n) + alf*pk
 
   ! Update residual vector
   res = res - alf*zk
 
-  ! L^1-norm of residual
-  resl = sum(abs(res))
+  ! L1-norm of residual
+  resl = sum( abs(res) )
 
   s0=sk
 
@@ -214,10 +491,12 @@ subroutine dpcg(fi,ifi)
 !
 ! Check convergence
 !
-  if(l.eq.1) resor(ifi) = res0
-  rsm = resl/(resor(ifi)+small)
-  if(ltest) write(6,'(19x,3a,i4,a,1pe10.3,a,1pe10.3)') ' fi=',chvar(ifi),' sweep = ',l,' resl = ',resl,' rsm = ',rsm
-  if(rsm.lt.resmax) exit
+
+  rsm = resl/(res0+small)
+
+  if( verbose ) write(*,'(19x,3a,i4,a,1pe10.3,a,1pe10.3)') ' fi=',trim( chvar),' sweep = ',l,' resl = ',resl,' rsm = ',rsm
+
+  if( rsm.lt.tol_rel .or. resl.lt.tol_abs ) exit ! Criteria for exiting iterations.
 
 !
 ! End of iteration loop
@@ -225,82 +504,219 @@ subroutine dpcg(fi,ifi)
   end do
 
 ! Write linear solver report:
-  write(6,'(3a,1PE10.3,a,1PE10.3,a,I0)') &
-  '  PCG(Jacobi):  Solving for ',trim(chvarSolver(ifi)), &
+  write(*,'(3a,1PE10.3,a,1PE10.3,a,I0)') '  PCG(IC0):  Solving for ',trim( chvar ), &
   ', Initial residual = ',res0,', Final residual = ',resl,', No Iterations ',itr_used
 
 end subroutine
 
-!***********************************************************************
-!
-subroutine GaussSeidel(fi,ifi)
-!
-!***********************************************************************
-!
-!    This routine incorporates the  
-!    Gauss-Seidel solver for sparse matrices in CSR sparse matrix format
-!
-!    Writen by nikola mirkov, 2016. nmirkov@vinca.rs
-!
-!***********************************************************************
-!
-  use types 
-  use parameters
-  use geometry, only: numCells,numTotal
-  use sparse_matrix
-  use title_mod
 
+subroutine bicgstab( n, nnz, ioffset, ja, a, diag, fi, rhs, res0, itr_max, tol_abs, tol_rel, chvar, verbose )
+!
+!***********************************************************************
+!
+! This routine incorporates the 
+! BiCGStab - Bi-Conjugate Gradient Stabilised (Van der Vorst 1990)
+! for sparse linear systems with matrices in CSR format.   
+! The precodnitioning is done by incomplete LU factorization.
+!
+!***********************************************************************
+!
   implicit none
 !
 !***********************************************************************
 !
-  integer, intent(in) :: ifi
-  real(dp), dimension(numTotal), intent(inout) :: fi 
+  integer, intent(in) :: n                              ! Number of unknowns, length of a solution vector
+  integer, intent(in) :: nnz                            ! Number of non-zero elements in sparse matrix
+  integer, dimension(n+1), intent(in) :: ioffset        ! The offsets of each row in coef array
+  integer, dimension(nnz), intent(in) :: ja             ! Columns array
+  real(dp), dimension(nnz), intent(in) :: a             ! Coefficient array
+  integer, dimension(n), intent(in) :: diag             ! Position of diagonal elements in coeff. array
+  real(dp), dimension(n), intent(inout) :: fi           ! On input-current field; on output-the solution vector
+  real(dp), dimension(n), intent(in) :: rhs             ! The right hand side of the linear system
+  real(dp), intent(out) :: res0                         ! Output - initial residual of the linear system in L1 norm
+  integer, intent(in) :: itr_max                        ! Maximum number of iterations
+  real(dp), intent(in) :: tol_abs                       ! Absolute tolerance level for residual
+  real(dp), intent(in) :: tol_rel                       ! Relative tolerance level for residual
+  character( len=* ), intent(in) :: chvar               ! Character string containing name of the solved field, printed on stdout
+  logical, intent(in) :: verbose                        ! Boolean saying do we print residual of each iteration to stdout.
 
 !
-! Local variables
+!     Local variables
 !
-  integer :: i, k, ns, l, itr_used
-  real(dp) :: rsm, resmax, res0, resl, tol
+  integer :: i, k, l, itr_used
+  real(dp) :: rsm, resl
+  real(dp) :: alf, beto, gam, bet, om, ukreso
+  real(dp), dimension(n) :: reso,pk,uk,zk,vk,d
+  real(dp), dimension(n) :: res                         ! Residual vector
 
+!
+! Calculate initial residual vector and the norm
+!
 
-! residual tolerance
-  resmax = sor(ifi)
-  tol = 1e-13
+  ! Vector form
+  ! res = rhs - a( ioffset(i),ioffset(i+1)-1 ) * fi( ja( ioffset(i),ioffset(i+1)-1 ) )
+
+  do i=1,n
+    res(i) = rhs(i) 
+    do k = ioffset(i),ioffset(i+1)-1
+      res(i) = res(i) -  a(k) * fi( ja(k) ) 
+    enddo
+  enddo
+
+  ! L1-norm of residual
+  res0=sum(abs(res))
+
+    if(res0.lt.tol_abs) then
+      write(*,'(3a,1PE10.3,a,1PE10.3,a)') '  BiCGStab(ILU(0)):  Solving for ',trim(chvar), &
+      ', Initial residual = ',res0,', Final residual = ',res0,', No Iterations 0'
+      return
+    endif
+
+  if( verbose ) write(*,'(20x,a,1pe10.3)') 'res0 = ',res0
+
+!
+! Calculate elements of diagonal preconditioning matrix
+!
+  do i=1,n
+    d(i) = a( diag(i) )
+    do k = ioffset(i), diag(i)-1
+      do l = diag( ja(k) ), ioffset( ja( k )+1 )-1
+        ! kolona u kojoj je trenutni dijagonalni element je i
+        ! kada je pronadje izlazi sa poslednjom vrednosti l indeksa:
+        if ( ja( l ) == i ) exit 
+      end do
+      d(i) = d(i) - a( k ) * d( ja( k )) * a( l )
+    end do
+    d(i) = 1.0_dp / d(i)
+  enddo 
+
+!
+! Initialize working arrays and constants
+!
+  reso  = res    
+  pk = 0.0_dp
+  uk = 0.0_dp
+  zk = 0.0_dp
+  vk = 0.0_dp
+
+  alf = 1.0_dp
+  beto = 1.0_dp
+  gam = 1.0_dp
 
   itr_used = 0
 
 !
 ! Start iterations
 !
-  ns=nsw(ifi)
-  do l=1,ns
+
+  do l=1,itr_max
 
 !
-! Calculate initial residual vector and the norm
+! Calculate beta and omega
 !
-  do i=1,numCells
-    res(i) = su(i) 
-    do k = ioffset(i),ioffset(i+1)-1
-      res(i) = res(i) -  a(k) * fi(ja(k)) 
-    enddo
-    fi(i) = fi(i) + res(i)/(a(diag(i))+small)   
+  bet = sum(res*reso)
+  om = bet*gam/(alf*beto+small)
+  beto = bet
+
+!
+! Calculate pk
+!
+  pk = res + om*(pk -alf*uk)
+
+
+!
+! Solve (M ZK = PK) - forward substitution
+!
+  do i=1,n
+    zk(i) = pk(i)
+    do k = ioffset(i), diag(i)-1
+      zk(i) = zk(i) -  a( k ) * zk( ja( k ))
+    end do
+    zk(i) = zk(i)*d(i)
+  enddo
+
+  zk = zk/(d+small)
+
+
+!
+! Backward substitution
+!
+  do i=n,1,-1
+    do k = diag(i)+1, ioffset(i+1)-1
+      zk(i) = zk(i) - a( k ) * zk( ja( k ))
+    end do
+    zk(i) = zk(i)*d(i)
   enddo
 
 
-! L1-norm of residual
-  if(l.eq.1)  then
-    res0=sum(abs(res))
+!
+! Matvec 1: Uk = A*pk
+!
+  do i=1,n
+    uk(i) = 0.0_dp
+    do k = ioffset(i),ioffset(i+1)-1
+      uk(i) = uk(i) +  a(k) * zk( ja(k) ) 
+    enddo
+  enddo
 
-    if(res0.lt.tol) then
-      write(6,'(3a,1PE10.3,a,1PE10.3,a,I0)') '  Gauss-Seidel:  Solving for ',trim(chvarSolver(ifi)), &
-      ', Initial residual = ',res0,', Final residual = ',res0,', No Iterations ',0
-      return
-    endif  
 
-  endif
+!
+! Calculate scalar product uk*reso, and gamma
+!
+  ukreso = sum(uk*reso)
+  gam = bet/ukreso
 
-  if(ltest.and.l.eq.1) write(6,'(20x,a,1pe10.3)') 'res0 = ',res0  
+
+!
+! Update 'fi' and calculate 'w' (overwrite 'res; - it is res-update)
+!
+  fi(1:n) = fi(1:n) + gam*zk
+  res     = res     - gam*uk   ! <- W
+
+
+!
+! Solve (M Y = W); Y overwrites zk; forward substitution
+!
+  do i=1,n
+    zk(i) = res(i)
+    do k = ioffset(i), diag(i)-1
+      zk(i) = zk(i) -  a( k ) * zk( ja( k ) )
+    end do
+    zk(i) = zk(i)*d(i)
+  enddo
+
+  zk = zk/(d+small)
+
+!
+! Backward substitution
+!
+  do i=n,1,-1
+    do k = diag(i)+1, ioffset(i+1)-1
+      zk(i) = zk(i) - a( k ) * zk( ja( k ) )
+    end do
+    zk(i) = zk(i)*d(i)
+  enddo
+
+!
+! Matvec 2: v = A*y (vk = A*zk); vk = csrMatVec(a,zk)
+!
+  do i=1,n
+    vk(i) = 0.0_dp
+    do k = ioffset(i),ioffset(i+1)-1
+      vk(i) = vk(i) +  a(k) * zk( ja(k) ) 
+    enddo
+  enddo  
+
+!
+! Calculate alpha (alf)
+!
+  alf = sum(vk*res) / (sum(vk*vk)+small)
+
+  ! Update solution vector
+  fi(1:n) = fi(1:n) + alf*zk
+
+  ! Update residual vector
+  res = res - alf*vk
 
   ! L1-norm of residual
   resl = sum(abs(res))
@@ -310,11 +726,12 @@ subroutine GaussSeidel(fi,ifi)
 !
 ! Check convergence
 !
-  if(l.eq.1) resor(ifi) = res0
-  rsm = resl/(resor(ifi)+small)
-  if(ltest) write(6,'(19x,3a,i4,a,1pe10.3,a,1pe10.3)') ' fi=',chvar(ifi),' sweep = ',l,' resl = ',resl,' rsm = ',rsm
-  if(rsm.lt.resmax) exit
 
+  rsm = resl/(res0+small)
+
+  if( verbose ) write(*,'(19x,3a,i4,a,1pe10.3,a,1pe10.3)') ' fi=',trim(chvar),' sweep = ',l,' resl = ',resl,' rsm = ',rsm
+
+  if( rsm.lt.tol_rel .or. resl.lt.tol_abs ) exit ! Criteria for exiting iterations.
 
 !
 ! End of iteration loop
@@ -322,12 +739,13 @@ subroutine GaussSeidel(fi,ifi)
   end do
 
 ! Write linear solver report:
-  write(6,'(3a,1PE10.3,a,1PE10.3,a,I0)') '  Gauss-Seidel:  Solving for ',trim(chvarSolver(ifi)), &
-  ', Initial residual = ',res0,', Final residual = ',resl,', No Iterations ',itr_used 
+  write(*,'(3a,1PE10.3,a,1PE10.3,a,I0)') '  BiCGStab(ILU(0)):  Solving for ',trim(chvar), &
+  ', Initial residual = ',res0,', Final residual = ',resl,', No Iterations ',itr_used
 
 end subroutine
 
-subroutine pmgmres_ilu ( n, nz_num, ia, ja, a, ua, x, iu, rhs, itr_max, mr, &
+
+subroutine pmgmres_ilu ( n, nz_num, ia, ja, a, ua, x, rhs, res0, itr_max, mr, &
   tol_abs, tol_rel, chvar, verbose )
 
 !*****************************************************************************80
@@ -407,6 +825,8 @@ subroutine pmgmres_ilu ( n, nz_num, ia, ja, a, ua, x, iu, rhs, itr_max, mr, &
 !    Input/output, real ( kind = 8 ) X(N); on input, an approximation to
 !    the solution.  On output, an improved approximation.
 !
+!    Output, real ( kind = 8 ) RES0, initial residual (L1) norm.
+!
 !    Input, real ( kind = 8 ) RHS(N), the right hand side of the linear system.
 !
 !    Input, integer ( kind = 4 ) ITR_MAX, the maximum number of (outer) 
@@ -430,7 +850,7 @@ subroutine pmgmres_ilu ( n, nz_num, ia, ja, a, ua, x, iu, rhs, itr_max, mr, &
   
   implicit none
 
-  character( len = * ) :: chvarSolver
+  character( len = * ) :: chvar
 
   integer ( kind = 4 ) mr
   integer ( kind = 4 ) n
@@ -444,7 +864,6 @@ subroutine pmgmres_ilu ( n, nz_num, ia, ja, a, ua, x, iu, rhs, itr_max, mr, &
   real ( kind = 8 ) h(mr+1,mr)
   real ( kind = 8 ) htmp
   integer ( kind = 4 ) i
-  integer ( kind = 4 ) iu
   integer ( kind = 4 ) ia(n+1)
   integer ( kind = 4 ) itr
   integer ( kind = 4 ) itr_max
@@ -468,6 +887,7 @@ subroutine pmgmres_ilu ( n, nz_num, ia, ja, a, ua, x, iu, rhs, itr_max, mr, &
   logical verbose
   real ( kind = 8 ) x(n)
   real ( kind = 8 ) y(mr+1)
+
 
   itr_used = 0
   rho_tol = 0. ! To eliminate 'uninitialized' warning.
@@ -597,7 +1017,7 @@ subroutine pmgmres_ilu ( n, nz_num, ia, ja, a, ua, x, iu, rhs, itr_max, mr, &
   end if
 
   ! Write linear solver report:
-  write(6,'(a,i2,3a,1PE10.3,a,1PE10.3,a,I0)') '  PMGMRES_ILU(',mr,'):  Solving for ',trim(chvarSolver), &
+  write(*,'(a,i2,3a,1PE10.3,a,1PE10.3,a,I0)') '  PMGMRES_ILU(',mr,'):  Solving for ',trim(chvar), &
   ', Initial residual = ',res0,', Final residual = ',rho,', No Iterations ',itr_used
 
 
@@ -1176,4 +1596,4 @@ subroutine r8vec_uniform_01 ( n, seed, r )
 end
 
 
-end module linear_solver
+end module linear_solvers

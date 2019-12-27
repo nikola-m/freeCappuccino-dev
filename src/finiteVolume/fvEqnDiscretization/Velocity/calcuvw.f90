@@ -27,7 +27,7 @@ subroutine calcuvw
   real(dp) :: sup, svp, swp
   real(dp) :: sum_off_diagonal_terms
 
-  logical :: ScndOrderWallBC_Model
+  ! logical :: ScndOrderWallBC_Model
   integer :: ib
   integer :: iWall, iSym
   integer :: ijb            ! Boundary field value indexes
