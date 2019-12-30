@@ -1,0 +1,71 @@
+\hypertarget{grad__gauss_8f90}{\section{src-\/par/grad\-\_\-gauss.f90 File Reference}
+\label{grad__gauss_8f90}\index{src-\/par/grad\-\_\-gauss.\-f90@{src-\/par/grad\-\_\-gauss.\-f90}}
+}
+\subsection*{Functions/\-Subroutines}
+\begin{DoxyCompactItemize}
+\item 
+subroutine \hyperlink{grad__gauss_8f90_a7f80df7cda6d211135b831baa2cd72f8}{grad\-\_\-gauss} (u, dudx, dudy, dudz)
+\item 
+subroutine \hyperlink{grad__gauss_8f90_a3e4eb348c20d51a6010dac1407330763}{gradco} (\hyperlink{CourantNo_8h_accea320a458bb8759c7ece360e05ddf4}{ijp}, ijn, xfc, yfc, zfc, sx, sy, sz, fif, fi, dfxo, dfyo, dfzo, dfx, dfy, dfz)
+\item 
+subroutine \hyperlink{grad__gauss_8f90_a046e26e7df92988f0f9d7e49b1e98014}{gradbc} (sx, sy, sz, fi, dfx, dfy, dfz)
+\end{DoxyCompactItemize}
+
+
+\subsection{Function/\-Subroutine Documentation}
+\hypertarget{grad__gauss_8f90_a7f80df7cda6d211135b831baa2cd72f8}{\index{grad\-\_\-gauss.\-f90@{grad\-\_\-gauss.\-f90}!grad\-\_\-gauss@{grad\-\_\-gauss}}
+\index{grad\-\_\-gauss@{grad\-\_\-gauss}!grad_gauss.f90@{grad\-\_\-gauss.\-f90}}
+\subsubsection[{grad\-\_\-gauss}]{\setlength{\rightskip}{0pt plus 5cm}subroutine grad\-\_\-gauss (
+\begin{DoxyParamCaption}
+\item[{real(dp), dimension(numtotal), intent(in)}]{u, }
+\item[{real(dp), dimension(numpcells), intent(inout)}]{dudx, }
+\item[{real(dp), dimension(numpcells), intent(inout)}]{dudy, }
+\item[{real(dp), dimension(numpcells), intent(inout)}]{dudz}
+\end{DoxyParamCaption}
+)}}\label{grad__gauss_8f90_a7f80df7cda6d211135b831baa2cd72f8}
+
+
+Here is the call graph for this function\-:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=230pt]{grad__gauss_8f90_a7f80df7cda6d211135b831baa2cd72f8_cgraph}
+\end{center}
+\end{figure}
+
+
+\hypertarget{grad__gauss_8f90_a046e26e7df92988f0f9d7e49b1e98014}{\index{grad\-\_\-gauss.\-f90@{grad\-\_\-gauss.\-f90}!gradbc@{gradbc}}
+\index{gradbc@{gradbc}!grad_gauss.f90@{grad\-\_\-gauss.\-f90}}
+\subsubsection[{gradbc}]{\setlength{\rightskip}{0pt plus 5cm}subroutine gradbc (
+\begin{DoxyParamCaption}
+\item[{real(dp), intent(in)}]{sx, }
+\item[{real(dp), intent(in)}]{sy, }
+\item[{real(dp), intent(in)}]{sz, }
+\item[{real(dp), intent(in)}]{fi, }
+\item[{real(dp), intent(inout)}]{dfx, }
+\item[{real(dp), intent(inout)}]{dfy, }
+\item[{real(dp), intent(inout)}]{dfz}
+\end{DoxyParamCaption}
+)}}\label{grad__gauss_8f90_a046e26e7df92988f0f9d7e49b1e98014}
+\hypertarget{grad__gauss_8f90_a3e4eb348c20d51a6010dac1407330763}{\index{grad\-\_\-gauss.\-f90@{grad\-\_\-gauss.\-f90}!gradco@{gradco}}
+\index{gradco@{gradco}!grad_gauss.f90@{grad\-\_\-gauss.\-f90}}
+\subsubsection[{gradco}]{\setlength{\rightskip}{0pt plus 5cm}subroutine gradco (
+\begin{DoxyParamCaption}
+\item[{integer, intent(in)}]{ijp, }
+\item[{integer, intent(in)}]{ijn, }
+\item[{real(dp), intent(in)}]{xfc, }
+\item[{real(dp), intent(in)}]{yfc, }
+\item[{real(dp), intent(in)}]{zfc, }
+\item[{real(dp), intent(in)}]{sx, }
+\item[{real(dp), intent(in)}]{sy, }
+\item[{real(dp), intent(in)}]{sz, }
+\item[{real(dp), intent(in)}]{fif, }
+\item[{real(dp), dimension(numtotal), intent(in)}]{fi, }
+\item[{real(dp), dimension(numcells), intent(in)}]{dfxo, }
+\item[{real(dp), dimension(numcells), intent(in)}]{dfyo, }
+\item[{real(dp), dimension(numcells), intent(in)}]{dfzo, }
+\item[{real(dp), dimension(numcells), intent(inout)}]{dfx, }
+\item[{real(dp), dimension(numcells), intent(inout)}]{dfy, }
+\item[{real(dp), dimension(numcells), intent(inout)}]{dfz}
+\end{DoxyParamCaption}
+)}}\label{grad__gauss_8f90_a3e4eb348c20d51a6010dac1407330763}

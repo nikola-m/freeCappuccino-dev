@@ -1,0 +1,165 @@
+\hypertarget{classk__epsilon__std}{\section{k\-\_\-epsilon\-\_\-std Module Reference}
+\label{classk__epsilon__std}\index{k\-\_\-epsilon\-\_\-std@{k\-\_\-epsilon\-\_\-std}}
+}
+\subsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+subroutine, public \hyperlink{classk__epsilon__std_aba071419bae84ce7a551ad2786481333}{correct\-\_\-turbulence\-\_\-k\-\_\-epsilon\-\_\-std} ()
+\item 
+subroutine, public \hyperlink{classk__epsilon__std_a1f9fe4f360a65f9d3f13c90cc30870b0}{correct\-\_\-turbulence\-\_\-inlet\-\_\-k\-\_\-epsilon\-\_\-std} ()
+\item 
+subroutine \hyperlink{classk__epsilon__std_a0a532283b523bd70158bf79b67d8d70e}{modify\-\_\-mu\-\_\-eff} ()
+\item 
+subroutine \hyperlink{classk__epsilon__std_a67a34b9f9d0599206952688d26e0d903}{modify\-\_\-mu\-\_\-eff\-\_\-inlet} ()
+\end{DoxyCompactItemize}
+\subsection*{Public Attributes}
+\begin{DoxyCompactItemize}
+\item 
+real(dp), parameter \hyperlink{classk__epsilon__std_ab8b45782adecbcc30ebf7b73d34a5ebd}{cmu} = 0.\-09\-\_\-dp
+\item 
+real(dp), parameter \hyperlink{classk__epsilon__std_a93ff6c4e5f083bc36a60209c171035f8}{c1} = 1.\-44\-\_\-dp
+\item 
+real(dp), parameter \hyperlink{classk__epsilon__std_a42ad7b9456f3e4d745d15cbfa7dd05c9}{c2} = 1.\-92\-\_\-dp
+\item 
+real(dp), parameter \hyperlink{classk__epsilon__std_a95e68b7b052df6838c3c516dd66cf0c5}{c3} = 1.\-44\-\_\-dp
+\item 
+real(dp), parameter \hyperlink{classk__epsilon__std_a6fa05e7c5d25ef3f137a8fbf3523f86e}{sigma\-\_\-k} = 1.\-0\-\_\-dp
+\item 
+real(dp), parameter \hyperlink{classk__epsilon__std_a915f88270b38c6960c564a1e62b30a4b}{sigma\-\_\-epsilon} = 1.\-3\-\_\-dp
+\item 
+real(dp), parameter \hyperlink{classk__epsilon__std_a5560ee6203c001281958b7335769e6e4}{cmu25} = sqrt(sqrt(\hyperlink{classk__epsilon__std_ab8b45782adecbcc30ebf7b73d34a5ebd}{cmu}))
+\item 
+real(dp), parameter \hyperlink{classk__epsilon__std_a385af61636cbfd6cd867898d54c297f1}{cmu75} = \hyperlink{classk__epsilon__std_a5560ee6203c001281958b7335769e6e4}{cmu25}$\ast$$\ast$3
+\end{DoxyCompactItemize}
+\subsection*{Private Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+subroutine \hyperlink{classk__epsilon__std_a154b083087bab8a4573406234b03da78}{calcsc} (Fi, d\-Fidxi, ifi)
+\end{DoxyCompactItemize}
+
+
+\subsection{Member Function/\-Subroutine Documentation}
+\hypertarget{classk__epsilon__std_a154b083087bab8a4573406234b03da78}{\index{k\-\_\-epsilon\-\_\-std@{k\-\_\-epsilon\-\_\-std}!calcsc@{calcsc}}
+\index{calcsc@{calcsc}!k_epsilon_std@{k\-\_\-epsilon\-\_\-std}}
+\subsubsection[{calcsc}]{\setlength{\rightskip}{0pt plus 5cm}subroutine k\-\_\-epsilon\-\_\-std\-::calcsc (
+\begin{DoxyParamCaption}
+\item[{real(dp), dimension(numtotal)}]{Fi, }
+\item[{real(dp), dimension(3,numcells)}]{d\-Fidxi, }
+\item[{integer, intent(in)}]{ifi}
+\end{DoxyParamCaption}
+)\hspace{0.3cm}{\ttfamily [private]}}}\label{classk__epsilon__std_a154b083087bab8a4573406234b03da78}
+
+
+Here is the call graph for this function\-:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classk__epsilon__std_a154b083087bab8a4573406234b03da78_cgraph}
+\end{center}
+\end{figure}
+
+
+\hypertarget{classk__epsilon__std_a1f9fe4f360a65f9d3f13c90cc30870b0}{\index{k\-\_\-epsilon\-\_\-std@{k\-\_\-epsilon\-\_\-std}!correct\-\_\-turbulence\-\_\-inlet\-\_\-k\-\_\-epsilon\-\_\-std@{correct\-\_\-turbulence\-\_\-inlet\-\_\-k\-\_\-epsilon\-\_\-std}}
+\index{correct\-\_\-turbulence\-\_\-inlet\-\_\-k\-\_\-epsilon\-\_\-std@{correct\-\_\-turbulence\-\_\-inlet\-\_\-k\-\_\-epsilon\-\_\-std}!k_epsilon_std@{k\-\_\-epsilon\-\_\-std}}
+\subsubsection[{correct\-\_\-turbulence\-\_\-inlet\-\_\-k\-\_\-epsilon\-\_\-std}]{\setlength{\rightskip}{0pt plus 5cm}subroutine, public k\-\_\-epsilon\-\_\-std\-::correct\-\_\-turbulence\-\_\-inlet\-\_\-k\-\_\-epsilon\-\_\-std (
+\begin{DoxyParamCaption}
+{}
+\end{DoxyParamCaption}
+)}}\label{classk__epsilon__std_a1f9fe4f360a65f9d3f13c90cc30870b0}
+
+
+Here is the call graph for this function\-:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classk__epsilon__std_a1f9fe4f360a65f9d3f13c90cc30870b0_cgraph}
+\end{center}
+\end{figure}
+
+
+\hypertarget{classk__epsilon__std_aba071419bae84ce7a551ad2786481333}{\index{k\-\_\-epsilon\-\_\-std@{k\-\_\-epsilon\-\_\-std}!correct\-\_\-turbulence\-\_\-k\-\_\-epsilon\-\_\-std@{correct\-\_\-turbulence\-\_\-k\-\_\-epsilon\-\_\-std}}
+\index{correct\-\_\-turbulence\-\_\-k\-\_\-epsilon\-\_\-std@{correct\-\_\-turbulence\-\_\-k\-\_\-epsilon\-\_\-std}!k_epsilon_std@{k\-\_\-epsilon\-\_\-std}}
+\subsubsection[{correct\-\_\-turbulence\-\_\-k\-\_\-epsilon\-\_\-std}]{\setlength{\rightskip}{0pt plus 5cm}subroutine, public k\-\_\-epsilon\-\_\-std\-::correct\-\_\-turbulence\-\_\-k\-\_\-epsilon\-\_\-std (
+\begin{DoxyParamCaption}
+{}
+\end{DoxyParamCaption}
+)}}\label{classk__epsilon__std_aba071419bae84ce7a551ad2786481333}
+
+
+Here is the call graph for this function\-:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classk__epsilon__std_aba071419bae84ce7a551ad2786481333_cgraph}
+\end{center}
+\end{figure}
+
+
+\hypertarget{classk__epsilon__std_a0a532283b523bd70158bf79b67d8d70e}{\index{k\-\_\-epsilon\-\_\-std@{k\-\_\-epsilon\-\_\-std}!modify\-\_\-mu\-\_\-eff@{modify\-\_\-mu\-\_\-eff}}
+\index{modify\-\_\-mu\-\_\-eff@{modify\-\_\-mu\-\_\-eff}!k_epsilon_std@{k\-\_\-epsilon\-\_\-std}}
+\subsubsection[{modify\-\_\-mu\-\_\-eff}]{\setlength{\rightskip}{0pt plus 5cm}subroutine k\-\_\-epsilon\-\_\-std\-::modify\-\_\-mu\-\_\-eff (
+\begin{DoxyParamCaption}
+{}
+\end{DoxyParamCaption}
+)}}\label{classk__epsilon__std_a0a532283b523bd70158bf79b67d8d70e}
+
+
+Here is the call graph for this function\-:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classk__epsilon__std_a0a532283b523bd70158bf79b67d8d70e_cgraph}
+\end{center}
+\end{figure}
+
+
+\hypertarget{classk__epsilon__std_a67a34b9f9d0599206952688d26e0d903}{\index{k\-\_\-epsilon\-\_\-std@{k\-\_\-epsilon\-\_\-std}!modify\-\_\-mu\-\_\-eff\-\_\-inlet@{modify\-\_\-mu\-\_\-eff\-\_\-inlet}}
+\index{modify\-\_\-mu\-\_\-eff\-\_\-inlet@{modify\-\_\-mu\-\_\-eff\-\_\-inlet}!k_epsilon_std@{k\-\_\-epsilon\-\_\-std}}
+\subsubsection[{modify\-\_\-mu\-\_\-eff\-\_\-inlet}]{\setlength{\rightskip}{0pt plus 5cm}subroutine k\-\_\-epsilon\-\_\-std\-::modify\-\_\-mu\-\_\-eff\-\_\-inlet (
+\begin{DoxyParamCaption}
+{}
+\end{DoxyParamCaption}
+)}}\label{classk__epsilon__std_a67a34b9f9d0599206952688d26e0d903}
+
+
+Here is the call graph for this function\-:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=274pt]{classk__epsilon__std_a67a34b9f9d0599206952688d26e0d903_cgraph}
+\end{center}
+\end{figure}
+
+
+
+
+\subsection{Member Data Documentation}
+\hypertarget{classk__epsilon__std_a93ff6c4e5f083bc36a60209c171035f8}{\index{k\-\_\-epsilon\-\_\-std@{k\-\_\-epsilon\-\_\-std}!c1@{c1}}
+\index{c1@{c1}!k_epsilon_std@{k\-\_\-epsilon\-\_\-std}}
+\subsubsection[{c1}]{\setlength{\rightskip}{0pt plus 5cm}real(dp), parameter k\-\_\-epsilon\-\_\-std\-::c1 = 1.\-44\-\_\-dp}}\label{classk__epsilon__std_a93ff6c4e5f083bc36a60209c171035f8}
+\hypertarget{classk__epsilon__std_a42ad7b9456f3e4d745d15cbfa7dd05c9}{\index{k\-\_\-epsilon\-\_\-std@{k\-\_\-epsilon\-\_\-std}!c2@{c2}}
+\index{c2@{c2}!k_epsilon_std@{k\-\_\-epsilon\-\_\-std}}
+\subsubsection[{c2}]{\setlength{\rightskip}{0pt plus 5cm}real(dp), parameter k\-\_\-epsilon\-\_\-std\-::c2 = 1.\-92\-\_\-dp}}\label{classk__epsilon__std_a42ad7b9456f3e4d745d15cbfa7dd05c9}
+\hypertarget{classk__epsilon__std_a95e68b7b052df6838c3c516dd66cf0c5}{\index{k\-\_\-epsilon\-\_\-std@{k\-\_\-epsilon\-\_\-std}!c3@{c3}}
+\index{c3@{c3}!k_epsilon_std@{k\-\_\-epsilon\-\_\-std}}
+\subsubsection[{c3}]{\setlength{\rightskip}{0pt plus 5cm}real(dp), parameter k\-\_\-epsilon\-\_\-std\-::c3 = 1.\-44\-\_\-dp}}\label{classk__epsilon__std_a95e68b7b052df6838c3c516dd66cf0c5}
+\hypertarget{classk__epsilon__std_ab8b45782adecbcc30ebf7b73d34a5ebd}{\index{k\-\_\-epsilon\-\_\-std@{k\-\_\-epsilon\-\_\-std}!cmu@{cmu}}
+\index{cmu@{cmu}!k_epsilon_std@{k\-\_\-epsilon\-\_\-std}}
+\subsubsection[{cmu}]{\setlength{\rightskip}{0pt plus 5cm}real(dp), parameter k\-\_\-epsilon\-\_\-std\-::cmu = 0.\-09\-\_\-dp}}\label{classk__epsilon__std_ab8b45782adecbcc30ebf7b73d34a5ebd}
+\hypertarget{classk__epsilon__std_a5560ee6203c001281958b7335769e6e4}{\index{k\-\_\-epsilon\-\_\-std@{k\-\_\-epsilon\-\_\-std}!cmu25@{cmu25}}
+\index{cmu25@{cmu25}!k_epsilon_std@{k\-\_\-epsilon\-\_\-std}}
+\subsubsection[{cmu25}]{\setlength{\rightskip}{0pt plus 5cm}real(dp), parameter k\-\_\-epsilon\-\_\-std\-::cmu25 = sqrt(sqrt({\bf cmu}))}}\label{classk__epsilon__std_a5560ee6203c001281958b7335769e6e4}
+\hypertarget{classk__epsilon__std_a385af61636cbfd6cd867898d54c297f1}{\index{k\-\_\-epsilon\-\_\-std@{k\-\_\-epsilon\-\_\-std}!cmu75@{cmu75}}
+\index{cmu75@{cmu75}!k_epsilon_std@{k\-\_\-epsilon\-\_\-std}}
+\subsubsection[{cmu75}]{\setlength{\rightskip}{0pt plus 5cm}real(dp), parameter k\-\_\-epsilon\-\_\-std\-::cmu75 = {\bf cmu25}$\ast$$\ast$3}}\label{classk__epsilon__std_a385af61636cbfd6cd867898d54c297f1}
+\hypertarget{classk__epsilon__std_a915f88270b38c6960c564a1e62b30a4b}{\index{k\-\_\-epsilon\-\_\-std@{k\-\_\-epsilon\-\_\-std}!sigma\-\_\-epsilon@{sigma\-\_\-epsilon}}
+\index{sigma\-\_\-epsilon@{sigma\-\_\-epsilon}!k_epsilon_std@{k\-\_\-epsilon\-\_\-std}}
+\subsubsection[{sigma\-\_\-epsilon}]{\setlength{\rightskip}{0pt plus 5cm}real(dp), parameter k\-\_\-epsilon\-\_\-std\-::sigma\-\_\-epsilon = 1.\-3\-\_\-dp}}\label{classk__epsilon__std_a915f88270b38c6960c564a1e62b30a4b}
+\hypertarget{classk__epsilon__std_a6fa05e7c5d25ef3f137a8fbf3523f86e}{\index{k\-\_\-epsilon\-\_\-std@{k\-\_\-epsilon\-\_\-std}!sigma\-\_\-k@{sigma\-\_\-k}}
+\index{sigma\-\_\-k@{sigma\-\_\-k}!k_epsilon_std@{k\-\_\-epsilon\-\_\-std}}
+\subsubsection[{sigma\-\_\-k}]{\setlength{\rightskip}{0pt plus 5cm}real(dp), parameter k\-\_\-epsilon\-\_\-std\-::sigma\-\_\-k = 1.\-0\-\_\-dp}}\label{classk__epsilon__std_a6fa05e7c5d25ef3f137a8fbf3523f86e}
+
+
+The documentation for this module was generated from the following file\-:\begin{DoxyCompactItemize}
+\item 
+src-\/par/\hyperlink{k__epsilon__std_8f90}{k\-\_\-epsilon\-\_\-std.\-f90}\end{DoxyCompactItemize}

@@ -1,0 +1,5 @@
+<map id="gradients::grad_lsq_qr" name="gradients::grad_lsq_qr">
+<area shape="rect" id="node2" href="$continuityErrors_8h.html#a19cbc190a1e0c99367ace992bda3cc11" title="nfaces" alt="" coords="245,5,307,32"/>
+<area shape="rect" id="node3" href="$classmatrix__module.html#a5d18b03838a0ba41d729284188c492cb" title="matrix_module::eye" alt="" coords="208,56,344,83"/>
+<area shape="rect" id="node4" href="$classmatrix__module.html#a8bf812de99eb57e458068660b1f18489" title="matrix_module::rank\l_one_update" alt="" coords="206,107,346,149"/>
+</map>

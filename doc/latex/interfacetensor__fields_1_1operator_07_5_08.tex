@@ -1,0 +1,74 @@
+\hypertarget{interfacetensor__fields_1_1operator_07_5_08}{\section{tensor\-\_\-fields\-:\-:operator($\ast$) Interface Reference}
+\label{interfacetensor__fields_1_1operator_07_5_08}\index{tensor\-\_\-fields\-::operator($\ast$)@{tensor\-\_\-fields\-::operator($\ast$)}}
+}
+\subsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+type(\hyperlink{structtensor__fields_1_1volvectorfield}{volvectorfield}) function \hyperlink{interfacetensor__fields_1_1operator_07_5_08_a6ed87260fa641e83275fceb9bc78a538}{scalar\-\_\-vector\-\_\-multiply} (alpha, v1)
+\item 
+type(\hyperlink{structtensor__fields_1_1volvectorfield}{volvectorfield}) function \hyperlink{interfacetensor__fields_1_1operator_07_5_08_a782eed0d4af5975e51dfaf824a39a29d}{scalar\-\_\-field\-\_\-vector\-\_\-multiply} (alpha, v1)
+\item 
+type(\hyperlink{structtensor__fields_1_1voltensorfield}{voltensorfield}) function \hyperlink{interfacetensor__fields_1_1operator_07_5_08_a3b6f9860834d05a397b96046c50aa32c}{scalar\-\_\-rank2\-\_\-tensor\-\_\-multiply} (alpha, T1)
+\item 
+type(\hyperlink{structtensor__fields_1_1voltensorfield}{voltensorfield}) function \hyperlink{interfacetensor__fields_1_1operator_07_5_08_aab41a7ee229630cc9b8271451682bcb3}{scalar\-\_\-field\-\_\-rank2\-\_\-tensor\-\_\-multiply} (alpha, T1)
+\item 
+type(\hyperlink{structtensor__fields_1_1surfacevectorfield}{surfacevectorfield}) function \hyperlink{interfacetensor__fields_1_1operator_07_5_08_a6620b9a71f05ff4be9b13c60eee023d1}{scalar\-\_\-surface\-\_\-vector\-\_\-multiply} (alpha, v1)
+\item 
+type(\hyperlink{structtensor__fields_1_1surfacevectorfield}{surfacevectorfield}) function \hyperlink{interfacetensor__fields_1_1operator_07_5_08_a5dc351b77e0065d51ddefed50e72a3ca}{scalar\-\_\-field\-\_\-surface\-\_\-vector\-\_\-multiply} (alpha, v1)
+\end{DoxyCompactItemize}
+
+
+\subsection{Member Function/\-Subroutine Documentation}
+\hypertarget{interfacetensor__fields_1_1operator_07_5_08_aab41a7ee229630cc9b8271451682bcb3}{\index{tensor\-\_\-fields\-::operator($\ast$)@{tensor\-\_\-fields\-::operator($\ast$)}!scalar\-\_\-field\-\_\-rank2\-\_\-tensor\-\_\-multiply@{scalar\-\_\-field\-\_\-rank2\-\_\-tensor\-\_\-multiply}}
+\index{scalar\-\_\-field\-\_\-rank2\-\_\-tensor\-\_\-multiply@{scalar\-\_\-field\-\_\-rank2\-\_\-tensor\-\_\-multiply}!tensor_fields::operator(*)@{tensor\-\_\-fields\-::operator($\ast$)}}
+\subsubsection[{scalar\-\_\-field\-\_\-rank2\-\_\-tensor\-\_\-multiply}]{\setlength{\rightskip}{0pt plus 5cm}type({\bf voltensorfield}) function tensor\-\_\-fields\-::operator($\ast$)\-::scalar\-\_\-field\-\_\-rank2\-\_\-tensor\-\_\-multiply (
+\begin{DoxyParamCaption}
+\item[{real(dp), dimension(numcells), intent(in)}]{alpha, }
+\item[{type({\bf voltensorfield}), intent(in)}]{T1}
+\end{DoxyParamCaption}
+)}}\label{interfacetensor__fields_1_1operator_07_5_08_aab41a7ee229630cc9b8271451682bcb3}
+\hypertarget{interfacetensor__fields_1_1operator_07_5_08_a5dc351b77e0065d51ddefed50e72a3ca}{\index{tensor\-\_\-fields\-::operator($\ast$)@{tensor\-\_\-fields\-::operator($\ast$)}!scalar\-\_\-field\-\_\-surface\-\_\-vector\-\_\-multiply@{scalar\-\_\-field\-\_\-surface\-\_\-vector\-\_\-multiply}}
+\index{scalar\-\_\-field\-\_\-surface\-\_\-vector\-\_\-multiply@{scalar\-\_\-field\-\_\-surface\-\_\-vector\-\_\-multiply}!tensor_fields::operator(*)@{tensor\-\_\-fields\-::operator($\ast$)}}
+\subsubsection[{scalar\-\_\-field\-\_\-surface\-\_\-vector\-\_\-multiply}]{\setlength{\rightskip}{0pt plus 5cm}type({\bf surfacevectorfield}) function tensor\-\_\-fields\-::operator($\ast$)\-::scalar\-\_\-field\-\_\-surface\-\_\-vector\-\_\-multiply (
+\begin{DoxyParamCaption}
+\item[{real(dp), dimension(numcells), intent(in)}]{alpha, }
+\item[{type({\bf surfacevectorfield}), intent(in)}]{v1}
+\end{DoxyParamCaption}
+)}}\label{interfacetensor__fields_1_1operator_07_5_08_a5dc351b77e0065d51ddefed50e72a3ca}
+\hypertarget{interfacetensor__fields_1_1operator_07_5_08_a782eed0d4af5975e51dfaf824a39a29d}{\index{tensor\-\_\-fields\-::operator($\ast$)@{tensor\-\_\-fields\-::operator($\ast$)}!scalar\-\_\-field\-\_\-vector\-\_\-multiply@{scalar\-\_\-field\-\_\-vector\-\_\-multiply}}
+\index{scalar\-\_\-field\-\_\-vector\-\_\-multiply@{scalar\-\_\-field\-\_\-vector\-\_\-multiply}!tensor_fields::operator(*)@{tensor\-\_\-fields\-::operator($\ast$)}}
+\subsubsection[{scalar\-\_\-field\-\_\-vector\-\_\-multiply}]{\setlength{\rightskip}{0pt plus 5cm}type({\bf volvectorfield}) function tensor\-\_\-fields\-::operator($\ast$)\-::scalar\-\_\-field\-\_\-vector\-\_\-multiply (
+\begin{DoxyParamCaption}
+\item[{real(dp), dimension(numcells), intent(in)}]{alpha, }
+\item[{type({\bf volvectorfield}), intent(in)}]{v1}
+\end{DoxyParamCaption}
+)}}\label{interfacetensor__fields_1_1operator_07_5_08_a782eed0d4af5975e51dfaf824a39a29d}
+\hypertarget{interfacetensor__fields_1_1operator_07_5_08_a3b6f9860834d05a397b96046c50aa32c}{\index{tensor\-\_\-fields\-::operator($\ast$)@{tensor\-\_\-fields\-::operator($\ast$)}!scalar\-\_\-rank2\-\_\-tensor\-\_\-multiply@{scalar\-\_\-rank2\-\_\-tensor\-\_\-multiply}}
+\index{scalar\-\_\-rank2\-\_\-tensor\-\_\-multiply@{scalar\-\_\-rank2\-\_\-tensor\-\_\-multiply}!tensor_fields::operator(*)@{tensor\-\_\-fields\-::operator($\ast$)}}
+\subsubsection[{scalar\-\_\-rank2\-\_\-tensor\-\_\-multiply}]{\setlength{\rightskip}{0pt plus 5cm}type({\bf voltensorfield}) function tensor\-\_\-fields\-::operator($\ast$)\-::scalar\-\_\-rank2\-\_\-tensor\-\_\-multiply (
+\begin{DoxyParamCaption}
+\item[{real(dp), intent(in)}]{alpha, }
+\item[{type({\bf voltensorfield}), intent(in)}]{T1}
+\end{DoxyParamCaption}
+)}}\label{interfacetensor__fields_1_1operator_07_5_08_a3b6f9860834d05a397b96046c50aa32c}
+\hypertarget{interfacetensor__fields_1_1operator_07_5_08_a6620b9a71f05ff4be9b13c60eee023d1}{\index{tensor\-\_\-fields\-::operator($\ast$)@{tensor\-\_\-fields\-::operator($\ast$)}!scalar\-\_\-surface\-\_\-vector\-\_\-multiply@{scalar\-\_\-surface\-\_\-vector\-\_\-multiply}}
+\index{scalar\-\_\-surface\-\_\-vector\-\_\-multiply@{scalar\-\_\-surface\-\_\-vector\-\_\-multiply}!tensor_fields::operator(*)@{tensor\-\_\-fields\-::operator($\ast$)}}
+\subsubsection[{scalar\-\_\-surface\-\_\-vector\-\_\-multiply}]{\setlength{\rightskip}{0pt plus 5cm}type({\bf surfacevectorfield}) function tensor\-\_\-fields\-::operator($\ast$)\-::scalar\-\_\-surface\-\_\-vector\-\_\-multiply (
+\begin{DoxyParamCaption}
+\item[{real(dp), intent(in)}]{alpha, }
+\item[{type({\bf surfacevectorfield}), intent(in)}]{v1}
+\end{DoxyParamCaption}
+)}}\label{interfacetensor__fields_1_1operator_07_5_08_a6620b9a71f05ff4be9b13c60eee023d1}
+\hypertarget{interfacetensor__fields_1_1operator_07_5_08_a6ed87260fa641e83275fceb9bc78a538}{\index{tensor\-\_\-fields\-::operator($\ast$)@{tensor\-\_\-fields\-::operator($\ast$)}!scalar\-\_\-vector\-\_\-multiply@{scalar\-\_\-vector\-\_\-multiply}}
+\index{scalar\-\_\-vector\-\_\-multiply@{scalar\-\_\-vector\-\_\-multiply}!tensor_fields::operator(*)@{tensor\-\_\-fields\-::operator($\ast$)}}
+\subsubsection[{scalar\-\_\-vector\-\_\-multiply}]{\setlength{\rightskip}{0pt plus 5cm}type({\bf volvectorfield}) function tensor\-\_\-fields\-::operator($\ast$)\-::scalar\-\_\-vector\-\_\-multiply (
+\begin{DoxyParamCaption}
+\item[{real(dp), intent(in)}]{alpha, }
+\item[{type({\bf volvectorfield}), intent(in)}]{v1}
+\end{DoxyParamCaption}
+)}}\label{interfacetensor__fields_1_1operator_07_5_08_a6ed87260fa641e83275fceb9bc78a538}
+
+
+The documentation for this interface was generated from the following file\-:\begin{DoxyCompactItemize}
+\item 
+src-\/par/\hyperlink{tensor__fields_8f90}{tensor\-\_\-fields.\-f90}\end{DoxyCompactItemize}

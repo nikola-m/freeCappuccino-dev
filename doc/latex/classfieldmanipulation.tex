@@ -1,0 +1,262 @@
+\hypertarget{classfieldmanipulation}{\section{fieldmanipulation Module Reference}
+\label{classfieldmanipulation}\index{fieldmanipulation@{fieldmanipulation}}
+}
+\subsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+real(dp) function \hyperlink{classfieldmanipulation_a0bdf9e1dcd8cee01d2a1f90bb96a1583}{volumeweightedaverage} (U)
+\item 
+subroutine \hyperlink{classfieldmanipulation_ad3594b987621ee1b66dc23373cba6482}{calcpressdiv}
+\item 
+real(dp) function, dimension(numcells) \hyperlink{classfieldmanipulation_aa58beed06659b15ede41acc5c6249991}{expldiv} (u)
+\item 
+subroutine \hyperlink{classfieldmanipulation_a8fa4949333251cce2f68dd0566a71e7b}{presfacedivinner} (\hyperlink{CourantNo_8h_accea320a458bb8759c7ece360e05ddf4}{ijp}, ijn, xfc, yfc, zfc, sx, sy, sz, fif, fi, df, dfxe, dfye, dfze)
+\item 
+subroutine \hyperlink{classfieldmanipulation_afbd4007fedcd5c8960dfc4a3905349a9}{facedivinner} (\hyperlink{CourantNo_8h_accea320a458bb8759c7ece360e05ddf4}{ijp}, ijn, xfc, yfc, zfc, sx, sy, sz, fif, fi, df, dfxe)
+\item 
+subroutine \hyperlink{classfieldmanipulation_aa28be3da5dcf8b277c6c28391f01a06e}{facedivboundary} (sx, sy, sz, fi, dfx)
+\item 
+subroutine \hyperlink{classfieldmanipulation_afe436887e04bd6717076c2bee1210f19}{presfacedivboundary} (sx, sy, sz, fi, dfx, dfy, dfz)
+\item 
+real(dp) function, dimension(numcells) \hyperlink{classfieldmanipulation_a8527c697c24116df3c60fce525a2c364}{average} (u)
+\item 
+real(dp) function, dimension(numfaces) \hyperlink{classfieldmanipulation_abe2f38fcc53d73b51061465e3cf9e3dd}{interpolate} (u)
+\item 
+real(dp) function, dimension(numcells) \hyperlink{classfieldmanipulation_a3f3fb8bda2659dd1f034ef8c5a99b405}{surfacesum} (u)
+\item 
+real(dp) function, dimension(numcells) \hyperlink{classfieldmanipulation_a3212f37b15b79464ad49e662e2a5a394}{surfaceintegrate} (u)
+\item 
+subroutine \hyperlink{classfieldmanipulation_aba8cce868dfdd1d679c48022ed786ea8}{faceinterpolatecdscorr} (\hyperlink{CourantNo_8h_accea320a458bb8759c7ece360e05ddf4}{ijp}, ijn, xfc, yfc, zfc, fif, fi, df, fie)
+\item 
+subroutine \hyperlink{classfieldmanipulation_a3e8ca2ca22fb46938f8a479a82c90205}{add\-\_\-random\-\_\-noise\-\_\-to\-\_\-field} (Phi, percent)
+\end{DoxyCompactItemize}
+
+
+\subsection{Member Function/\-Subroutine Documentation}
+\hypertarget{classfieldmanipulation_a3e8ca2ca22fb46938f8a479a82c90205}{\index{fieldmanipulation@{fieldmanipulation}!add\-\_\-random\-\_\-noise\-\_\-to\-\_\-field@{add\-\_\-random\-\_\-noise\-\_\-to\-\_\-field}}
+\index{add\-\_\-random\-\_\-noise\-\_\-to\-\_\-field@{add\-\_\-random\-\_\-noise\-\_\-to\-\_\-field}!fieldmanipulation@{fieldmanipulation}}
+\subsubsection[{add\-\_\-random\-\_\-noise\-\_\-to\-\_\-field}]{\setlength{\rightskip}{0pt plus 5cm}subroutine fieldmanipulation\-::add\-\_\-random\-\_\-noise\-\_\-to\-\_\-field (
+\begin{DoxyParamCaption}
+\item[{real(dp), dimension(numtotal), intent(inout)}]{Phi, }
+\item[{integer, intent(in)}]{percent}
+\end{DoxyParamCaption}
+)}}\label{classfieldmanipulation_a3e8ca2ca22fb46938f8a479a82c90205}
+
+
+Here is the call graph for this function\-:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classfieldmanipulation_a3e8ca2ca22fb46938f8a479a82c90205_cgraph}
+\end{center}
+\end{figure}
+
+
+\hypertarget{classfieldmanipulation_a8527c697c24116df3c60fce525a2c364}{\index{fieldmanipulation@{fieldmanipulation}!average@{average}}
+\index{average@{average}!fieldmanipulation@{fieldmanipulation}}
+\subsubsection[{average}]{\setlength{\rightskip}{0pt plus 5cm}real(dp) function, dimension(numcells) fieldmanipulation\-::average (
+\begin{DoxyParamCaption}
+\item[{real(dp), dimension(numtotal)}]{u}
+\end{DoxyParamCaption}
+)}}\label{classfieldmanipulation_a8527c697c24116df3c60fce525a2c364}
+
+
+Here is the call graph for this function\-:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=308pt]{classfieldmanipulation_a8527c697c24116df3c60fce525a2c364_cgraph}
+\end{center}
+\end{figure}
+
+
+\hypertarget{classfieldmanipulation_ad3594b987621ee1b66dc23373cba6482}{\index{fieldmanipulation@{fieldmanipulation}!calcpressdiv@{calcpressdiv}}
+\index{calcpressdiv@{calcpressdiv}!fieldmanipulation@{fieldmanipulation}}
+\subsubsection[{calcpressdiv}]{\setlength{\rightskip}{0pt plus 5cm}subroutine fieldmanipulation\-::calcpressdiv (
+\begin{DoxyParamCaption}
+{}
+\end{DoxyParamCaption}
+)}}\label{classfieldmanipulation_ad3594b987621ee1b66dc23373cba6482}
+
+
+Here is the call graph for this function\-:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classfieldmanipulation_ad3594b987621ee1b66dc23373cba6482_cgraph}
+\end{center}
+\end{figure}
+
+
+\hypertarget{classfieldmanipulation_aa58beed06659b15ede41acc5c6249991}{\index{fieldmanipulation@{fieldmanipulation}!expldiv@{expldiv}}
+\index{expldiv@{expldiv}!fieldmanipulation@{fieldmanipulation}}
+\subsubsection[{expldiv}]{\setlength{\rightskip}{0pt plus 5cm}real(dp) function, dimension(numcells) fieldmanipulation\-::expldiv (
+\begin{DoxyParamCaption}
+\item[{real(dp), dimension(numtotal)}]{u}
+\end{DoxyParamCaption}
+)}}\label{classfieldmanipulation_aa58beed06659b15ede41acc5c6249991}
+
+
+Here is the call graph for this function\-:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=308pt]{classfieldmanipulation_aa58beed06659b15ede41acc5c6249991_cgraph}
+\end{center}
+\end{figure}
+
+
+\hypertarget{classfieldmanipulation_aa28be3da5dcf8b277c6c28391f01a06e}{\index{fieldmanipulation@{fieldmanipulation}!facedivboundary@{facedivboundary}}
+\index{facedivboundary@{facedivboundary}!fieldmanipulation@{fieldmanipulation}}
+\subsubsection[{facedivboundary}]{\setlength{\rightskip}{0pt plus 5cm}subroutine fieldmanipulation\-::facedivboundary (
+\begin{DoxyParamCaption}
+\item[{real(dp), intent(in)}]{sx, }
+\item[{real(dp), intent(in)}]{sy, }
+\item[{real(dp), intent(in)}]{sz, }
+\item[{real(dp), intent(in)}]{fi, }
+\item[{real(dp), intent(inout)}]{dfx}
+\end{DoxyParamCaption}
+)}}\label{classfieldmanipulation_aa28be3da5dcf8b277c6c28391f01a06e}
+\hypertarget{classfieldmanipulation_afbd4007fedcd5c8960dfc4a3905349a9}{\index{fieldmanipulation@{fieldmanipulation}!facedivinner@{facedivinner}}
+\index{facedivinner@{facedivinner}!fieldmanipulation@{fieldmanipulation}}
+\subsubsection[{facedivinner}]{\setlength{\rightskip}{0pt plus 5cm}subroutine fieldmanipulation\-::facedivinner (
+\begin{DoxyParamCaption}
+\item[{integer, intent(in)}]{ijp, }
+\item[{integer, intent(in)}]{ijn, }
+\item[{real(dp), intent(in)}]{xfc, }
+\item[{real(dp), intent(in)}]{yfc, }
+\item[{real(dp), intent(in)}]{zfc, }
+\item[{real(dp), intent(in)}]{sx, }
+\item[{real(dp), intent(in)}]{sy, }
+\item[{real(dp), intent(in)}]{sz, }
+\item[{real(dp), intent(in)}]{fif, }
+\item[{real(dp), dimension(numtotal), intent(in)}]{fi, }
+\item[{real(dp), dimension(3,numcells), intent(in)}]{df, }
+\item[{real(dp)}]{dfxe}
+\end{DoxyParamCaption}
+)}}\label{classfieldmanipulation_afbd4007fedcd5c8960dfc4a3905349a9}
+\hypertarget{classfieldmanipulation_aba8cce868dfdd1d679c48022ed786ea8}{\index{fieldmanipulation@{fieldmanipulation}!faceinterpolatecdscorr@{faceinterpolatecdscorr}}
+\index{faceinterpolatecdscorr@{faceinterpolatecdscorr}!fieldmanipulation@{fieldmanipulation}}
+\subsubsection[{faceinterpolatecdscorr}]{\setlength{\rightskip}{0pt plus 5cm}subroutine fieldmanipulation\-::faceinterpolatecdscorr (
+\begin{DoxyParamCaption}
+\item[{integer, intent(in)}]{ijp, }
+\item[{integer, intent(in)}]{ijn, }
+\item[{real(dp), intent(in)}]{xfc, }
+\item[{real(dp), intent(in)}]{yfc, }
+\item[{real(dp), intent(in)}]{zfc, }
+\item[{real(dp), intent(in)}]{fif, }
+\item[{real(dp), dimension(numtotal), intent(in)}]{fi, }
+\item[{real(dp), dimension(3,numcells), intent(in)}]{df, }
+\item[{real(dp)}]{fie}
+\end{DoxyParamCaption}
+)}}\label{classfieldmanipulation_aba8cce868dfdd1d679c48022ed786ea8}
+\hypertarget{classfieldmanipulation_abe2f38fcc53d73b51061465e3cf9e3dd}{\index{fieldmanipulation@{fieldmanipulation}!interpolate@{interpolate}}
+\index{interpolate@{interpolate}!fieldmanipulation@{fieldmanipulation}}
+\subsubsection[{interpolate}]{\setlength{\rightskip}{0pt plus 5cm}real(dp) function, dimension(numfaces) fieldmanipulation\-::interpolate (
+\begin{DoxyParamCaption}
+\item[{real(dp), dimension(numtotal)}]{u}
+\end{DoxyParamCaption}
+)}}\label{classfieldmanipulation_abe2f38fcc53d73b51061465e3cf9e3dd}
+
+
+Here is the call graph for this function\-:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=326pt]{classfieldmanipulation_abe2f38fcc53d73b51061465e3cf9e3dd_cgraph}
+\end{center}
+\end{figure}
+
+
+\hypertarget{classfieldmanipulation_afe436887e04bd6717076c2bee1210f19}{\index{fieldmanipulation@{fieldmanipulation}!presfacedivboundary@{presfacedivboundary}}
+\index{presfacedivboundary@{presfacedivboundary}!fieldmanipulation@{fieldmanipulation}}
+\subsubsection[{presfacedivboundary}]{\setlength{\rightskip}{0pt plus 5cm}subroutine fieldmanipulation\-::presfacedivboundary (
+\begin{DoxyParamCaption}
+\item[{real(dp), intent(in)}]{sx, }
+\item[{real(dp), intent(in)}]{sy, }
+\item[{real(dp), intent(in)}]{sz, }
+\item[{real(dp), intent(in)}]{fi, }
+\item[{real(dp), intent(inout)}]{dfx, }
+\item[{real(dp), intent(inout)}]{dfy, }
+\item[{real(dp), intent(inout)}]{dfz}
+\end{DoxyParamCaption}
+)}}\label{classfieldmanipulation_afe436887e04bd6717076c2bee1210f19}
+\hypertarget{classfieldmanipulation_a8fa4949333251cce2f68dd0566a71e7b}{\index{fieldmanipulation@{fieldmanipulation}!presfacedivinner@{presfacedivinner}}
+\index{presfacedivinner@{presfacedivinner}!fieldmanipulation@{fieldmanipulation}}
+\subsubsection[{presfacedivinner}]{\setlength{\rightskip}{0pt plus 5cm}subroutine fieldmanipulation\-::presfacedivinner (
+\begin{DoxyParamCaption}
+\item[{integer, intent(in)}]{ijp, }
+\item[{integer, intent(in)}]{ijn, }
+\item[{real(dp), intent(in)}]{xfc, }
+\item[{real(dp), intent(in)}]{yfc, }
+\item[{real(dp), intent(in)}]{zfc, }
+\item[{real(dp), intent(in)}]{sx, }
+\item[{real(dp), intent(in)}]{sy, }
+\item[{real(dp), intent(in)}]{sz, }
+\item[{real(dp), intent(in)}]{fif, }
+\item[{real(dp), dimension(numtotal), intent(in)}]{fi, }
+\item[{real(dp), dimension(3,numcells), intent(in)}]{df, }
+\item[{real(dp)}]{dfxe, }
+\item[{real(dp)}]{dfye, }
+\item[{real(dp)}]{dfze}
+\end{DoxyParamCaption}
+)}}\label{classfieldmanipulation_a8fa4949333251cce2f68dd0566a71e7b}
+\hypertarget{classfieldmanipulation_a3212f37b15b79464ad49e662e2a5a394}{\index{fieldmanipulation@{fieldmanipulation}!surfaceintegrate@{surfaceintegrate}}
+\index{surfaceintegrate@{surfaceintegrate}!fieldmanipulation@{fieldmanipulation}}
+\subsubsection[{surfaceintegrate}]{\setlength{\rightskip}{0pt plus 5cm}real(dp) function, dimension(numcells) fieldmanipulation\-::surfaceintegrate (
+\begin{DoxyParamCaption}
+\item[{real(dp), dimension(numtotal)}]{u}
+\end{DoxyParamCaption}
+)}}\label{classfieldmanipulation_a3212f37b15b79464ad49e662e2a5a394}
+
+
+Here is the call graph for this function\-:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=326pt]{classfieldmanipulation_a3212f37b15b79464ad49e662e2a5a394_cgraph}
+\end{center}
+\end{figure}
+
+
+\hypertarget{classfieldmanipulation_a3f3fb8bda2659dd1f034ef8c5a99b405}{\index{fieldmanipulation@{fieldmanipulation}!surfacesum@{surfacesum}}
+\index{surfacesum@{surfacesum}!fieldmanipulation@{fieldmanipulation}}
+\subsubsection[{surfacesum}]{\setlength{\rightskip}{0pt plus 5cm}real(dp) function, dimension(numcells) fieldmanipulation\-::surfacesum (
+\begin{DoxyParamCaption}
+\item[{real(dp), dimension(numtotal)}]{u}
+\end{DoxyParamCaption}
+)}}\label{classfieldmanipulation_a3f3fb8bda2659dd1f034ef8c5a99b405}
+
+
+Here is the call graph for this function\-:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=326pt]{classfieldmanipulation_a3f3fb8bda2659dd1f034ef8c5a99b405_cgraph}
+\end{center}
+\end{figure}
+
+
+\hypertarget{classfieldmanipulation_a0bdf9e1dcd8cee01d2a1f90bb96a1583}{\index{fieldmanipulation@{fieldmanipulation}!volumeweightedaverage@{volumeweightedaverage}}
+\index{volumeweightedaverage@{volumeweightedaverage}!fieldmanipulation@{fieldmanipulation}}
+\subsubsection[{volumeweightedaverage}]{\setlength{\rightskip}{0pt plus 5cm}real(dp) function fieldmanipulation\-::volumeweightedaverage (
+\begin{DoxyParamCaption}
+\item[{real(dp), dimension(numtotal), intent(in)}]{U}
+\end{DoxyParamCaption}
+)}}\label{classfieldmanipulation_a0bdf9e1dcd8cee01d2a1f90bb96a1583}
+
+
+Here is the call graph for this function\-:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=304pt]{classfieldmanipulation_a0bdf9e1dcd8cee01d2a1f90bb96a1583_cgraph}
+\end{center}
+\end{figure}
+
+
+
+
+The documentation for this module was generated from the following file\-:\begin{DoxyCompactItemize}
+\item 
+src-\/par/\hyperlink{fieldManipulation_8f90}{field\-Manipulation.\-f90}\end{DoxyCompactItemize}

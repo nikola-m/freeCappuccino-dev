@@ -1,0 +1,54 @@
+\hypertarget{interfacetensor__fields_1_1operator_07_8dot_8_08}{\section{tensor\-\_\-fields\-:\-:operator(.dot.) Interface Reference}
+\label{interfacetensor__fields_1_1operator_07_8dot_8_08}\index{tensor\-\_\-fields\-::operator(.\-dot.)@{tensor\-\_\-fields\-::operator(.\-dot.)}}
+}
+\subsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+real(dp) function, dimension(numcells) \hyperlink{interfacetensor__fields_1_1operator_07_8dot_8_08_a838256bff6e171fd3b62f4c1badd5ae1}{calc\-\_\-inner\-\_\-product} (v1, v2)
+\item 
+real(dp) function, dimension(numinnerfaces) \hyperlink{interfacetensor__fields_1_1operator_07_8dot_8_08_abae545e81e54059c0086d53b7172a7fc}{calc\-\_\-inner\-\_\-product\-\_\-surface\-\_\-vectors} (v1, v2)
+\item 
+type(\hyperlink{structtensor__fields_1_1volvectorfield}{volvectorfield}) function \hyperlink{interfacetensor__fields_1_1operator_07_8dot_8_08_a434df252f10aa77828f94376cd0c77ef}{calc\-\_\-inner\-\_\-product\-\_\-rank2\-\_\-and\-\_\-rank1\-\_\-tensors} (T1, v1)
+\item 
+type(\hyperlink{structtensor__fields_1_1volvectorfield}{volvectorfield}) function \hyperlink{interfacetensor__fields_1_1operator_07_8dot_8_08_a637050f8d6286c96c2a9091b07e2432d}{calc\-\_\-inner\-\_\-product\-\_\-rank1\-\_\-and\-\_\-rank2\-\_\-tensors} (v1, T1)
+\end{DoxyCompactItemize}
+
+
+\subsection{Member Function/\-Subroutine Documentation}
+\hypertarget{interfacetensor__fields_1_1operator_07_8dot_8_08_a838256bff6e171fd3b62f4c1badd5ae1}{\index{tensor\-\_\-fields\-::operator(.\-dot.)@{tensor\-\_\-fields\-::operator(.\-dot.)}!calc\-\_\-inner\-\_\-product@{calc\-\_\-inner\-\_\-product}}
+\index{calc\-\_\-inner\-\_\-product@{calc\-\_\-inner\-\_\-product}!tensor_fields::operator(.dot.)@{tensor\-\_\-fields\-::operator(.\-dot.)}}
+\subsubsection[{calc\-\_\-inner\-\_\-product}]{\setlength{\rightskip}{0pt plus 5cm}real(dp) function, dimension(numcells) tensor\-\_\-fields\-::operator(.dot.)\-::calc\-\_\-inner\-\_\-product (
+\begin{DoxyParamCaption}
+\item[{type({\bf volvectorfield}), intent(in)}]{v1, }
+\item[{type({\bf volvectorfield}), intent(in)}]{v2}
+\end{DoxyParamCaption}
+)}}\label{interfacetensor__fields_1_1operator_07_8dot_8_08_a838256bff6e171fd3b62f4c1badd5ae1}
+\hypertarget{interfacetensor__fields_1_1operator_07_8dot_8_08_a637050f8d6286c96c2a9091b07e2432d}{\index{tensor\-\_\-fields\-::operator(.\-dot.)@{tensor\-\_\-fields\-::operator(.\-dot.)}!calc\-\_\-inner\-\_\-product\-\_\-rank1\-\_\-and\-\_\-rank2\-\_\-tensors@{calc\-\_\-inner\-\_\-product\-\_\-rank1\-\_\-and\-\_\-rank2\-\_\-tensors}}
+\index{calc\-\_\-inner\-\_\-product\-\_\-rank1\-\_\-and\-\_\-rank2\-\_\-tensors@{calc\-\_\-inner\-\_\-product\-\_\-rank1\-\_\-and\-\_\-rank2\-\_\-tensors}!tensor_fields::operator(.dot.)@{tensor\-\_\-fields\-::operator(.\-dot.)}}
+\subsubsection[{calc\-\_\-inner\-\_\-product\-\_\-rank1\-\_\-and\-\_\-rank2\-\_\-tensors}]{\setlength{\rightskip}{0pt plus 5cm}type({\bf volvectorfield}) function tensor\-\_\-fields\-::operator(.dot.)\-::calc\-\_\-inner\-\_\-product\-\_\-rank1\-\_\-and\-\_\-rank2\-\_\-tensors (
+\begin{DoxyParamCaption}
+\item[{type({\bf volvectorfield}), intent(in)}]{v1, }
+\item[{type({\bf voltensorfield}), intent(in)}]{T1}
+\end{DoxyParamCaption}
+)}}\label{interfacetensor__fields_1_1operator_07_8dot_8_08_a637050f8d6286c96c2a9091b07e2432d}
+\hypertarget{interfacetensor__fields_1_1operator_07_8dot_8_08_a434df252f10aa77828f94376cd0c77ef}{\index{tensor\-\_\-fields\-::operator(.\-dot.)@{tensor\-\_\-fields\-::operator(.\-dot.)}!calc\-\_\-inner\-\_\-product\-\_\-rank2\-\_\-and\-\_\-rank1\-\_\-tensors@{calc\-\_\-inner\-\_\-product\-\_\-rank2\-\_\-and\-\_\-rank1\-\_\-tensors}}
+\index{calc\-\_\-inner\-\_\-product\-\_\-rank2\-\_\-and\-\_\-rank1\-\_\-tensors@{calc\-\_\-inner\-\_\-product\-\_\-rank2\-\_\-and\-\_\-rank1\-\_\-tensors}!tensor_fields::operator(.dot.)@{tensor\-\_\-fields\-::operator(.\-dot.)}}
+\subsubsection[{calc\-\_\-inner\-\_\-product\-\_\-rank2\-\_\-and\-\_\-rank1\-\_\-tensors}]{\setlength{\rightskip}{0pt plus 5cm}type({\bf volvectorfield}) function tensor\-\_\-fields\-::operator(.dot.)\-::calc\-\_\-inner\-\_\-product\-\_\-rank2\-\_\-and\-\_\-rank1\-\_\-tensors (
+\begin{DoxyParamCaption}
+\item[{type({\bf voltensorfield}), intent(in)}]{T1, }
+\item[{type({\bf volvectorfield}), intent(in)}]{v1}
+\end{DoxyParamCaption}
+)}}\label{interfacetensor__fields_1_1operator_07_8dot_8_08_a434df252f10aa77828f94376cd0c77ef}
+\hypertarget{interfacetensor__fields_1_1operator_07_8dot_8_08_abae545e81e54059c0086d53b7172a7fc}{\index{tensor\-\_\-fields\-::operator(.\-dot.)@{tensor\-\_\-fields\-::operator(.\-dot.)}!calc\-\_\-inner\-\_\-product\-\_\-surface\-\_\-vectors@{calc\-\_\-inner\-\_\-product\-\_\-surface\-\_\-vectors}}
+\index{calc\-\_\-inner\-\_\-product\-\_\-surface\-\_\-vectors@{calc\-\_\-inner\-\_\-product\-\_\-surface\-\_\-vectors}!tensor_fields::operator(.dot.)@{tensor\-\_\-fields\-::operator(.\-dot.)}}
+\subsubsection[{calc\-\_\-inner\-\_\-product\-\_\-surface\-\_\-vectors}]{\setlength{\rightskip}{0pt plus 5cm}real(dp) function, dimension(numinnerfaces) tensor\-\_\-fields\-::operator(.dot.)\-::calc\-\_\-inner\-\_\-product\-\_\-surface\-\_\-vectors (
+\begin{DoxyParamCaption}
+\item[{type({\bf surfacevectorfield}), intent(in)}]{v1, }
+\item[{type({\bf surfacevectorfield}), intent(in)}]{v2}
+\end{DoxyParamCaption}
+)}}\label{interfacetensor__fields_1_1operator_07_8dot_8_08_abae545e81e54059c0086d53b7172a7fc}
+
+
+The documentation for this interface was generated from the following file\-:\begin{DoxyCompactItemize}
+\item 
+src-\/par/\hyperlink{tensor__fields_8f90}{tensor\-\_\-fields.\-f90}\end{DoxyCompactItemize}

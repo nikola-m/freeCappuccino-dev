@@ -1,0 +1,419 @@
+\hypertarget{classgeometry}{\section{geometry Module Reference}
+\label{classgeometry}\index{geometry@{geometry}}
+}
+\subsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+subroutine \hyperlink{classgeometry_a6f11cfdf3b8f94b5dda77b3330f6428c}{read\-\_\-mesh}
+\item 
+subroutine \hyperlink{classgeometry_a5b97404630e45caf9cfe42e5986e1610}{triangle\-\_\-area\-\_\-vector} (px, py, pz, qx, qy, qz, nx, ny, nz)
+\item 
+pure real(dp) function \hyperlink{classgeometry_aecc1816d6f36536e7d0c6466597a621d}{cell\-\_\-volume\-\_\-part\-\_\-polymesh} (ax, ay, az, nx, ny, nz)
+\item 
+pure real(dp) function \hyperlink{classgeometry_a4e6945c0ecfba5f8bfd4426f0857eb74}{centroid\-\_\-component\-\_\-part\-\_\-polymesh} (ax, bx, cx, nx, \hyperlink{classgeometry_a4d57310a2f6f4431e6ec39d9633b3cc5}{vol})
+\item 
+real(dp) function \hyperlink{classgeometry_a23fc43cb57a6a3ff4ab9c1261b85ff9f}{determinant} (a1, a2, a3, b1, b2, b3, q1, q2, q3)
+\item 
+subroutine \hyperlink{classgeometry_aa93eef6306028fbc41a72afa77219e42}{find\-\_\-intersection\-\_\-point} (
+\item 
+subroutine \hyperlink{classgeometry_a26addf2bfa77af939dd112214572338b}{read\-\_\-line\-\_\-faces\-\_\-file\-\_\-polymesh} (\hyperlink{classgeometry_af70942cfbb3d083b361d7c30d7c7d1b8}{faces\-\_\-file}, nn, nod, nmax)
+\end{DoxyCompactItemize}
+\subsection*{Public Attributes}
+\begin{DoxyCompactItemize}
+\item 
+integer \hyperlink{classgeometry_a74e7aa9e5207d1bdf0ec33642daa1e95}{numnodes}
+\item 
+integer \hyperlink{classgeometry_a6316b2c2a707e4250801749fad266b81}{numcells}
+\item 
+integer \hyperlink{classgeometry_abe73a7c15a5676edffcb997de320903b}{numpcells}
+\item 
+integer \hyperlink{classgeometry_a1fe23be4aa394d4647eb94f232ef7be4}{numfaces}
+\item 
+integer \hyperlink{classgeometry_a3604c4b943618f96d25b4e57be2d730a}{numinnerfaces}
+\item 
+integer \hyperlink{classgeometry_aa40b31eef33895463f82107dec14911a}{numboundaryfaces}
+\item 
+integer \hyperlink{classgeometry_a4b36c67fd5fbba66cd159331a6449464}{numtotal}
+\item 
+integer \hyperlink{classgeometry_a18cc0b968a1496fa99a2ef47a0ee7d1a}{numboundaries}
+\item 
+integer, dimension(\-:), allocatable \hyperlink{classgeometry_abc180e7f216d7319e972a77e754cf1ba}{nfaces}
+\item 
+integer, dimension(\-:), allocatable \hyperlink{classgeometry_a18f4eb284c2fb036786e7cb078b1261b}{startface}
+\item 
+integer, dimension(\-:), allocatable \hyperlink{classgeometry_ac725fa5c48485899cdc2607d4c0e3278}{ibndvaluestart}
+\item 
+character(len=15), dimension(\-:), \\*
+allocatable \hyperlink{classgeometry_a4e43a18bec8fa1fa370aebdf28b26723}{bcname}
+\item 
+character(len=15), dimension(\-:), \\*
+allocatable \hyperlink{classgeometry_a273882b8b9ef9670ecef4c22d7a1ffc3}{bctype}
+\item 
+integer \hyperlink{classgeometry_af9bcf0023987fb42899faea73e6e719d}{npro}
+\item 
+integer \hyperlink{classgeometry_a7c3a12b979532a42fd4791cd336b388f}{ninl}
+\item 
+integer \hyperlink{classgeometry_af185a2e42ce8dc5f660f52f4e844d883}{nout}
+\item 
+integer \hyperlink{classgeometry_a3267813953228bd94c67d73bd878eb9c}{nsym}
+\item 
+integer \hyperlink{classgeometry_a3e083890c7aae9c07961696766208796}{nwal}
+\item 
+integer, parameter \hyperlink{classgeometry_aebf6156cf92933802643ed6612d80bcc}{nomax} = 30
+\item 
+real(dp), parameter \hyperlink{classgeometry_a8f9a710dae624d649ba6196d6a3ad819}{tiny} = 1e-\/30
+\item 
+integer \hyperlink{classgeometry_a4f9606dd6dec8a18282daf3096cd7074}{points\-\_\-file}
+\item 
+integer \hyperlink{classgeometry_af70942cfbb3d083b361d7c30d7c7d1b8}{faces\-\_\-file}
+\item 
+integer \hyperlink{classgeometry_aa4904f087664ad6358d283ca2e053b0f}{owner\-\_\-file}
+\item 
+integer \hyperlink{classgeometry_a76fd3a715a134c4e338b1bef0d53563b}{neighbour\-\_\-file}
+\item 
+integer \hyperlink{classgeometry_a7b1e102e0a1a96f15dcd1def8d7e0e28}{boundary\-\_\-file}
+\item 
+integer \hyperlink{classgeometry_a6d6c8b4ed2fdb31e8b906eccb7fe8bd2}{process\-\_\-file}
+\item 
+integer \hyperlink{classgeometry_aa32cd7bcc888322cd384ba928fbe0fd8}{glonodes}
+\item 
+integer \hyperlink{classgeometry_a0512cb49b2ee4ae8aa67fe7b3e9cfa25}{glocells}
+\item 
+integer \hyperlink{classgeometry_a11e0bee8bca796dfc9673a1652675d95}{glofaces}
+\item 
+integer \hyperlink{classgeometry_aa0b3019664f1e20f95c082706fbf4bf6}{gloifaces}
+\item 
+integer \hyperlink{classgeometry_ad1e038213bb054d1e90870329c685f60}{globfaces}
+\item 
+real(dp), dimension(\-:), allocatable \hyperlink{classgeometry_addb7458352afb3060d5831f54b39ca61}{x}
+\item 
+real(dp), dimension(\-:), allocatable \hyperlink{classgeometry_a12fdb27cf84ec561b9c20625748e8f57}{y}
+\item 
+real(dp), dimension(\-:), allocatable \hyperlink{classgeometry_a567da85e335951f534f57b51765df56a}{z}
+\item 
+real(dp), dimension(\-:), allocatable \hyperlink{classgeometry_ab8a1629eea878ff62c7dbd6b6025fc55}{xc}
+\item 
+real(dp), dimension(\-:), allocatable \hyperlink{classgeometry_a23fc04ce2affc5bb7f3b1f3464feab40}{yc}
+\item 
+real(dp), dimension(\-:), allocatable \hyperlink{classgeometry_accaf072ca71c8cf746b911dfc0165664}{zc}
+\item 
+real(dp), dimension(\-:), allocatable \hyperlink{classgeometry_a4d57310a2f6f4431e6ec39d9633b3cc5}{vol}
+\item 
+real(dp), dimension(\-:), allocatable \hyperlink{classgeometry_a51893a5f373a1a6c12894eeb216ecc59}{walldistance}
+\item 
+real(dp), dimension(\-:), allocatable \hyperlink{classgeometry_a471fde959c1d2bdc45facc53fae5fb5b}{arx}
+\item 
+real(dp), dimension(\-:), allocatable \hyperlink{classgeometry_a20e05e2b4e25753dc0892a77029b94b8}{ary}
+\item 
+real(dp), dimension(\-:), allocatable \hyperlink{classgeometry_af05cbfe19f538092a328e02ba17ec1b9}{arz}
+\item 
+real(dp), dimension(\-:), allocatable \hyperlink{classgeometry_a6be1b0f6e7647b5eea5975c28be87ba3}{xf}
+\item 
+real(dp), dimension(\-:), allocatable \hyperlink{classgeometry_a6f897e422e91f75c528d0c855a933271}{yf}
+\item 
+real(dp), dimension(\-:), allocatable \hyperlink{classgeometry_acf0149de3e29b6714898a4db86b62435}{zf}
+\item 
+real(dp), dimension(\-:), allocatable \hyperlink{classgeometry_adb87ebbb8b31be2d1372108e5057ab11}{xpp}
+\item 
+real(dp), dimension(\-:), allocatable \hyperlink{classgeometry_a0e0c8bc792d7ff52c12df810cb39bde6}{ypp}
+\item 
+real(dp), dimension(\-:), allocatable \hyperlink{classgeometry_a55be35632eac8306e28a7d900e1c9cb1}{zpp}
+\item 
+real(dp), dimension(\-:), allocatable \hyperlink{classgeometry_afd0076c8984ed089741c40a24b176665}{xnp}
+\item 
+real(dp), dimension(\-:), allocatable \hyperlink{classgeometry_a2fd843e613749c67542f4377ed724ef9}{ynp}
+\item 
+real(dp), dimension(\-:), allocatable \hyperlink{classgeometry_a40f59df46474b424b2545f108ac317ec}{znp}
+\item 
+real(dp), dimension(\-:), allocatable \hyperlink{classgeometry_a637d800def3bd03fb7b696a0a31d23f6}{facint}
+\item 
+real(dp), dimension(\-:), allocatable \hyperlink{classgeometry_a992699ec16084d3f8cf7423b32fc02b6}{fpro}
+\item 
+real(dp), dimension(\-:), allocatable \hyperlink{classgeometry_ad2388cd69f1b9efc5b4dafab1540e6fd}{srds}
+\item 
+real(dp), dimension(\-:), allocatable \hyperlink{classgeometry_a22e8c08158c2f0faf7a3ff6527281144}{dns}
+\item 
+real(dp), dimension(\-:), allocatable \hyperlink{classgeometry_ad4f99f0dbd2866ccd6bb897c324fbbb9}{srdw}
+\item 
+real(dp), dimension(\-:), allocatable \hyperlink{classgeometry_a15d5598fc8fd8adf2a3a0218d2aef488}{dnw}
+\item 
+integer, dimension(\-:), allocatable \hyperlink{classgeometry_ae59df205a86f69d3cc7ecf9917b3fc8d}{owner}
+\item 
+integer, dimension(\-:), allocatable \hyperlink{classgeometry_afc765695937174a634f048738ae0dc8e}{neighbour}
+\end{DoxyCompactItemize}
+
+
+\subsection{Member Function/\-Subroutine Documentation}
+\hypertarget{classgeometry_aecc1816d6f36536e7d0c6466597a621d}{\index{geometry@{geometry}!cell\-\_\-volume\-\_\-part\-\_\-polymesh@{cell\-\_\-volume\-\_\-part\-\_\-polymesh}}
+\index{cell\-\_\-volume\-\_\-part\-\_\-polymesh@{cell\-\_\-volume\-\_\-part\-\_\-polymesh}!geometry@{geometry}}
+\subsubsection[{cell\-\_\-volume\-\_\-part\-\_\-polymesh}]{\setlength{\rightskip}{0pt plus 5cm}pure real(dp) function geometry\-::cell\-\_\-volume\-\_\-part\-\_\-polymesh (
+\begin{DoxyParamCaption}
+\item[{real(dp), intent(in)}]{ax, }
+\item[{real(dp), intent(in)}]{ay, }
+\item[{real(dp), intent(in)}]{az, }
+\item[{real(dp), intent(in)}]{nx, }
+\item[{real(dp), intent(in)}]{ny, }
+\item[{real(dp), intent(in)}]{nz}
+\end{DoxyParamCaption}
+)}}\label{classgeometry_aecc1816d6f36536e7d0c6466597a621d}
+\hypertarget{classgeometry_a4e6945c0ecfba5f8bfd4426f0857eb74}{\index{geometry@{geometry}!centroid\-\_\-component\-\_\-part\-\_\-polymesh@{centroid\-\_\-component\-\_\-part\-\_\-polymesh}}
+\index{centroid\-\_\-component\-\_\-part\-\_\-polymesh@{centroid\-\_\-component\-\_\-part\-\_\-polymesh}!geometry@{geometry}}
+\subsubsection[{centroid\-\_\-component\-\_\-part\-\_\-polymesh}]{\setlength{\rightskip}{0pt plus 5cm}pure real(dp) function geometry\-::centroid\-\_\-component\-\_\-part\-\_\-polymesh (
+\begin{DoxyParamCaption}
+\item[{real(dp), intent(in)}]{ax, }
+\item[{real(dp), intent(in)}]{bx, }
+\item[{real(dp), intent(in)}]{cx, }
+\item[{real(dp), intent(in)}]{nx, }
+\item[{real(dp), intent(in)}]{vol}
+\end{DoxyParamCaption}
+)}}\label{classgeometry_a4e6945c0ecfba5f8bfd4426f0857eb74}
+\hypertarget{classgeometry_a23fc43cb57a6a3ff4ab9c1261b85ff9f}{\index{geometry@{geometry}!determinant@{determinant}}
+\index{determinant@{determinant}!geometry@{geometry}}
+\subsubsection[{determinant}]{\setlength{\rightskip}{0pt plus 5cm}real(dp) function geometry\-::determinant (
+\begin{DoxyParamCaption}
+\item[{real(dp)}]{a1, }
+\item[{real(dp)}]{a2, }
+\item[{real(dp)}]{a3, }
+\item[{real(dp)}]{b1, }
+\item[{real(dp)}]{b2, }
+\item[{real(dp)}]{b3, }
+\item[{real(dp)}]{q1, }
+\item[{real(dp)}]{q2, }
+\item[{real(dp)}]{q3}
+\end{DoxyParamCaption}
+)}}\label{classgeometry_a23fc43cb57a6a3ff4ab9c1261b85ff9f}
+\hypertarget{classgeometry_aa93eef6306028fbc41a72afa77219e42}{\index{geometry@{geometry}!find\-\_\-intersection\-\_\-point@{find\-\_\-intersection\-\_\-point}}
+\index{find\-\_\-intersection\-\_\-point@{find\-\_\-intersection\-\_\-point}!geometry@{geometry}}
+\subsubsection[{find\-\_\-intersection\-\_\-point}]{\setlength{\rightskip}{0pt plus 5cm}subroutine geometry\-::find\-\_\-intersection\-\_\-point (
+\begin{DoxyParamCaption}
+{}
+\end{DoxyParamCaption}
+)}}\label{classgeometry_aa93eef6306028fbc41a72afa77219e42}
+\hypertarget{classgeometry_a26addf2bfa77af939dd112214572338b}{\index{geometry@{geometry}!read\-\_\-line\-\_\-faces\-\_\-file\-\_\-polymesh@{read\-\_\-line\-\_\-faces\-\_\-file\-\_\-polymesh}}
+\index{read\-\_\-line\-\_\-faces\-\_\-file\-\_\-polymesh@{read\-\_\-line\-\_\-faces\-\_\-file\-\_\-polymesh}!geometry@{geometry}}
+\subsubsection[{read\-\_\-line\-\_\-faces\-\_\-file\-\_\-polymesh}]{\setlength{\rightskip}{0pt plus 5cm}subroutine geometry\-::read\-\_\-line\-\_\-faces\-\_\-file\-\_\-polymesh (
+\begin{DoxyParamCaption}
+\item[{integer, intent(in)}]{faces\-\_\-file, }
+\item[{integer, intent(out)}]{nn, }
+\item[{integer, dimension(nmax), intent(out)}]{nod, }
+\item[{integer, intent(in)}]{nmax}
+\end{DoxyParamCaption}
+)}}\label{classgeometry_a26addf2bfa77af939dd112214572338b}
+\hypertarget{classgeometry_a6f11cfdf3b8f94b5dda77b3330f6428c}{\index{geometry@{geometry}!read\-\_\-mesh@{read\-\_\-mesh}}
+\index{read\-\_\-mesh@{read\-\_\-mesh}!geometry@{geometry}}
+\subsubsection[{read\-\_\-mesh}]{\setlength{\rightskip}{0pt plus 5cm}subroutine geometry\-::read\-\_\-mesh (
+\begin{DoxyParamCaption}
+{}
+\end{DoxyParamCaption}
+)}}\label{classgeometry_a6f11cfdf3b8f94b5dda77b3330f6428c}
+
+
+Here is the call graph for this function\-:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classgeometry_a6f11cfdf3b8f94b5dda77b3330f6428c_cgraph}
+\end{center}
+\end{figure}
+
+
+\hypertarget{classgeometry_a5b97404630e45caf9cfe42e5986e1610}{\index{geometry@{geometry}!triangle\-\_\-area\-\_\-vector@{triangle\-\_\-area\-\_\-vector}}
+\index{triangle\-\_\-area\-\_\-vector@{triangle\-\_\-area\-\_\-vector}!geometry@{geometry}}
+\subsubsection[{triangle\-\_\-area\-\_\-vector}]{\setlength{\rightskip}{0pt plus 5cm}subroutine geometry\-::triangle\-\_\-area\-\_\-vector (
+\begin{DoxyParamCaption}
+\item[{real(dp), intent(in)}]{px, }
+\item[{real(dp), intent(in)}]{py, }
+\item[{real(dp), intent(in)}]{pz, }
+\item[{real(dp), intent(in)}]{qx, }
+\item[{real(dp), intent(in)}]{qy, }
+\item[{real(dp), intent(in)}]{qz, }
+\item[{real(dp), intent(inout)}]{nx, }
+\item[{real(dp), intent(inout)}]{ny, }
+\item[{real(dp), intent(inout)}]{nz}
+\end{DoxyParamCaption}
+)}}\label{classgeometry_a5b97404630e45caf9cfe42e5986e1610}
+
+
+\subsection{Member Data Documentation}
+\hypertarget{classgeometry_a471fde959c1d2bdc45facc53fae5fb5b}{\index{geometry@{geometry}!arx@{arx}}
+\index{arx@{arx}!geometry@{geometry}}
+\subsubsection[{arx}]{\setlength{\rightskip}{0pt plus 5cm}real(dp), dimension(\-:), allocatable geometry\-::arx}}\label{classgeometry_a471fde959c1d2bdc45facc53fae5fb5b}
+\hypertarget{classgeometry_a20e05e2b4e25753dc0892a77029b94b8}{\index{geometry@{geometry}!ary@{ary}}
+\index{ary@{ary}!geometry@{geometry}}
+\subsubsection[{ary}]{\setlength{\rightskip}{0pt plus 5cm}real(dp), dimension(\-:), allocatable geometry\-::ary}}\label{classgeometry_a20e05e2b4e25753dc0892a77029b94b8}
+\hypertarget{classgeometry_af05cbfe19f538092a328e02ba17ec1b9}{\index{geometry@{geometry}!arz@{arz}}
+\index{arz@{arz}!geometry@{geometry}}
+\subsubsection[{arz}]{\setlength{\rightskip}{0pt plus 5cm}real(dp), dimension(\-:), allocatable geometry\-::arz}}\label{classgeometry_af05cbfe19f538092a328e02ba17ec1b9}
+\hypertarget{classgeometry_a4e43a18bec8fa1fa370aebdf28b26723}{\index{geometry@{geometry}!bcname@{bcname}}
+\index{bcname@{bcname}!geometry@{geometry}}
+\subsubsection[{bcname}]{\setlength{\rightskip}{0pt plus 5cm}character(len=15), dimension(\-:), allocatable geometry\-::bcname}}\label{classgeometry_a4e43a18bec8fa1fa370aebdf28b26723}
+\hypertarget{classgeometry_a273882b8b9ef9670ecef4c22d7a1ffc3}{\index{geometry@{geometry}!bctype@{bctype}}
+\index{bctype@{bctype}!geometry@{geometry}}
+\subsubsection[{bctype}]{\setlength{\rightskip}{0pt plus 5cm}character(len=15), dimension(\-:), allocatable geometry\-::bctype}}\label{classgeometry_a273882b8b9ef9670ecef4c22d7a1ffc3}
+\hypertarget{classgeometry_a7b1e102e0a1a96f15dcd1def8d7e0e28}{\index{geometry@{geometry}!boundary\-\_\-file@{boundary\-\_\-file}}
+\index{boundary\-\_\-file@{boundary\-\_\-file}!geometry@{geometry}}
+\subsubsection[{boundary\-\_\-file}]{\setlength{\rightskip}{0pt plus 5cm}integer geometry\-::boundary\-\_\-file}}\label{classgeometry_a7b1e102e0a1a96f15dcd1def8d7e0e28}
+\hypertarget{classgeometry_a22e8c08158c2f0faf7a3ff6527281144}{\index{geometry@{geometry}!dns@{dns}}
+\index{dns@{dns}!geometry@{geometry}}
+\subsubsection[{dns}]{\setlength{\rightskip}{0pt plus 5cm}real(dp), dimension(\-:), allocatable geometry\-::dns}}\label{classgeometry_a22e8c08158c2f0faf7a3ff6527281144}
+\hypertarget{classgeometry_a15d5598fc8fd8adf2a3a0218d2aef488}{\index{geometry@{geometry}!dnw@{dnw}}
+\index{dnw@{dnw}!geometry@{geometry}}
+\subsubsection[{dnw}]{\setlength{\rightskip}{0pt plus 5cm}real(dp), dimension(\-:), allocatable geometry\-::dnw}}\label{classgeometry_a15d5598fc8fd8adf2a3a0218d2aef488}
+\hypertarget{classgeometry_af70942cfbb3d083b361d7c30d7c7d1b8}{\index{geometry@{geometry}!faces\-\_\-file@{faces\-\_\-file}}
+\index{faces\-\_\-file@{faces\-\_\-file}!geometry@{geometry}}
+\subsubsection[{faces\-\_\-file}]{\setlength{\rightskip}{0pt plus 5cm}integer geometry\-::faces\-\_\-file}}\label{classgeometry_af70942cfbb3d083b361d7c30d7c7d1b8}
+\hypertarget{classgeometry_a637d800def3bd03fb7b696a0a31d23f6}{\index{geometry@{geometry}!facint@{facint}}
+\index{facint@{facint}!geometry@{geometry}}
+\subsubsection[{facint}]{\setlength{\rightskip}{0pt plus 5cm}real(dp), dimension(\-:), allocatable geometry\-::facint}}\label{classgeometry_a637d800def3bd03fb7b696a0a31d23f6}
+\hypertarget{classgeometry_a992699ec16084d3f8cf7423b32fc02b6}{\index{geometry@{geometry}!fpro@{fpro}}
+\index{fpro@{fpro}!geometry@{geometry}}
+\subsubsection[{fpro}]{\setlength{\rightskip}{0pt plus 5cm}real(dp), dimension(\-:), allocatable geometry\-::fpro}}\label{classgeometry_a992699ec16084d3f8cf7423b32fc02b6}
+\hypertarget{classgeometry_ad1e038213bb054d1e90870329c685f60}{\index{geometry@{geometry}!globfaces@{globfaces}}
+\index{globfaces@{globfaces}!geometry@{geometry}}
+\subsubsection[{globfaces}]{\setlength{\rightskip}{0pt plus 5cm}integer geometry\-::globfaces}}\label{classgeometry_ad1e038213bb054d1e90870329c685f60}
+\hypertarget{classgeometry_a0512cb49b2ee4ae8aa67fe7b3e9cfa25}{\index{geometry@{geometry}!glocells@{glocells}}
+\index{glocells@{glocells}!geometry@{geometry}}
+\subsubsection[{glocells}]{\setlength{\rightskip}{0pt plus 5cm}integer geometry\-::glocells}}\label{classgeometry_a0512cb49b2ee4ae8aa67fe7b3e9cfa25}
+\hypertarget{classgeometry_a11e0bee8bca796dfc9673a1652675d95}{\index{geometry@{geometry}!glofaces@{glofaces}}
+\index{glofaces@{glofaces}!geometry@{geometry}}
+\subsubsection[{glofaces}]{\setlength{\rightskip}{0pt plus 5cm}integer geometry\-::glofaces}}\label{classgeometry_a11e0bee8bca796dfc9673a1652675d95}
+\hypertarget{classgeometry_aa0b3019664f1e20f95c082706fbf4bf6}{\index{geometry@{geometry}!gloifaces@{gloifaces}}
+\index{gloifaces@{gloifaces}!geometry@{geometry}}
+\subsubsection[{gloifaces}]{\setlength{\rightskip}{0pt plus 5cm}integer geometry\-::gloifaces}}\label{classgeometry_aa0b3019664f1e20f95c082706fbf4bf6}
+\hypertarget{classgeometry_aa32cd7bcc888322cd384ba928fbe0fd8}{\index{geometry@{geometry}!glonodes@{glonodes}}
+\index{glonodes@{glonodes}!geometry@{geometry}}
+\subsubsection[{glonodes}]{\setlength{\rightskip}{0pt plus 5cm}integer geometry\-::glonodes}}\label{classgeometry_aa32cd7bcc888322cd384ba928fbe0fd8}
+\hypertarget{classgeometry_ac725fa5c48485899cdc2607d4c0e3278}{\index{geometry@{geometry}!ibndvaluestart@{ibndvaluestart}}
+\index{ibndvaluestart@{ibndvaluestart}!geometry@{geometry}}
+\subsubsection[{ibndvaluestart}]{\setlength{\rightskip}{0pt plus 5cm}integer, dimension(\-:), allocatable geometry\-::ibndvaluestart}}\label{classgeometry_ac725fa5c48485899cdc2607d4c0e3278}
+\hypertarget{classgeometry_afc765695937174a634f048738ae0dc8e}{\index{geometry@{geometry}!neighbour@{neighbour}}
+\index{neighbour@{neighbour}!geometry@{geometry}}
+\subsubsection[{neighbour}]{\setlength{\rightskip}{0pt plus 5cm}integer, dimension(\-:), allocatable geometry\-::neighbour}}\label{classgeometry_afc765695937174a634f048738ae0dc8e}
+\hypertarget{classgeometry_a76fd3a715a134c4e338b1bef0d53563b}{\index{geometry@{geometry}!neighbour\-\_\-file@{neighbour\-\_\-file}}
+\index{neighbour\-\_\-file@{neighbour\-\_\-file}!geometry@{geometry}}
+\subsubsection[{neighbour\-\_\-file}]{\setlength{\rightskip}{0pt plus 5cm}integer geometry\-::neighbour\-\_\-file}}\label{classgeometry_a76fd3a715a134c4e338b1bef0d53563b}
+\hypertarget{classgeometry_abc180e7f216d7319e972a77e754cf1ba}{\index{geometry@{geometry}!nfaces@{nfaces}}
+\index{nfaces@{nfaces}!geometry@{geometry}}
+\subsubsection[{nfaces}]{\setlength{\rightskip}{0pt plus 5cm}integer, dimension(\-:), allocatable geometry\-::nfaces}}\label{classgeometry_abc180e7f216d7319e972a77e754cf1ba}
+\hypertarget{classgeometry_a7c3a12b979532a42fd4791cd336b388f}{\index{geometry@{geometry}!ninl@{ninl}}
+\index{ninl@{ninl}!geometry@{geometry}}
+\subsubsection[{ninl}]{\setlength{\rightskip}{0pt plus 5cm}integer geometry\-::ninl}}\label{classgeometry_a7c3a12b979532a42fd4791cd336b388f}
+\hypertarget{classgeometry_aebf6156cf92933802643ed6612d80bcc}{\index{geometry@{geometry}!nomax@{nomax}}
+\index{nomax@{nomax}!geometry@{geometry}}
+\subsubsection[{nomax}]{\setlength{\rightskip}{0pt plus 5cm}integer, parameter geometry\-::nomax = 30}}\label{classgeometry_aebf6156cf92933802643ed6612d80bcc}
+\hypertarget{classgeometry_af185a2e42ce8dc5f660f52f4e844d883}{\index{geometry@{geometry}!nout@{nout}}
+\index{nout@{nout}!geometry@{geometry}}
+\subsubsection[{nout}]{\setlength{\rightskip}{0pt plus 5cm}integer geometry\-::nout}}\label{classgeometry_af185a2e42ce8dc5f660f52f4e844d883}
+\hypertarget{classgeometry_af9bcf0023987fb42899faea73e6e719d}{\index{geometry@{geometry}!npro@{npro}}
+\index{npro@{npro}!geometry@{geometry}}
+\subsubsection[{npro}]{\setlength{\rightskip}{0pt plus 5cm}integer geometry\-::npro}}\label{classgeometry_af9bcf0023987fb42899faea73e6e719d}
+\hypertarget{classgeometry_a3267813953228bd94c67d73bd878eb9c}{\index{geometry@{geometry}!nsym@{nsym}}
+\index{nsym@{nsym}!geometry@{geometry}}
+\subsubsection[{nsym}]{\setlength{\rightskip}{0pt plus 5cm}integer geometry\-::nsym}}\label{classgeometry_a3267813953228bd94c67d73bd878eb9c}
+\hypertarget{classgeometry_a18cc0b968a1496fa99a2ef47a0ee7d1a}{\index{geometry@{geometry}!numboundaries@{numboundaries}}
+\index{numboundaries@{numboundaries}!geometry@{geometry}}
+\subsubsection[{numboundaries}]{\setlength{\rightskip}{0pt plus 5cm}integer geometry\-::numboundaries}}\label{classgeometry_a18cc0b968a1496fa99a2ef47a0ee7d1a}
+\hypertarget{classgeometry_aa40b31eef33895463f82107dec14911a}{\index{geometry@{geometry}!numboundaryfaces@{numboundaryfaces}}
+\index{numboundaryfaces@{numboundaryfaces}!geometry@{geometry}}
+\subsubsection[{numboundaryfaces}]{\setlength{\rightskip}{0pt plus 5cm}integer geometry\-::numboundaryfaces}}\label{classgeometry_aa40b31eef33895463f82107dec14911a}
+\hypertarget{classgeometry_a6316b2c2a707e4250801749fad266b81}{\index{geometry@{geometry}!numcells@{numcells}}
+\index{numcells@{numcells}!geometry@{geometry}}
+\subsubsection[{numcells}]{\setlength{\rightskip}{0pt plus 5cm}integer geometry\-::numcells}}\label{classgeometry_a6316b2c2a707e4250801749fad266b81}
+\hypertarget{classgeometry_a1fe23be4aa394d4647eb94f232ef7be4}{\index{geometry@{geometry}!numfaces@{numfaces}}
+\index{numfaces@{numfaces}!geometry@{geometry}}
+\subsubsection[{numfaces}]{\setlength{\rightskip}{0pt plus 5cm}integer geometry\-::numfaces}}\label{classgeometry_a1fe23be4aa394d4647eb94f232ef7be4}
+\hypertarget{classgeometry_a3604c4b943618f96d25b4e57be2d730a}{\index{geometry@{geometry}!numinnerfaces@{numinnerfaces}}
+\index{numinnerfaces@{numinnerfaces}!geometry@{geometry}}
+\subsubsection[{numinnerfaces}]{\setlength{\rightskip}{0pt plus 5cm}integer geometry\-::numinnerfaces}}\label{classgeometry_a3604c4b943618f96d25b4e57be2d730a}
+\hypertarget{classgeometry_a74e7aa9e5207d1bdf0ec33642daa1e95}{\index{geometry@{geometry}!numnodes@{numnodes}}
+\index{numnodes@{numnodes}!geometry@{geometry}}
+\subsubsection[{numnodes}]{\setlength{\rightskip}{0pt plus 5cm}integer geometry\-::numnodes}}\label{classgeometry_a74e7aa9e5207d1bdf0ec33642daa1e95}
+\hypertarget{classgeometry_abe73a7c15a5676edffcb997de320903b}{\index{geometry@{geometry}!numpcells@{numpcells}}
+\index{numpcells@{numpcells}!geometry@{geometry}}
+\subsubsection[{numpcells}]{\setlength{\rightskip}{0pt plus 5cm}integer geometry\-::numpcells}}\label{classgeometry_abe73a7c15a5676edffcb997de320903b}
+\hypertarget{classgeometry_a4b36c67fd5fbba66cd159331a6449464}{\index{geometry@{geometry}!numtotal@{numtotal}}
+\index{numtotal@{numtotal}!geometry@{geometry}}
+\subsubsection[{numtotal}]{\setlength{\rightskip}{0pt plus 5cm}integer geometry\-::numtotal}}\label{classgeometry_a4b36c67fd5fbba66cd159331a6449464}
+\hypertarget{classgeometry_a3e083890c7aae9c07961696766208796}{\index{geometry@{geometry}!nwal@{nwal}}
+\index{nwal@{nwal}!geometry@{geometry}}
+\subsubsection[{nwal}]{\setlength{\rightskip}{0pt plus 5cm}integer geometry\-::nwal}}\label{classgeometry_a3e083890c7aae9c07961696766208796}
+\hypertarget{classgeometry_ae59df205a86f69d3cc7ecf9917b3fc8d}{\index{geometry@{geometry}!owner@{owner}}
+\index{owner@{owner}!geometry@{geometry}}
+\subsubsection[{owner}]{\setlength{\rightskip}{0pt plus 5cm}integer, dimension(\-:), allocatable geometry\-::owner}}\label{classgeometry_ae59df205a86f69d3cc7ecf9917b3fc8d}
+\hypertarget{classgeometry_aa4904f087664ad6358d283ca2e053b0f}{\index{geometry@{geometry}!owner\-\_\-file@{owner\-\_\-file}}
+\index{owner\-\_\-file@{owner\-\_\-file}!geometry@{geometry}}
+\subsubsection[{owner\-\_\-file}]{\setlength{\rightskip}{0pt plus 5cm}integer geometry\-::owner\-\_\-file}}\label{classgeometry_aa4904f087664ad6358d283ca2e053b0f}
+\hypertarget{classgeometry_a4f9606dd6dec8a18282daf3096cd7074}{\index{geometry@{geometry}!points\-\_\-file@{points\-\_\-file}}
+\index{points\-\_\-file@{points\-\_\-file}!geometry@{geometry}}
+\subsubsection[{points\-\_\-file}]{\setlength{\rightskip}{0pt plus 5cm}integer geometry\-::points\-\_\-file}}\label{classgeometry_a4f9606dd6dec8a18282daf3096cd7074}
+\hypertarget{classgeometry_a6d6c8b4ed2fdb31e8b906eccb7fe8bd2}{\index{geometry@{geometry}!process\-\_\-file@{process\-\_\-file}}
+\index{process\-\_\-file@{process\-\_\-file}!geometry@{geometry}}
+\subsubsection[{process\-\_\-file}]{\setlength{\rightskip}{0pt plus 5cm}integer geometry\-::process\-\_\-file}}\label{classgeometry_a6d6c8b4ed2fdb31e8b906eccb7fe8bd2}
+\hypertarget{classgeometry_ad2388cd69f1b9efc5b4dafab1540e6fd}{\index{geometry@{geometry}!srds@{srds}}
+\index{srds@{srds}!geometry@{geometry}}
+\subsubsection[{srds}]{\setlength{\rightskip}{0pt plus 5cm}real(dp), dimension(\-:), allocatable geometry\-::srds}}\label{classgeometry_ad2388cd69f1b9efc5b4dafab1540e6fd}
+\hypertarget{classgeometry_ad4f99f0dbd2866ccd6bb897c324fbbb9}{\index{geometry@{geometry}!srdw@{srdw}}
+\index{srdw@{srdw}!geometry@{geometry}}
+\subsubsection[{srdw}]{\setlength{\rightskip}{0pt plus 5cm}real(dp), dimension(\-:), allocatable geometry\-::srdw}}\label{classgeometry_ad4f99f0dbd2866ccd6bb897c324fbbb9}
+\hypertarget{classgeometry_a18f4eb284c2fb036786e7cb078b1261b}{\index{geometry@{geometry}!startface@{startface}}
+\index{startface@{startface}!geometry@{geometry}}
+\subsubsection[{startface}]{\setlength{\rightskip}{0pt plus 5cm}integer, dimension(\-:), allocatable geometry\-::startface}}\label{classgeometry_a18f4eb284c2fb036786e7cb078b1261b}
+\hypertarget{classgeometry_a8f9a710dae624d649ba6196d6a3ad819}{\index{geometry@{geometry}!tiny@{tiny}}
+\index{tiny@{tiny}!geometry@{geometry}}
+\subsubsection[{tiny}]{\setlength{\rightskip}{0pt plus 5cm}real(dp), parameter geometry\-::tiny = 1e-\/30}}\label{classgeometry_a8f9a710dae624d649ba6196d6a3ad819}
+\hypertarget{classgeometry_a4d57310a2f6f4431e6ec39d9633b3cc5}{\index{geometry@{geometry}!vol@{vol}}
+\index{vol@{vol}!geometry@{geometry}}
+\subsubsection[{vol}]{\setlength{\rightskip}{0pt plus 5cm}real(dp), dimension(\-:), allocatable geometry\-::vol}}\label{classgeometry_a4d57310a2f6f4431e6ec39d9633b3cc5}
+\hypertarget{classgeometry_a51893a5f373a1a6c12894eeb216ecc59}{\index{geometry@{geometry}!walldistance@{walldistance}}
+\index{walldistance@{walldistance}!geometry@{geometry}}
+\subsubsection[{walldistance}]{\setlength{\rightskip}{0pt plus 5cm}real(dp), dimension(\-:), allocatable geometry\-::walldistance}}\label{classgeometry_a51893a5f373a1a6c12894eeb216ecc59}
+\hypertarget{classgeometry_addb7458352afb3060d5831f54b39ca61}{\index{geometry@{geometry}!x@{x}}
+\index{x@{x}!geometry@{geometry}}
+\subsubsection[{x}]{\setlength{\rightskip}{0pt plus 5cm}real(dp), dimension(\-:), allocatable geometry\-::x}}\label{classgeometry_addb7458352afb3060d5831f54b39ca61}
+\hypertarget{classgeometry_ab8a1629eea878ff62c7dbd6b6025fc55}{\index{geometry@{geometry}!xc@{xc}}
+\index{xc@{xc}!geometry@{geometry}}
+\subsubsection[{xc}]{\setlength{\rightskip}{0pt plus 5cm}real(dp), dimension(\-:), allocatable geometry\-::xc}}\label{classgeometry_ab8a1629eea878ff62c7dbd6b6025fc55}
+\hypertarget{classgeometry_a6be1b0f6e7647b5eea5975c28be87ba3}{\index{geometry@{geometry}!xf@{xf}}
+\index{xf@{xf}!geometry@{geometry}}
+\subsubsection[{xf}]{\setlength{\rightskip}{0pt plus 5cm}real(dp), dimension(\-:), allocatable geometry\-::xf}}\label{classgeometry_a6be1b0f6e7647b5eea5975c28be87ba3}
+\hypertarget{classgeometry_afd0076c8984ed089741c40a24b176665}{\index{geometry@{geometry}!xnp@{xnp}}
+\index{xnp@{xnp}!geometry@{geometry}}
+\subsubsection[{xnp}]{\setlength{\rightskip}{0pt plus 5cm}real(dp), dimension(\-:), allocatable geometry\-::xnp}}\label{classgeometry_afd0076c8984ed089741c40a24b176665}
+\hypertarget{classgeometry_adb87ebbb8b31be2d1372108e5057ab11}{\index{geometry@{geometry}!xpp@{xpp}}
+\index{xpp@{xpp}!geometry@{geometry}}
+\subsubsection[{xpp}]{\setlength{\rightskip}{0pt plus 5cm}real(dp), dimension(\-:), allocatable geometry\-::xpp}}\label{classgeometry_adb87ebbb8b31be2d1372108e5057ab11}
+\hypertarget{classgeometry_a12fdb27cf84ec561b9c20625748e8f57}{\index{geometry@{geometry}!y@{y}}
+\index{y@{y}!geometry@{geometry}}
+\subsubsection[{y}]{\setlength{\rightskip}{0pt plus 5cm}real(dp), dimension(\-:), allocatable geometry\-::y}}\label{classgeometry_a12fdb27cf84ec561b9c20625748e8f57}
+\hypertarget{classgeometry_a23fc04ce2affc5bb7f3b1f3464feab40}{\index{geometry@{geometry}!yc@{yc}}
+\index{yc@{yc}!geometry@{geometry}}
+\subsubsection[{yc}]{\setlength{\rightskip}{0pt plus 5cm}real(dp), dimension(\-:), allocatable geometry\-::yc}}\label{classgeometry_a23fc04ce2affc5bb7f3b1f3464feab40}
+\hypertarget{classgeometry_a6f897e422e91f75c528d0c855a933271}{\index{geometry@{geometry}!yf@{yf}}
+\index{yf@{yf}!geometry@{geometry}}
+\subsubsection[{yf}]{\setlength{\rightskip}{0pt plus 5cm}real(dp), dimension(\-:), allocatable geometry\-::yf}}\label{classgeometry_a6f897e422e91f75c528d0c855a933271}
+\hypertarget{classgeometry_a2fd843e613749c67542f4377ed724ef9}{\index{geometry@{geometry}!ynp@{ynp}}
+\index{ynp@{ynp}!geometry@{geometry}}
+\subsubsection[{ynp}]{\setlength{\rightskip}{0pt plus 5cm}real(dp), dimension(\-:), allocatable geometry\-::ynp}}\label{classgeometry_a2fd843e613749c67542f4377ed724ef9}
+\hypertarget{classgeometry_a0e0c8bc792d7ff52c12df810cb39bde6}{\index{geometry@{geometry}!ypp@{ypp}}
+\index{ypp@{ypp}!geometry@{geometry}}
+\subsubsection[{ypp}]{\setlength{\rightskip}{0pt plus 5cm}real(dp), dimension(\-:), allocatable geometry\-::ypp}}\label{classgeometry_a0e0c8bc792d7ff52c12df810cb39bde6}
+\hypertarget{classgeometry_a567da85e335951f534f57b51765df56a}{\index{geometry@{geometry}!z@{z}}
+\index{z@{z}!geometry@{geometry}}
+\subsubsection[{z}]{\setlength{\rightskip}{0pt plus 5cm}real(dp), dimension(\-:), allocatable geometry\-::z}}\label{classgeometry_a567da85e335951f534f57b51765df56a}
+\hypertarget{classgeometry_accaf072ca71c8cf746b911dfc0165664}{\index{geometry@{geometry}!zc@{zc}}
+\index{zc@{zc}!geometry@{geometry}}
+\subsubsection[{zc}]{\setlength{\rightskip}{0pt plus 5cm}real(dp), dimension(\-:), allocatable geometry\-::zc}}\label{classgeometry_accaf072ca71c8cf746b911dfc0165664}
+\hypertarget{classgeometry_acf0149de3e29b6714898a4db86b62435}{\index{geometry@{geometry}!zf@{zf}}
+\index{zf@{zf}!geometry@{geometry}}
+\subsubsection[{zf}]{\setlength{\rightskip}{0pt plus 5cm}real(dp), dimension(\-:), allocatable geometry\-::zf}}\label{classgeometry_acf0149de3e29b6714898a4db86b62435}
+\hypertarget{classgeometry_a40f59df46474b424b2545f108ac317ec}{\index{geometry@{geometry}!znp@{znp}}
+\index{znp@{znp}!geometry@{geometry}}
+\subsubsection[{znp}]{\setlength{\rightskip}{0pt plus 5cm}real(dp), dimension(\-:), allocatable geometry\-::znp}}\label{classgeometry_a40f59df46474b424b2545f108ac317ec}
+\hypertarget{classgeometry_a55be35632eac8306e28a7d900e1c9cb1}{\index{geometry@{geometry}!zpp@{zpp}}
+\index{zpp@{zpp}!geometry@{geometry}}
+\subsubsection[{zpp}]{\setlength{\rightskip}{0pt plus 5cm}real(dp), dimension(\-:), allocatable geometry\-::zpp}}\label{classgeometry_a55be35632eac8306e28a7d900e1c9cb1}
+
+
+The documentation for this module was generated from the following file\-:\begin{DoxyCompactItemize}
+\item 
+src-\/par/\hyperlink{geometry_8f90}{geometry.\-f90}\end{DoxyCompactItemize}

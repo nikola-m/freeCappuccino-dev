@@ -1,0 +1,192 @@
+\hypertarget{classinterpolation}{\section{interpolation Module Reference}
+\label{classinterpolation}\index{interpolation@{interpolation}}
+}
+\subsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+real(dp) function \hyperlink{classinterpolation_a4906644e7abbc98fe9e87749dd7ca907}{face\-\_\-value} (\hyperlink{CourantNo_8h_accea320a458bb8759c7ece360e05ddf4}{ijp}, ijn, xf, yf, zf, lambda, u, d\-Udxi)
+\item 
+real(dp) function \hyperlink{classinterpolation_a2955420d11e2fbe30a99e4fefc374759}{face\-\_\-value\-\_\-cds} (\hyperlink{CourantNo_8h_accea320a458bb8759c7ece360e05ddf4}{ijp}, ijn, lambda, fi)
+\item 
+real(dp) function \hyperlink{classinterpolation_aebfa91890374b7e5e59f1342aa091a58}{face\-\_\-value\-\_\-cds\-\_\-corrected} (\hyperlink{CourantNo_8h_accea320a458bb8759c7ece360e05ddf4}{ijp}, ijn, xf, yf, zf, lambda, fi, dfidxi)
+\item 
+real(dp) function \hyperlink{classinterpolation_ab244a4491720b6c92b4f5e6e2539e06c}{face\-\_\-value\-\_\-central} (inp, inn, xf, yf, zf, fi, gradfi)
+\item 
+real(dp) function \hyperlink{classinterpolation_aad6795e9522c835edaf6484a063343cc}{face\-\_\-value\-\_\-2nd\-\_\-upwind} (inp, xf, yf, zf, fi, gradfi)
+\item 
+real(dp) function \hyperlink{classinterpolation_a69b9fafef9c399b908b8c8b6b7c7862d}{face\-\_\-value\-\_\-muscl} (inp, inn, xf, yf, zf, fi, gradfi)
+\item 
+real(dp) function \hyperlink{classinterpolation_af5ae37f4a0cb45e47998b454659a6eb9}{face\-\_\-value\-\_\-2nd\-\_\-upwind\-\_\-flux\-\_\-limiter} (\hyperlink{CourantNo_8h_accea320a458bb8759c7ece360e05ddf4}{ijp}, ijn, lambda, u, d\-Udxi)
+\end{DoxyCompactItemize}
+
+
+\subsection{Member Function/\-Subroutine Documentation}
+\hypertarget{classinterpolation_a4906644e7abbc98fe9e87749dd7ca907}{\index{interpolation@{interpolation}!face\-\_\-value@{face\-\_\-value}}
+\index{face\-\_\-value@{face\-\_\-value}!interpolation@{interpolation}}
+\subsubsection[{face\-\_\-value}]{\setlength{\rightskip}{0pt plus 5cm}real(dp) function interpolation\-::face\-\_\-value (
+\begin{DoxyParamCaption}
+\item[{integer}]{ijp, }
+\item[{integer}]{ijn, }
+\item[{real(dp)}]{xf, }
+\item[{real(dp)}]{yf, }
+\item[{real(dp)}]{zf, }
+\item[{real(dp)}]{lambda, }
+\item[{real(dp), dimension(numtotal)}]{u, }
+\item[{real(dp), dimension(3,numpcells)}]{d\-Udxi}
+\end{DoxyParamCaption}
+)}}\label{classinterpolation_a4906644e7abbc98fe9e87749dd7ca907}
+
+
+Here is the call graph for this function\-:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classinterpolation_a4906644e7abbc98fe9e87749dd7ca907_cgraph}
+\end{center}
+\end{figure}
+
+
+\hypertarget{classinterpolation_aad6795e9522c835edaf6484a063343cc}{\index{interpolation@{interpolation}!face\-\_\-value\-\_\-2nd\-\_\-upwind@{face\-\_\-value\-\_\-2nd\-\_\-upwind}}
+\index{face\-\_\-value\-\_\-2nd\-\_\-upwind@{face\-\_\-value\-\_\-2nd\-\_\-upwind}!interpolation@{interpolation}}
+\subsubsection[{face\-\_\-value\-\_\-2nd\-\_\-upwind}]{\setlength{\rightskip}{0pt plus 5cm}real(dp) function interpolation\-::face\-\_\-value\-\_\-2nd\-\_\-upwind (
+\begin{DoxyParamCaption}
+\item[{integer}]{inp, }
+\item[{real(dp)}]{xf, }
+\item[{real(dp)}]{yf, }
+\item[{real(dp)}]{zf, }
+\item[{real(dp), dimension(numtotal)}]{fi, }
+\item[{real(dp), dimension(3,numpcells)}]{gradfi}
+\end{DoxyParamCaption}
+)}}\label{classinterpolation_aad6795e9522c835edaf6484a063343cc}
+
+
+Here is the call graph for this function\-:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classinterpolation_aad6795e9522c835edaf6484a063343cc_cgraph}
+\end{center}
+\end{figure}
+
+
+\hypertarget{classinterpolation_af5ae37f4a0cb45e47998b454659a6eb9}{\index{interpolation@{interpolation}!face\-\_\-value\-\_\-2nd\-\_\-upwind\-\_\-flux\-\_\-limiter@{face\-\_\-value\-\_\-2nd\-\_\-upwind\-\_\-flux\-\_\-limiter}}
+\index{face\-\_\-value\-\_\-2nd\-\_\-upwind\-\_\-flux\-\_\-limiter@{face\-\_\-value\-\_\-2nd\-\_\-upwind\-\_\-flux\-\_\-limiter}!interpolation@{interpolation}}
+\subsubsection[{face\-\_\-value\-\_\-2nd\-\_\-upwind\-\_\-flux\-\_\-limiter}]{\setlength{\rightskip}{0pt plus 5cm}real(dp) function interpolation\-::face\-\_\-value\-\_\-2nd\-\_\-upwind\-\_\-flux\-\_\-limiter (
+\begin{DoxyParamCaption}
+\item[{integer}]{ijp, }
+\item[{integer}]{ijn, }
+\item[{real(dp)}]{lambda, }
+\item[{real(dp), dimension(numtotal)}]{u, }
+\item[{real(dp), dimension(3,numpcells)}]{d\-Udxi}
+\end{DoxyParamCaption}
+)}}\label{classinterpolation_af5ae37f4a0cb45e47998b454659a6eb9}
+
+
+Here is the call graph for this function\-:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classinterpolation_af5ae37f4a0cb45e47998b454659a6eb9_cgraph}
+\end{center}
+\end{figure}
+
+
+\hypertarget{classinterpolation_a2955420d11e2fbe30a99e4fefc374759}{\index{interpolation@{interpolation}!face\-\_\-value\-\_\-cds@{face\-\_\-value\-\_\-cds}}
+\index{face\-\_\-value\-\_\-cds@{face\-\_\-value\-\_\-cds}!interpolation@{interpolation}}
+\subsubsection[{face\-\_\-value\-\_\-cds}]{\setlength{\rightskip}{0pt plus 5cm}real(dp) function interpolation\-::face\-\_\-value\-\_\-cds (
+\begin{DoxyParamCaption}
+\item[{integer}]{ijp, }
+\item[{integer}]{ijn, }
+\item[{real(dp)}]{lambda, }
+\item[{real(dp), dimension(numtotal)}]{fi}
+\end{DoxyParamCaption}
+)}}\label{classinterpolation_a2955420d11e2fbe30a99e4fefc374759}
+
+
+Here is the call graph for this function\-:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classinterpolation_a2955420d11e2fbe30a99e4fefc374759_cgraph}
+\end{center}
+\end{figure}
+
+
+\hypertarget{classinterpolation_aebfa91890374b7e5e59f1342aa091a58}{\index{interpolation@{interpolation}!face\-\_\-value\-\_\-cds\-\_\-corrected@{face\-\_\-value\-\_\-cds\-\_\-corrected}}
+\index{face\-\_\-value\-\_\-cds\-\_\-corrected@{face\-\_\-value\-\_\-cds\-\_\-corrected}!interpolation@{interpolation}}
+\subsubsection[{face\-\_\-value\-\_\-cds\-\_\-corrected}]{\setlength{\rightskip}{0pt plus 5cm}real(dp) function interpolation\-::face\-\_\-value\-\_\-cds\-\_\-corrected (
+\begin{DoxyParamCaption}
+\item[{integer}]{ijp, }
+\item[{integer}]{ijn, }
+\item[{real(dp)}]{xf, }
+\item[{real(dp)}]{yf, }
+\item[{real(dp)}]{zf, }
+\item[{real(dp)}]{lambda, }
+\item[{real(dp), dimension(numtotal)}]{fi, }
+\item[{real(dp), dimension(3,numpcells)}]{dfidxi}
+\end{DoxyParamCaption}
+)}}\label{classinterpolation_aebfa91890374b7e5e59f1342aa091a58}
+
+
+Here is the call graph for this function\-:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classinterpolation_aebfa91890374b7e5e59f1342aa091a58_cgraph}
+\end{center}
+\end{figure}
+
+
+\hypertarget{classinterpolation_ab244a4491720b6c92b4f5e6e2539e06c}{\index{interpolation@{interpolation}!face\-\_\-value\-\_\-central@{face\-\_\-value\-\_\-central}}
+\index{face\-\_\-value\-\_\-central@{face\-\_\-value\-\_\-central}!interpolation@{interpolation}}
+\subsubsection[{face\-\_\-value\-\_\-central}]{\setlength{\rightskip}{0pt plus 5cm}real(dp) function interpolation\-::face\-\_\-value\-\_\-central (
+\begin{DoxyParamCaption}
+\item[{integer}]{inp, }
+\item[{integer}]{inn, }
+\item[{real(dp)}]{xf, }
+\item[{real(dp)}]{yf, }
+\item[{real(dp)}]{zf, }
+\item[{real(dp), dimension(numtotal)}]{fi, }
+\item[{real(dp), dimension(3,numpcells)}]{gradfi}
+\end{DoxyParamCaption}
+)}}\label{classinterpolation_ab244a4491720b6c92b4f5e6e2539e06c}
+
+
+Here is the call graph for this function\-:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classinterpolation_ab244a4491720b6c92b4f5e6e2539e06c_cgraph}
+\end{center}
+\end{figure}
+
+
+\hypertarget{classinterpolation_a69b9fafef9c399b908b8c8b6b7c7862d}{\index{interpolation@{interpolation}!face\-\_\-value\-\_\-muscl@{face\-\_\-value\-\_\-muscl}}
+\index{face\-\_\-value\-\_\-muscl@{face\-\_\-value\-\_\-muscl}!interpolation@{interpolation}}
+\subsubsection[{face\-\_\-value\-\_\-muscl}]{\setlength{\rightskip}{0pt plus 5cm}real(dp) function interpolation\-::face\-\_\-value\-\_\-muscl (
+\begin{DoxyParamCaption}
+\item[{integer}]{inp, }
+\item[{integer}]{inn, }
+\item[{real(dp)}]{xf, }
+\item[{real(dp)}]{yf, }
+\item[{real(dp)}]{zf, }
+\item[{real(dp), dimension(numtotal)}]{fi, }
+\item[{real(dp), dimension(3,numpcells)}]{gradfi}
+\end{DoxyParamCaption}
+)}}\label{classinterpolation_a69b9fafef9c399b908b8c8b6b7c7862d}
+
+
+Here is the call graph for this function\-:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classinterpolation_a69b9fafef9c399b908b8c8b6b7c7862d_cgraph}
+\end{center}
+\end{figure}
+
+
+
+
+The documentation for this module was generated from the following file\-:\begin{DoxyCompactItemize}
+\item 
+src-\/par/\hyperlink{interpolation_8f90}{interpolation.\-f90}\end{DoxyCompactItemize}
