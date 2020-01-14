@@ -1,4 +1,4 @@
-subroutine fvm_div(phi,u)
+subroutine Div(phi,u)
 !  
 !******************************************************************************
 !
@@ -42,7 +42,7 @@ subroutine fvm_div(phi,u)
     ijp = owner(i)
     ijn = neighbour(i)
 
-    call facefluxconvection(ijp, ijn, xf(i), yf(i), zf(i), phi(i), facint(i), gam, cap, can, sup, svp, swp)
+    call facefluxconvective(ijp, ijn, xf(i), yf(i), zf(i), phi(i), facint(i), gam, cap, can, sup, svp, swp)
 
     ! > Off-diagonal elements:
 
@@ -76,27 +76,6 @@ subroutine fvm_div(phi,u)
 
   end do
 
-
-  ! o- and c-grid cuts
-  do i=1,noc
-
-    iface = iOCFacesStart+i
-    ijp=ijl(i)
-    ijn=ijr(i)
-
-    call facefluxdivergence(ijp, ijn, xf(iface), yf(iface), zf(iface), phi(iface), foc(i), gam, al(i), ar(i), sup, svp, swp)
-    
-    ! > Elements on main diagonal:
-
-    ! (icell,icell) main diagonal element
-    k = diag(ijp)
-    a(k) = a(k) - ar(i)
-
-    ! (jcell,jcell) main diagonal element
-    k = diag(ijn)
-    a(k) = a(k) - al(i)
-
-  end do
 
 
 !.....Modify matrix coefficients to reflect presence of Boundary Conditions in PDE problem.
@@ -181,7 +160,7 @@ end subroutine
 
 !***********************************************************************
 !
-subroutine facefluxconvection(ijp, ijn, xf, yf, zf, flomass, lambda, gam, cap, can, sup, svp, swp)
+subroutine facefluxconvective(ijp, ijn, xf, yf, zf, flomass, lambda, gam, cap, can, sup, svp, swp)
 !
 !***********************************************************************
 !

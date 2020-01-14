@@ -1,6 +1,6 @@
 !***********************************************************************
 !
-subroutine calcp
+subroutine calcp_simple
 !***********************************************************************
 !
 ! Assemble and solve pressure correction equation in SIMPLE algorithm
@@ -27,9 +27,9 @@ subroutine calcp
 
   ! character(5) :: maxno
   ! character(10) :: tol
-  integer :: i, k, inp, iface, ijp, ijn, istage
-  integer :: ib
-  real(dp) :: sum, ppref, cap, can, fmcor
+  integer :: i, k, inp, ib, iface, istage
+  integer :: ijp, ijn  
+  real(dp) :: ppref, cap, can, fmcor
 
 
   a = 0.0_dp
@@ -80,7 +80,40 @@ subroutine calcp
 
   if(.not.const_mflux) call adjustMassFlow
 
+  ! Add contributions to source of the inlet and outlet boundaries.
 
+  ! Loop over boundaries
+  do ib=1,numBoundaries
+    
+    if ( bctype(ib) == 'inlet' ) then
+
+      do i=1,nfaces(ib)
+
+        iface = startFace(ib) + i
+        ijp = owner(iface)
+
+        ! Minus sign is there to make fmi(i) positive since it enters the cell.
+        ! Check out comments in bcin.f90
+        su(ijp) = su(ijp) - flmass(iface)
+
+      end do
+
+    elseif ( bctype(ib) == 'outlet' ) then
+
+      do i=1,nfaces(ib)
+
+        iface = startFace(ib) + i
+        ijp = owner(iface)
+
+        ! fmout is positive because of same direction of velocity and surface normal vectors
+        ! but the mass flow is going out of the cell, therefore minus sign.
+        su(ijp) = su(ijp) - flmass(iface)
+            
+      end do
+
+    endif 
+
+  enddo 
 
 !*Multiple pressure corrections loop *******************************************************************
   do ipcorr=1,npcor
@@ -90,8 +123,8 @@ subroutine calcp
 
     ! Solving pressure correction equation
     ! call dpcg(pp,ip)
-    ! call iccg(pp,ip)
-    call bicgstab(pp,ip) 
+    call iccg(pp,ip)
+    ! call bicgstab(pp,ip) 
     
     !  write(maxno,'(i5)') nsw(ip)
     !  write(tol,'(es9.2)') sor(ip)
@@ -178,6 +211,6 @@ subroutine calcp
   enddo
 
   ! Write continuity error report:
-  include 'continuityErrors.h'
+  call continuityErrors
 
 end subroutine

@@ -30,9 +30,11 @@ bcin.f90
 bpres.f90
 fieldManipulation.f90
 faceflux_velocity.f90
-facefluxmass.f90
+faceflux_mass.f90
 calcheatflux.f90
-calcp-multiple_correction_SIMPLE.f90
+continuityErrors.f90
+calcp_simple.f90
+calcp_piso.f90
 calcstress.f90
 calc_strain_and_vorticity.f90
 calcuvw.f90
@@ -45,7 +47,6 @@ correct_turbulence_inlet.f90
 fvm_laplacian.f90
 init.f90
 openfiles.f90
-PISO_multiple_correction.f90
 readfiles.f90
 read_input.f90
 time_shift.f90

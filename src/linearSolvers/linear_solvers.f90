@@ -12,12 +12,11 @@ module linear_solvers
 !    where all the solution parameters are provided within the data type, or it can accept a CSR matrix with other
 !    required parameters listed in a subroutine call. 
 !    The list of available linear solvers inlcude: 
-!      - Gauss-Seidell
-!      - Incomplete Cholesky Precodnitioned Conjugate Gradient - iccg
+!      - Gauss-Seidel
+!      - Incomplete Cholesky Preconditioned Conjugate Gradient - iccg
 !      - Diagonally Preconditioned CG - dpcg
 !      - Restarted GMRES with ILU preconditioner  - pmgmres_ilu,
 !      - BiConjugate Gradient Stabilised - BiCGStab with ILU preconditioner,
-!      - Gauss-Seidell - gauss-seidell
 !      - or you can call a veriety of solvers from LIS library if the code is compiled with support of this library.
 !
 !  Licensing:
@@ -58,7 +57,7 @@ subroutine spsolve(solver, fi, rhs, res0, itr_max, tol_abs, tol_rel, chvar)
   character( len=* ), intent(in) :: chvar             ! Character string containing name of the solved field, printed on stdout
 
 
-  if( solver .eq. 'gauss-seidell') then
+  if( solver .eq. 'gauss-seidel') then
 
     call GaussSeidel( numCells, nnz, ioffset, ja, a, diag, fi(1:numCells), rhs, res0, itr_max, tol_abs, tol_rel, chvar, ltest )
 

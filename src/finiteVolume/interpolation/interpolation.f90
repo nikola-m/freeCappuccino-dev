@@ -101,7 +101,7 @@ end function
 !***********************************************************************
 !
 !     Calculates face value using values of variables and their gradients
-!     at neighbours cell-centers.
+!     at centers of adjecent cells..
 !
 !***********************************************************************
 
@@ -147,7 +147,7 @@ end function
 !***********************************************************************
 !
 !    Calculates face value using values of variables and their gradients
-!    at neighbours cell-centers.
+!    at centers of adjecent cells..
 !
 !***********************************************************************
 
@@ -206,7 +206,7 @@ end function
 !***********************************************************************
 !
 !    Calculates face value using values of variables and their gradients
-!    at neighbours cell-centers.
+!    at centers of adjecent cells..
 !    Corresponds to unlimited second order upwind scheme as 
 !    used in ANSYS FLUENT.
 !
@@ -256,7 +256,7 @@ end function
 !***********************************************************************
 !
 !    Calculates face value using values of variables and their gradients
-!    at neighbours cell-centers.
+!    at centers of adjecent cells..
 !    Corresponds to MUSCL scheme as used in ANSYS FLUENT.
 !
 !***********************************************************************
@@ -327,10 +327,10 @@ end function
 !***********************************************************************
 !
 !    Calculates face value using values of variables and their gradients
-!    at neighbours cell-centers.
+!    at centers of adjecent cells.
 !    Flux limited versionof BOUNDED HIGH-ORDER CONVECTIVE SCHEMES.
 !    Reference paper is Waterson & Deconinck JCP 224 (2007) pp. 182-207
-!    Also Darwish-Moukalled TVD schemes for unstructured girds, IJHMT, 2003., 
+!    Also Darwish-Moukalled TVD schemes for unstructured grids, IJHMT, 2003., 
 !    for definition of 'r' ratio expression on unstructured meshes.
 !
 !***********************************************************************
@@ -357,30 +357,30 @@ end function
   ypn = yc(ijn)-yc(ijp)
   zpn = zc(ijn)-zc(ijp)
 
-  ! Gradient ratio expression taken from Darwish-Moukalled TVD schemes paper
+  ! Gradient ratio expression taken from Darwish-Moukalled 'TVD schemes for unstructured grids' paper.
   r = (2*dUdxi(1,ijp)*xpn + 2*dUdxi(2,ijp)*ypn + 2*dUdxi(3,ijp)*zpn)/(u(ijn)-u(ijp)) - 1.0_dp
 
 
   if(lsmart) then
-    psi = max(0., min(2.*r, 0.75*r+0.25, 4.))
+    psi = max(0., min(2*r, 0.75*r+0.25, 4.0))
 
   elseif(lavl) then
     psi = max(0., min(1.5*r, 0.75*r+0.25, 2.5))
 
   elseif(lmuscl) then
-    psi = max(0., min(2.*r, 0.5*r+0.5, 2.))
+    psi = max(0., min(2*r, 0.5*r+0.5, 2.0))
  
   elseif(lumist) then
-    psi = max(0., min(2.*r, 0.75*r+0.25, 0.25*r+0.75, 2.))
+    psi = max(0., min(2*r, 0.75*r+0.25, 0.25*r+0.75, 2.0))
 
   elseif(lkoren) then
-    psi = max(0., min(2.*r, 2./3._dp*r+1./3._dp, 2.))
+    psi = max(0., min(2*r, 2./3._dp*r+1./3.0_dp, 2.0))
 
   elseif(lcharm) then
-    psi = (r+abs(r))*(3*r+1.)/(2*(r+1.)**2)
+    psi = (r+abs(r))*(3*r+1.0)/(2*(r+1.0)**2)
 
   elseif(lospre) then
-    psi = 1.5*r*(r+1.)/(r**2+r+1.)
+    psi = 1.5*r*(r+1.0)/(r**2+r+1.0)
 
   else
   ! psi for 2nd order upwind (luds) scheme:

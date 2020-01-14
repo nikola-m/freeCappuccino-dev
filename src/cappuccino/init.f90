@@ -133,25 +133,25 @@ subroutine init
   ! Concentration
   if(lcal(icon)) con = conin
 
-  ! Reynolds stress tensor components
-  if (lturb) then
-    uu = 0.0_dp
-    vv = 0.0_dp
-    ww = 0.0_dp
-    uv = 0.0_dp
-    uw = 0.0_dp
-    vw = 0.0_dp
-  endif
+  ! ! Reynolds stress tensor components
+  ! if (lturb) then
+  !   uu = 0.0_dp
+  !   vv = 0.0_dp
+  !   ww = 0.0_dp
+  !   uv = 0.0_dp
+  !   uw = 0.0_dp
+  !   vw = 0.0_dp
+  ! endif
 
-  ! Turbulent heat fluxes
-  if(lcal(ien).and.lbuoy) then
-    utt = 0.0_dp
-    vtt = 0.0_dp
-    wtt = 0.0_dp
-  endif
+  ! ! Turbulent heat fluxes
+  ! if(lcal(ien).and.lbuoy) then
+  !   utt = 0.0_dp
+  !   vtt = 0.0_dp
+  !   wtt = 0.0_dp
+  ! endif
 
-  ! Reynolds stress anisotropy
-  if(lturb.and.lasm) bij = 0.0_dp
+  ! ! Reynolds stress anisotropy
+  ! if(lturb.and.lasm) bij = 0.0_dp
 
   ! Pressure and pressure correction
   p = 0.0_dp
@@ -189,13 +189,6 @@ subroutine init
 !
 ! Initial Gradient Calculation
 !
-  dUdxi = 0.0_dp
-  dVdxi = 0.0_dp
-  dWdxi = 0.0_dp
-  dPdxi = 0.0_dp
-  dTEdxi = 0.0_dp
-  dEDdxi = 0.0_dp
-
 
   ! Set matrix with geometric coefficients for Least-squares gradient reconstruction.
   if (lstsq .or. lstsq_qr .or. lstsq_dm) then
@@ -206,12 +199,26 @@ subroutine init
   call grad(U,dUdxi)
   call grad(V,dVdxi)
   call grad(W,dWdxi)
- 
 
+! 
+! Initialization of residual for all variables
+!
+  ! do i=1,nphi
+  !   rnor(i) = 1.0_dp
+  !   resor(i)= 0.0_dp
+  ! enddo
 
-  !
-  ! Distance to the nearest wall (needed for some turbulence models) for all cells via Poisson equation.
-  !
+  ! rnor(iu)  = 1.0_dp/(flomom+small)
+  ! rnor(iv)  = rnor(iu)
+  ! rnor(iw)  = rnor(iu)
+
+  ! rnor(ip)  = 1.0_dp/(flomas+small)
+  ! rnor(ite) = 1.0_dp/(flowte+small)
+  ! rnor(ied) = 1.0_dp/(flowed+small)
+
+!
+! Distance to the nearest wall (needed for some turbulence models) for all cells via Poisson equation.
+!
 
   write(*,*) ' '
   write(*,*) ' Calculate distance to the nearest wall:'

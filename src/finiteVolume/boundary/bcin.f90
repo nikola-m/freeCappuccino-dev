@@ -134,22 +134,6 @@ subroutine bcin
   endif
 
 
-
-  ! Initialization of residual for all variables
-  do i=1,nphi
-    rnor(i) = 1.0_dp
-    resor(i)= 0.0_dp
-  enddo
-
-  rnor(iu)  = 1.0_dp/(flomom+small)
-  rnor(iv)  = rnor(iu)
-  rnor(iw)  = rnor(iu)
-
-  rnor(ip)  = 1.0_dp/(flomas+small)
-  rnor(ite) = 1.0_dp/(flowte+small)
-  rnor(ied) = 1.0_dp/(flowed+small)
-
-
   ! Correct turbulence at inlet for appropriate turbulence model
   if(lturb) call correct_turbulence_inlet()
 

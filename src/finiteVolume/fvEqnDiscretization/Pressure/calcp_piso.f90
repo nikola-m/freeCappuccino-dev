@@ -1,6 +1,6 @@
 !***********************************************************************
 !
-subroutine PISO_multiple_correction
+subroutine calcp_piso
 !
 !***********************************************************************
 !
@@ -67,8 +67,7 @@ subroutine PISO_multiple_correction
 !
 !***********************************************************************
 !
-  integer :: i, k, inp, iface, istage
-  integer :: ib
+  integer :: i, k, inp, ib, iface, istage
   integer :: ijp, ijn
   real(dp) :: cap, can
   real(dp) :: pavg, fmcor
@@ -199,6 +198,40 @@ subroutine PISO_multiple_correction
       !// problem where a solution for pressure exists." - Comment in OF pisoFOAM code.
       if(.not.const_mflux) call adjustMassFlow
 
+      ! Add contributions to source of the inlet and outlet boundaries.
+
+      ! Loop over boundaries
+      do ib=1,numBoundaries
+        
+        if ( bctype(ib) == 'inlet' ) then
+
+          do i=1,nfaces(ib)
+
+            iface = startFace(ib) + i
+            ijp = owner(iface)
+
+            ! Minus sign is there to make fmi(i) positive since it enters the cell.
+            ! Check out comments in bcin.f90
+            su(ijp) = su(ijp) - flmass(iface)
+
+          end do
+
+        elseif ( bctype(ib) == 'outlet' ) then
+
+          do i=1,nfaces(ib)
+
+            iface = startFace(ib) + i
+            ijp = owner(iface)
+
+            ! fmout is positive because of same direction of velocity and surface normal vectors
+            ! but the mass flow is going out of the cell, therefore minus sign.
+            su(ijp) = su(ijp) - flmass(iface)
+                
+          end do
+
+        endif 
+
+      enddo 
 
       !                                                                                  
       ! Laplacian source term modification due to non-orthogonality.
@@ -300,7 +333,7 @@ subroutine PISO_multiple_correction
         enddo                                                              
 
         ! Write continuity error report:
-        include 'continuityErrors.h' 
+        call continuityErrors 
 
       endif 
 
@@ -325,7 +358,7 @@ subroutine PISO_multiple_correction
     enddo 
 
     ! Explicit correction of boundary conditions 
-    ! call correctBoundaryConditionsVelocity
+    ! call updateVelocityAtBoundary
 
   !== END: PISO Corrector loop =========================================
   enddo

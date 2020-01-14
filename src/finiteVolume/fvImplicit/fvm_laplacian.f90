@@ -101,7 +101,7 @@ end subroutine
 
 !***********************************************************************
 !
-subroutine facefluxlaplacian(ijp, ijn, arx, ary, arz, lambda, mu, cap, can)
+subroutine faceFluxLaplacian(ijp, ijn, arx, ary, arz, lambda, mu, cap, can)
 !
 !***********************************************************************
 !

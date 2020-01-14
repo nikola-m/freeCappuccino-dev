@@ -1,6 +1,17 @@
-!---------------------------------------------------------------------------
-! Calculates and prints the continuity errors.
-!---------------------------------------------------------------------------
+subroutine continuityErrors
+!
+! Purpose: 
+!   Calculates and prints the continuity errors.
+!
+  use types
+  use parameters, only: sumLocalContErr, globalContErr, cumulativeContErr
+  use geometry, only: numInnerFaces, owner, neighbour, numBoundaries, bctype, nfaces, startFace
+  use sparse_matrix, only: res
+  use variables, only: flmass
+
+  implicit none
+
+  integer :: i, ijp, ijn, ib, iface
 
   ! Initialize array with zero value.
   res = 0.0_dp
@@ -43,9 +54,9 @@
   enddo
 
 
-  ! The way it is done in OpenFOAM:
-  ! sumLocalContErr = timestep*volumeWeightedAverage( abs(res) )
-  ! globalContErr = timestep*volumeWeightedAverage( res )
+  ! sumLocalContErr = volumeWeightedAverage( abs(res) )
+
+  ! globalContErr   = volumeWeightedAverage( res )
 
   sumLocalContErr = sum( abs( res ) ) 
   
@@ -58,4 +69,6 @@
   write(6,'(3(a,es10.3))') "  time step continuity errors : sum local = ", sumLocalContErr, &
  &                          ", global = ", globalContErr, &
  &                          ", cumulative = ", cumulativeContErr
+
+end subroutine
 

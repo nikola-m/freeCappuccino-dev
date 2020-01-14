@@ -49,7 +49,7 @@ module parameters
   real(dp) :: slarge   ! Upper limit for residuals before simulation blowup
   real(dp) :: facnap   ! Underelaxation factor for Reynolds stresses
   real(dp) :: facflx   ! Underelaxation factor for turbulent heat fluxes
-  real(dp) :: uin,vin,win,tein,edin,tin,vartin,conin ! Inlet values (assumed constant accross inlet)
+  real(dp) :: uin,vin,win,tein,edin,tin,vartin,conin ! Inlet values (assumed constant across inlet)
 
   real(dp) :: pranl     ! (= 0.7_dp for air, 7.0_dp for water, read it from input file.)
   logical :: lbuoy      ! Bouyancy effects - are they included in momentum and turbulence eqns. If yes we calculate heat fluxes.
@@ -79,7 +79,7 @@ module parameters
   logical :: CoNumFix         ! Is Courant no. fixed during time-stepping
   real(dp) :: CoNumFixValue   ! Fixed value for Courant number - set in modinp for now - may be read in input
   real(dp) :: CoNum,meanCoNum ! Courant number.  
-  character(len=9) :: timechar! A char string to write current timestep
+  ! character(len=9) :: timechar! A char string to write current timestep
 
   ! Choosing discretization scheme cds, luds, smart,muscl, gamma, etc.
   ! logical :: lcds,lluds,lsmart,lavl,lmuscl,lumist...,lcds_flnt,l2nd_flnt,l2ndlim_flnt,lmuscl_flnt
@@ -232,7 +232,7 @@ module title_mod
 !%%%%%%%%%%%%
 
   character(len=70) :: title
-  character(19) :: datetime   ! A date-time character to identify unique postprocessing folder
+  ! character(19) :: datetime   ! A date-time character to identify unique postprocessing folder
   character(len=4), dimension(10) ::  chvar = (/'  U ', '  V ', '  W ', '  P ', ' TE ', ' ED ', '  T ', ' VIS', 'VART', ' CON' /)
   character(len=7), dimension(10) ::  chvarSolver = &
   (/'U      ', 'V      ', 'W      ', 'p      ', 'k      ', 'epsilon', 'Temp   ', 'Visc   ', 'VarTemp', 'Conc   ' /)

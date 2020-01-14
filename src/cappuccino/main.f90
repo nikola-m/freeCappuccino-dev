@@ -27,6 +27,7 @@ program cappuccino
   integer :: itimes, itimee
   real(dp):: source
   real :: start, finish
+  character( len = 9) :: timechar
 !                                                                       
 !******************************************************************************
 !
@@ -66,7 +67,7 @@ program cappuccino
   itimes = itime+1
   itimee = itime+numstep
 
-  time_loop: do itime=itimes,itimee ! time_loop 
+  time_loop: do itime=itimes,itimee
 
 
     ! Update variables - shift in time: 
@@ -78,11 +79,7 @@ program cappuccino
     ! Courant number report:
     call CourantNo
 
-    ! 
-    !===============================================
-    ! SIMPLE iteration loop:
-    !===============================================
-    !
+
     iteration_loop: do iter=1,maxit 
 
       write(*,'(2x,a,i0)') 'Iter. ',iter
@@ -93,8 +90,8 @@ program cappuccino
       call calcuvw  
 
       ! Pressure-velocity coupling. Two options: SIMPLE and PISO
-      if(SIMPLE)   call CALCP
-      if(PISO)     call PISO_multiple_correction
+      if(SIMPLE)   call calcp_simple
+      if(PISO)     call calcp_piso
 
       ! Turbulence
       if(lturb)    call correct_turbulence()
@@ -108,8 +105,8 @@ program cappuccino
 
 
       call cpu_time(finish)
-      write(timechar,'(f9.3)') finish-start
-      write(6,'(3a)') '  ExecutionTime = ',trim(adjustl(timechar)),' s'
+      write(timechar,'(f9.5)') finish-start
+      write(6,'(3a)') '  ExecutionTime = ',adjustl(timechar),' s'
       write(6,*)
 
       !---------------------------------------------------------------
@@ -117,8 +114,9 @@ program cappuccino
       !---------------------------------------------------------------
 
       ! Check residual and stop program if residuals diverge
-      source=max(resor(iu),resor(iv),resor(iw),resor(ip)) 
-      if(source.gt.slarge) then
+      source = max(resor(iu),resor(iv),resor(iw),resor(ip)) 
+
+      if( source.gt.slarge ) then
           write(6,"(//,10x,a)") "*** Program terminated -  iterations diverge ***" 
           stop
       endif
@@ -133,13 +131,13 @@ program cappuccino
       if(ltransient) then 
 
           ! Has converged within timestep or has reached maximum no. of SIMPLE iterations per timetstep:
-          if(source.lt.sormax.or.iter.ge.maxit) then 
+          if( source.lt.sormax .or. iter.ge.maxit ) then 
 
             ! Correct driving force for a constant mass flow rate simulation:
             if(const_mflux) call constant_mass_flow_forcing
 
             ! Write field values after nzapis iterations or at the end of time-dependent simulation:
-            if(mod(itime,nzapis).eq.0  .or. itime.eq.numstep) then
+            if( mod(itime,nzapis).eq.0  .or. itime.eq.numstep ) then
               call write_restart_files
               call writefiles
             endif

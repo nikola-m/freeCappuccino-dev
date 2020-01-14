@@ -95,36 +95,40 @@ subroutine read_input_file
   !
   ! Convective scheme:
   !
-  if(adjustl(convective_scheme) == 'central') then
-    lcds = .true.
-  elseif(adjustl(convective_scheme) == 'cds-corrected') then
-    lcdsc = .true.
-  elseif(adjustl(convective_scheme) == 'linear') then
-    lluds = .true.
-  elseif(adjustl(convective_scheme) == 'smart') then
-    lsmart = .true.
-  elseif(adjustl(convective_scheme) == 'avl-smart') then
-    lavl = .true.
-  elseif(adjustl(convective_scheme) == 'muscl') then
-    lmuscl = .true.
-  elseif(adjustl(convective_scheme) == 'umist') then
-    lumist = .true.
-  elseif(adjustl(convective_scheme) == 'koren') then
-    lkoren = .true.
-  elseif(adjustl(convective_scheme) == 'charm') then
-    lcharm = .true.
-  elseif(adjustl(convective_scheme) == 'ospre') then
-    lospre = .true.
-  elseif(adjustl(convective_scheme) == 'central-f') then
-    lcds_flnt = .true.
-  elseif(adjustl(convective_scheme) == 'linear-f') then
-    l2nd_flnt = .true.
-  elseif(adjustl(convective_scheme) == 'muscl-f') then
-    lmuscl_flnt = .true.
-  else
-    write(*,'(a)') '  Convective scheme not chosen, assigning default muscl scheme'
-    convective_scheme = 'muscl'
-  endif
+  select case(convective_scheme)
+
+    case ('central')
+      lcds = .true.
+    case ('cds-corrected')
+      lcdsc = .true.
+    case ('linear')
+      lluds = .true.
+    case ('smart')
+      lsmart = .true.
+    case ('avl-smart')
+      lavl = .true.
+    case ('muscl')
+      lmuscl = .true.
+    case ('umist')
+      lumist = .true.
+    case ('koren')
+      lkoren = .true.
+    case ('charm')
+      lcharm = .true.
+    case ('ospre')
+      lospre = .true.
+    case ('central-f')
+      lcds_flnt = .true.
+    case ('linear-f')
+      l2nd_flnt = .true.
+    case('muscl-f')
+      lmuscl_flnt = .true.
+
+    case default
+      write(*,'(a)') "Using default convective scheme - 2nd order upwind."
+      l2nd_flnt = .true.
+
+  end select
   
   ! Set value for flux_limiter logical
   if(lluds.or.lsmart.or.lavl.or.lmuscl.or.lumist.or.lkoren.or.lcharm.or.lospre) then

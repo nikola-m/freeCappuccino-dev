@@ -1,0 +1,22 @@
+#!/bin/bash
+#
+# Purpose:
+#  This is a bash script which will make all binaries for freeCappuccino,
+#  including applications and utilities.
+# Description:
+#  The procedure amounts to a few calls to generic makefile, but every time 
+#  specifying a specific src directory, with its own 'files' and 'directories' 
+#  lists, specific compile and link flags and the name of executable file. 
+#  All executables will be places into the same directory $FCAPPUC_DIR/bin 
+#  for which we need to update the PATH environment variable.
+#
+#  Thanks for using freeCappuccino.
+#
+# Make 'cappuccino' CFD solver:
+make execut=bin/cappuccino makefile_dir=src/cappuccino LDFLAGS=-O2\ -Wall LDLIBS=-llapack 
+#
+# Make Poisson equation solver:
+make execut=bin/poisson makefile_dir=applications/Poisson LDFLAGS=-O2\ -Wall LDLIBS=-llapack
+#
+# Make Steady Heat Equation solver:
+make execut=bin/steadyHeatEq makefile_dir=applications/steadyHeatEq LDFLAGS=-O2\ -Wall LDLIBS=-llapack
