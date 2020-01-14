@@ -5,7 +5,7 @@
 # 1. Source files
 
 # Directory containing the main makefile, used by "VPATH":
-makefile_dir = ./src/cappuccino
+makefile_dir = src/cappuccino
 
 # Write paths relative to makefile_dir, separated by blanks (do not
 # include ${makefile_dir} in the list):
@@ -31,7 +31,7 @@ sources := $(shell cat ${makefile_dir}/files)
 # Or, if all the source files have the same suffix, more simply:
 objects := $(sources:.f=.o)
 
-execut = ./bin/cappuccino
+execut = bin/cappuccino
 
 # 3. Compiler-dependent part
 
@@ -61,7 +61,7 @@ ${execut}: ${objects}
 	$(FC) $(LDFLAGS) $^ $(LDLIBS) -o $@
 
 clean:
-	rm -f ${execut} ${objects} *mod
+	rm -f ${execut} *mod
 
 clobber:
 	rm -f *mod
