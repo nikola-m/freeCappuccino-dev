@@ -178,7 +178,6 @@ subroutine read_mesh
     read(process_file,*) neighbProcNo(i)
   enddo
 
-
 !
 ! > Read boundary conditions file. 
 !
@@ -500,7 +499,6 @@ subroutine read_mesh
 
 endif
 
-
 !******************************************************************************
 ! > Allocate arrays for Mesh description
 !..............................................................................
@@ -521,17 +519,11 @@ endif
   ! I have these things stored in positions numCells+1, numPCells and exchange them with
   ! subroutine exchange__ with double underscore. This one is inteded for thiese smaller arrays.
 
-  ! allocate ( xc(numPCells) )
-  ! allocate ( yc(numCPells) )
-  ! allocate ( zc(numCPells) )
-
   allocate ( xc(numTotal) )
   allocate ( yc(numTotal) )
   allocate ( zc(numTotal) )
 
   ! Cell volumes
-  ! allocate ( vol(numCells+Npro) )
-
   allocate ( vol(numTotal) )
 
 
@@ -760,12 +752,6 @@ endif
   deallocate(r8tmp)
 
   ! We need some geometry in the buffer cells, we fill these by exchanging info with other processes
-  ! call exchange__( xc )
-  ! call exchange__( yc )
-  ! call exchange__( zc )
-  ! call exchange__( Vol )
-
-
   call exchange( xc ) 
   call exchange( yc )
   call exchange( zc )
@@ -854,7 +840,6 @@ endif
         inn = iBndValueStart(ib) + i
 
         iPro = iPro + 1
-
 
         node = 0
 
@@ -1027,7 +1012,6 @@ endif
   close ( boundary_file)
   close ( process_file)
 !+-----------------------------------------------------------------------------+
-
 
 end subroutine read_mesh
 

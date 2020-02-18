@@ -95,41 +95,24 @@ subroutine calcp_piso
     sw = rW
 
     ! Assemble H(U) = - sum_j {a_j*U_pj}, j - runs trough neighbour indices
-    do i = 1,numInnerFaces
-        ijp = owner(i)
-        ijn = neighbour(i)
-
-        k = icell_jcell_csr_index(i)
-        su(ijp) = su(ijp) - h(k)*u(ijn)
-
-        k = jcell_icell_csr_index(i)
-        su(ijn) = su(ijn) - h(k)*u(ijp)
-    enddo
-
-    ! Assemble H(V) = - sum_j {a_j*V_pj}, j - runs trough neighbour indices
-    do i = 1,numInnerFaces
-        ijp = owner(i)
-        ijn = neighbour(i)
-
-        k = icell_jcell_csr_index(i)
-        sv(ijp) = sv(ijp) - h(k)*v(ijn)
-
-        k = jcell_icell_csr_index(i)
-        sv(ijn) = sv(ijn) - h(k)*v(ijp)
-    enddo
-
+    ! Assemble H(V) = - sum_j {a_j*V_pj}, j - runs trough neighbour indices  
     ! Assemble H(W) = - sum_j {a_j*W_pj}, j - runs trough neighbour indices
+
     do i = 1,numInnerFaces
-        ijp = owner(i)
-        ijn = neighbour(i)
+      ijp = owner(i)
+      ijn = neighbour(i)
 
-        k = icell_jcell_csr_index(i)
-        sw(ijp) = sw(ijp) - h(k)*w(ijn)
+      k = icell_jcell_csr_index(i)
+      su(ijp) = su(ijp) - h(k)*u(ijn)
+      sv(ijp) = sv(ijp) - h(k)*v(ijn)
+      sw(ijp) = sw(ijp) - h(k)*w(ijn)
 
-        k = jcell_icell_csr_index(i)
-        sw(ijn) = sw(ijn) - h(k)*w(ijp)
+      k = jcell_icell_csr_index(i)
+      su(ijn) = su(ijn) - h(k)*u(ijp)
+      sv(ijn) = sv(ijn) - h(k)*v(ijp)    
+      sw(ijn) = sw(ijn) - h(k)*w(ijp)
+
     enddo
-
  
     ! HbyA
     u(1:numCells) = apu*su
@@ -142,6 +125,92 @@ subroutine calcp_piso
     call grad(V,dVdxi)
     call grad(W,dWdxi) 
 
+
+    ! Initialize coefficient array and source:
+    a = 0.0_dp
+    su = 0.0_dp 
+
+
+    ! > Assemble off diagonal entries of system matrix and find mass flux,
+    !   accumulate diagonal entries of sysem matrix, and rhs vector stored in su array.
+
+    ! Internal faces:
+    do i = 1,numInnerFaces
+
+      ijp = owner(i)
+      ijn = neighbour(i)
+
+      call facefluxmass_piso( ijp, ijn, xf(i), yf(i), zf(i), arx(i), ary(i), arz(i), facint(i), &
+                              cap, can, flmass(i), flmasso(i), flmassoo(i),flmassooo(i) )
+
+      ! > Off-diagonal elements:
+
+      ! (icell,jcell) matrix element:
+      k = icell_jcell_csr_index(i)
+      a(k) = can
+
+      ! (jcell,icell) matrix element:
+      k = jcell_icell_csr_index(i)
+      a(k) = cap
+
+      ! > Elements on main diagonal:
+
+      ! (icell,icell) main diagonal element
+      k = diag(ijp)
+      a(k) = a(k) - can
+
+      ! (jcell,jcell) main diagonal element
+      k = diag(ijn)
+      a(k) = a(k) - cap
+
+      ! > Sources:
+
+      su(ijp) = su(ijp)-flmass(i)
+      su(ijn) = su(ijn)+flmass(i) 
+
+    end do
+
+
+    !// "adjusts the inlet and outlet fluxes to obey continuity, which is necessary for creating a well-posed
+    !// problem where a solution for pressure exists." - Comment in OF pisoFOAM code.
+    if(.not.const_mflux) call adjustMassFlow
+
+    ! Add contributions to source of the inlet and outlet boundaries.
+
+    ! Loop over boundaries
+    do ib=1,numBoundaries
+      
+      if ( bctype(ib) == 'inlet' ) then
+
+        do i=1,nfaces(ib)
+
+          iface = startFace(ib) + i
+          ijp = owner(iface)
+
+          ! Minus sign is there to make fmi(i) positive since it enters the cell.
+          ! Check out comments in bcin.f90
+          su(ijp) = su(ijp) - flmass(iface)
+
+        end do
+
+      elseif ( bctype(ib) == 'outlet' ) then
+
+        do i=1,nfaces(ib)
+
+          iface = startFace(ib) + i
+          ijp = owner(iface)
+
+          ! fmout is positive because of same direction of velocity and surface normal vectors
+          ! but the mass flow is going out of the cell, therefore minus sign.
+          su(ijp) = su(ijp) - flmass(iface)
+              
+        end do
+
+      endif 
+
+    enddo 
+
+
     !~~~~ Non orthogonal corrections loop ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     !
@@ -150,88 +219,26 @@ subroutine calcp_piso
     !
     DO ipcorr=1,npcor
 
-      ! Initialize coefficient array and source:
-      a = 0.0_dp
-      su = 0.0_dp 
+      ! !  "If you have a pressure equations with boundaries that do not fix pressure level, you have to fix a reference pressure." H.Jasak cfd-online forum
+      ! !// In incompressible flow, only relative pressure matters.  Unless there is a pressure BC present,
+      ! !// one cell's pressure has to be set to produce a unique pressure solution
+      ! !    pEqn.setReference(pRefCell, pRefValue);
+      ! !//
+      ! ! So:
+      ! a( ioffset(pRefCell):ioffset(pRefCell+1)-1 ) = 0.0_dp
+      ! a( diag(pRefCell) ) = 1.0_dp
+      ! ! Set rhs value for pRefCell to be reference pressure
+      ! su(pRefCell) = p(pRefCell)
 
-      ! > Assemble off diagonal entries of system matrix and find mass flux,
-      !   accumulate diagonal entries of sysem matrix, and rhs vector stored in su array.
+      !
+      ! Solve pressure equation system
+      !
+      call iccg(p,ip)
 
-      ! Internal faces:
-      do i = 1,numInnerFaces
+      ! We have pure Neumann problem - take out the average of the field as the additive constant
+      pavg = sum(p(1:numCells))/dble(numCells)
+      p(1:numCells) = p(1:numCells) - pavg
 
-        ijp = owner(i)
-        ijn = neighbour(i)
-
-        call facefluxmass_piso( ijp, ijn, xf(i), yf(i), zf(i), arx(i), ary(i), arz(i), facint(i), &
-                                cap, can, flmass(i), flmasso(i), flmassoo(i),flmassooo(i) )
-
-        ! > Off-diagonal elements:
-
-        ! (icell,jcell) matrix element:
-        k = icell_jcell_csr_index(i)
-        a(k) = can
-
-        ! (jcell,icell) matrix element:
-        k = jcell_icell_csr_index(i)
-        a(k) = cap
-
-        ! > Elements on main diagonal:
-
-        ! (icell,icell) main diagonal element
-        k = diag(ijp)
-        a(k) = a(k) - can
-
-        ! (jcell,jcell) main diagonal element
-        k = diag(ijn)
-        a(k) = a(k) - cap
-
-        ! > Sources:
-
-        su(ijp) = su(ijp)-flmass(i)
-        su(ijn) = su(ijn)+flmass(i) 
-
-      end do
-
-
-      !// "adjusts the inlet and outlet fluxes to obey continuity, which is necessary for creating a well-posed
-      !// problem where a solution for pressure exists." - Comment in OF pisoFOAM code.
-      if(.not.const_mflux) call adjustMassFlow
-
-      ! Add contributions to source of the inlet and outlet boundaries.
-
-      ! Loop over boundaries
-      do ib=1,numBoundaries
-        
-        if ( bctype(ib) == 'inlet' ) then
-
-          do i=1,nfaces(ib)
-
-            iface = startFace(ib) + i
-            ijp = owner(iface)
-
-            ! Minus sign is there to make fmi(i) positive since it enters the cell.
-            ! Check out comments in bcin.f90
-            su(ijp) = su(ijp) - flmass(iface)
-
-          end do
-
-        elseif ( bctype(ib) == 'outlet' ) then
-
-          do i=1,nfaces(ib)
-
-            iface = startFace(ib) + i
-            ijp = owner(iface)
-
-            ! fmout is positive because of same direction of velocity and surface normal vectors
-            ! but the mass flow is going out of the cell, therefore minus sign.
-            su(ijp) = su(ijp) - flmass(iface)
-                
-          end do
-
-        endif 
-
-      enddo 
 
       !                                                                                  
       ! Laplacian source term modification due to non-orthogonality.
@@ -262,27 +269,6 @@ subroutine calcp_piso
 
         enddo                                                              
 
-      endif 
-
-      ! !  "If you have a pressure equations with boundaries that do not fix pressure level, you have to fix a reference pressure." H.Jasak cfd-online forum
-      ! !// In incompressible flow, only relative pressure matters.  Unless there is a pressure BC present,
-      ! !// one cell's pressure has to be set to produce a unique pressure solution
-      ! !    pEqn.setReference(pRefCell, pRefValue);
-      ! !//
-      ! ! So:
-      ! a( ioffset(pRefCell):ioffset(pRefCell+1)-1 ) = 0.0_dp
-      ! a( diag(pRefCell) ) = 1.0_dp
-      ! ! Set rhs value for pRefCell to be reference pressure
-      ! su(pRefCell) = p(pRefCell)
-
-      !
-      ! Solve pressure equation system
-      !
-      call iccg(p,ip)
-
-      ! We have pure Neumann problem - take out the average of the field as the additive constant
-      pavg = sum(p(1:numCells))/dble(numCells)
-      p(1:numCells) = p(1:numCells) - pavg
 
 
       !// On the last non-orthogonality correction, correct the flux using the most up-to-date pressure
@@ -290,7 +276,7 @@ subroutine calcp_piso
       !                    phi -= pEqn.flux();                                                 
                                                                                                
       ! We have hit the last iteration of nonorthogonality correction:                         
-      if(ipcorr.eq.npcor) then
+      else ! or in other words if(ipcorr.eq.npcor) then
 
         !
         ! Correct mass fluxes at inner cv-faces only (only inner flux)
@@ -324,13 +310,13 @@ subroutine calcp_piso
 
         end do  
 
-        do i=1,numInnerFaces
+        ! do i=1,numInnerFaces
 
-          call fluxmc(ijp, ijn, xf(i), yf(i), zf(i), arx(i), ary(i), arz(i), facint(i), fmcor)
+        !   call fluxmc(ijp, ijn, xf(i), yf(i), zf(i), arx(i), ary(i), arz(i), facint(i), fmcor)
 
-          flmass(i) = flmass(i)-fmcor 
+        !   flmass(i) = flmass(i)-fmcor 
 
-        enddo                                                              
+        ! enddo                                                              
 
         ! Write continuity error report:
         call continuityErrors 
@@ -341,7 +327,7 @@ subroutine calcp_piso
     !~~~~ END: Non orthogonal corrections loop ~~~~~~~~~~~~~~~~~~~~~~~~~
     enddo
 
-
+stop
 
     !// Add pressure gradient to interior velocity and BC's.  Note that this pressure is not just a small
     !// correction to a previous pressure, but is the entire pressure field.  Contrast this to the use of p'
@@ -358,7 +344,7 @@ subroutine calcp_piso
     enddo 
 
     ! Explicit correction of boundary conditions 
-    ! call updateVelocityAtBoundary
+    call updateVelocityAtBoundary
 
   !== END: PISO Corrector loop =========================================
   enddo

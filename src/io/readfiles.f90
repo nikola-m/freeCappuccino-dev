@@ -85,4 +85,8 @@ subroutine readfiles
 
   endif
 
+  write ( *, '(a)' ) ' '
+  write ( *, '(a)' ) '  Continuing simulaton from saved state - fields have been succesfully read! '
+  write ( *, '(a)' ) ' '
+
 end subroutine

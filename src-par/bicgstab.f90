@@ -24,7 +24,7 @@ subroutine bicgstab(fi,ifi)
 !
   integer :: i, k, ns, l, itr_used, ib, iface, ijn, ipro
   real(dp), dimension(numCells) :: reso,pk,uk,vk,d
-  real(dp), dimension(numPCells) :: zk
+  real(dp), dimension(numTotal) :: zk
   real(dp) :: rsm, resmax, res0, resl, tol
   real(dp) :: alf, beto, gam, bet, om, ukreso, svkres, svkvk
 
@@ -138,7 +138,7 @@ subroutine bicgstab(fi,ifi)
 
 
 !
-! Solve (M ZK = PK) - forward substitution
+! Solve (M ZK = PK) - forward elimination
 !
   do i=1,numCells
     zk(i) = pk(i)

@@ -160,6 +160,8 @@ subroutine read_input_file
     dt_scheme = 'Backward-Differentiation of 3nd order - BDF3'
   elseif( cn ) then
     dt_scheme = 'Crank-Nicolson'
+  else
+    dt_scheme = 'None'
   endif
 
   write(*,'(a)') ' '

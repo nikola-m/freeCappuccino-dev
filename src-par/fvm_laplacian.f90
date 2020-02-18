@@ -26,7 +26,7 @@ subroutine laplacian(phi)
 
   integer :: i, k, ijp, ijn, ijb, ib, iface, ipro, iwall
   real(dp) :: cap, can
-  real(dp) :: are,dpw
+  ! real(dp) :: are,dpw
 
 
   ! Initialize matrix array
@@ -136,7 +136,7 @@ subroutine facefluxlaplacian(ijp, ijn, arx, ary, arz, lambda, cap, can)
 !
   use types
   use parameters
-  use geometry, only: numTotal,xc,yc,zc
+  use geometry, only: xc,yc,zc
 
   implicit none
 

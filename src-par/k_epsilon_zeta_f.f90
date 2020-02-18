@@ -756,7 +756,7 @@ subroutine modify_mu_eff()
   real(dp) :: visold
   real(dp) :: nxf,nyf,nzf,are
   real(dp) :: Vnp,Vtp,xtp,ytp,ztp
-  real(dp) :: Ut2,Tau,Utau,viscw
+  real(dp) :: Ut2,viscw
   real(dp), parameter :: sqrt_six = sqrt(6.0_dp)
 
   !
@@ -853,7 +853,7 @@ subroutine modify_mu_eff()
         ztp = W(ijp)-Vnp*nzf
 
         ! Its magnitude
-        Vtp = xtp*xtp+ytp*ytp+ztp*ztp
+        Vtp = sqrt(xtp*xtp+ytp*ytp+ztp*ztp)
 
         ! Tangent direction
         xtp = xtp/vtp
@@ -863,7 +863,7 @@ subroutine modify_mu_eff()
         ! projektovanje razlike brzina na pravac tangencijalne brzine u cell centru ijp
         Ut2 = abs( (U(ijb)-U(ijp))*xtp + (V(ijb)-V(ijp))*ytp + (W(ijb)-W(ijp))*ztp )
 
-        Tau = viscos*Ut2/dnw(iWall)
+        Tau(iWall) = viscos*Ut2/dnw(iWall)
         Utau = sqrt( Tau / den(ijb) )
         ypl(iWall) = den(ijb)*Utau*dnw(iWall)/viscos
 

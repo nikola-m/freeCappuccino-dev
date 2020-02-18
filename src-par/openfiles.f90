@@ -29,14 +29,14 @@ subroutine openfiles
   ! write(datetime, '(a)') date(1:4)//"-"//date(5:6)//"-"//date(7:8)//"_"//time(1:2)//":"//time(3:4)//":"//time(5:6)
 
   ! Create folders for process data
-  do id=0,nproc-1
+  ! do id=0,nproc-1
 
-    ! nproc_char <- myid zapisan levo u vidu stringa.
-    call i4_to_s_left ( id, nproc_char )
+  !   ! nproc_char <- myid zapisan levo u vidu stringa.
+  !   call i4_to_s_left ( id, nproc_char )
 
-    call execute_command_line('mkdir processor'//trim(nproc_char)//'/VTK')
+  !   call execute_command_line('mkdir processor'//trim(nproc_char)//'/vtk')
  
-  enddo
+  ! enddo
 
 
   ! Print cappuccino logo to log file.

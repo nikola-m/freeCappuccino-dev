@@ -17,16 +17,17 @@ subroutine calcp
   use gradients
   use fieldManipulation
   use faceflux_mass
+  ! use mpi
 
   implicit none
 
-  ! include 'mpif.h'
 !
 !***********************************************************************
 !
 
   integer :: i, k, inp, iface, if, ijp, ijn, ib, ipro, istage
-  real(dp) :: sum, suma, ppref, cap, can, fmcor, psum
+  real(dp) :: sum, suma, ppref, cap, can, fmcor
+  real(dp) :: psum
 
 
   a = 0.0_dp
@@ -117,6 +118,40 @@ subroutine calcp
 
   if(.not.const_mflux) call adjustMassFlow
 
+  ! Add contributions to source of the inlet and outlet boundaries.
+
+  ! Loop over boundaries
+  do ib=1,numBoundaries
+    
+    if ( bctype(ib) == 'inlet' ) then
+
+      do i=1,nfaces(ib)
+
+        iface = startFace(ib) + i
+        ijp = owner(iface)
+
+        ! Minus sign is there to make fmi(i) positive since it enters the cell.
+        ! Check out comments in bcin.f90
+        su(ijp) = su(ijp) - flmass(iface)
+
+      end do
+
+    elseif ( bctype(ib) == 'outlet' ) then
+
+      do i=1,nfaces(ib)
+
+        iface = startFace(ib) + i
+        ijp = owner(iface)
+
+        ! fmout is positive because of same direction of velocity and surface normal vectors
+        ! but the mass flow is going out of the cell, therefore minus sign.
+        su(ijp) = su(ijp) - flmass(iface)
+            
+      end do
+
+    endif 
+
+  enddo 
 
   ! Test continutity:
   if(ltest) then
@@ -124,8 +159,6 @@ subroutine calcp
     call global_sum(suma)
     if (myid .eq. 0) write(6,'(19x,a,1pe10.3)') ' Initial sum  =',suma
   endif
-
-
 
 !=====Multiple pressure corrections=====================================
   do ipcorr=1,npcor
@@ -286,5 +319,5 @@ subroutine calcp
 
   ! Write continuity error report:
   include 'continuityErrors.h'
-
+ 
 end subroutine

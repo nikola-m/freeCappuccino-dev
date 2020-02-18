@@ -56,7 +56,7 @@ subroutine bcin
           ! so minus signs here is to turn net mass influx - flomas, into positive value.
           flomas = flomas - flmass(iface) 
           flomom = flomom + abs(flmass(iface))*sqrt(u(ini)**2+v(ini)**2+w(ini)**2)
-          flowen = flowen + abs(flmass(iface)*t(ini))
+          ! if(lcal(ien)) flowen = flowen + abs(flmass(iface)*t(ini))
           flowte = flowte + abs(flmass(iface)*te(ini))
           flowed = flowed + abs(flmass(iface)*ed(ini))
           
@@ -67,51 +67,50 @@ subroutine bcin
 
     enddo
 
-    ! close(input_unit)
+  endif  
 
+  ! close(input_unit)
 
-    ! Outlet area
-    outare = 0.0_dp
+  ! Outlet area
+  outare = 0.0_dp
 
+  if (nout > 0 ) then
     ! Loop over outlet boundaries
-    do ib=1,numBoundaries
-      
+    do ib=1,numBoundaries    
       if ( bctype(ib) == 'outlet' ) then
-
         do i=1,nfaces(ib)
-
           iface = startFace(ib) + i
           outare = outare + sqrt(arx(iface)**2+ary(iface)**2+arz(iface)**2)
-
         end do
-
       endif 
-
     enddo
-
-    ! Global sum - MPI communication
-    call global_sum( flomas )
-    call global_sum( flomom )
-    call global_sum( flowen )
-    call global_sum( flowte )
-    call global_sum( flowed )
-
-    call global_sum( outare )
+  endif  
 
 
-    ! Average velocity at outlet boundary
-    uav = flomas/(densit*outare+small)
+  ! Global sum - MPI communication
+  call global_sum( flomas )
+  call global_sum( flomom )
+  if(lcal(ien)) call global_sum( flowen )
+  call global_sum( flowte )
+  call global_sum( flowed )
+
+  call global_sum( outare )
+
+  ! Average velocity at outlet boundary
+  uav = flomas/(densit*outare+small)
 
 
-    if( myid .eq. 0 ) then
-      write ( *, '(a)' ) '  Inlet boundary condition information:'
-      write ( *, '(a)' ) ' '
-      write ( *, '(a,e12.6)' ) '  Mass inflow: ', flomas
-      write ( *, '(a,e12.6)' ) '  Momentum inflow: ', flomom
-    endif
+  if( myid .eq. 0 ) then
+    write ( *, '(a)' ) '  Inlet boundary condition information:'
+    write ( *, '(a)' ) ' '
+    write ( *, '(a,e12.6)' ) '  Mass inflow: ', flomas
+    write ( *, '(a,e12.6)' ) '  Momentum inflow: ', flomom
+  endif
 
 
-    ! Mass flow trough outlet faces using Uav velocity
+  ! Mass flow trough outlet faces using Uav velocity
+
+  if(nout.gt.0) then
 
     ! Loop over outlet boundaries
     do ib=1,numBoundaries
@@ -137,8 +136,7 @@ subroutine bcin
 
     enddo
 
-  endif
-
+  endif  
 
   totalNumInlets = ninl 
   call global_isum( totalNumInlets )
@@ -154,22 +152,6 @@ subroutine bcin
     flowed = 1.0_dp
 
   endif
-
-
-  ! Initialization of residual for all variables
-  do i=1,nphi
-    rnor(i) = 1.0_dp
-    resor(i)= 0.0_dp
-  enddo
-
-  rnor(iu)  = 1.0_dp/(flomom+small)
-  rnor(iv)  = rnor(iu)
-  rnor(iw)  = rnor(iu)
-
-  rnor(ip)  = 1.0_dp/(flomas+small)
-  rnor(ite) = 1.0_dp/(flowte+small)
-  rnor(ied) = 1.0_dp/(flowed+small)
-
 
   ! Correct turbulence at inlet for appropriate turbulence model
   if(lturb) call correct_turbulence_inlet()

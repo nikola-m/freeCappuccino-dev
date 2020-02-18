@@ -347,6 +347,7 @@ subroutine calcuvw
 
         viss = viscos ! viskoznost interpolirana na boundary face
         if(lturb.and.ypl(iWall).gt.ctrans) viss=visw(iWall)
+        ! viss=max(viscos,visw(iWall))
 
         ! Face area
         are = sqrt(arx(iface)**2+ary(iface)**2+arz(iface)**2)
@@ -391,6 +392,7 @@ subroutine calcuvw
 
       !   viss = viscos ! viskoznost interolirana na boundary face
       !   if(lturb.and.ypl(i).gt.ctrans) viss=visw(i)
+      
       !   cf=viss*srdw(i) ! cf v.s. vsol -> cf is calculated using normal distance in srdw!
 
       !   ! Face area 

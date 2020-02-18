@@ -29,7 +29,7 @@ subroutine dpcg(fi,ifi)
 !
   integer :: i, k, ns, l, itr_used, ib, iface, ijn, ipro
   real(dp), dimension(numCells) :: zk
-  real(dp), dimension(numPCells) :: pk
+  real(dp), dimension(numTotal) :: pk
   real(dp) :: rsm, resmax, res0, resl, tol
   real(dp) :: s0, sk, alf, bet, pkapk
 
@@ -115,7 +115,7 @@ subroutine dpcg(fi,ifi)
 !
   pk(1:numCells) = zk + bet*pk(1:numCells)
 
-  call exchange__( pk )
+  call exchange( pk )
 !
 ! Calculate scalar product (pk.a pk) and alpha (overwrite zk)
 !
@@ -136,7 +136,7 @@ subroutine dpcg(fi,ifi)
         ijn = iBndValueStart(ib) + i
         ipro = ipro + 1
 
-        zk( k ) = zk( k ) + apr( ipro )*pk( numCells + ipro )
+        zk( k ) = zk( k ) + apr( ipro )*pk( ijn )
 
       enddo
     endif

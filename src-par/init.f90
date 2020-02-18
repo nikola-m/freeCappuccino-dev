@@ -21,7 +21,7 @@ subroutine init
   use gradients
   use sparse_matrix, only: su,sv
   use utils, only: get_unit,i4_to_s_left
-  use LIS_linear_solver_library
+  ! use LIS_linear_solver_library
   use field_initialization
   use output
 
@@ -32,7 +32,7 @@ subroutine init
   !
   character( len = 5) :: nproc_char
   integer :: i, ijp, ijn, ijb, ib, iface, ipro
-  integer :: output_unit
+  ! integer :: output_unit
   integer :: nsw_backup
   real(dp) :: fxp, fxn, ui, vi, wi
   real(dp) :: sor_backup
@@ -128,16 +128,16 @@ subroutine init
   ! 
   ! > TE Turbulent kinetic energy.
   !   
-  ! call initialize_scalar_field(te,dTEdxi,'k')
+  call initialize_scalar_field(te,dTEdxi,'k')
 
   ! 
   ! > ED Specific turbulent kinetic energy dissipation rate, also turbulence frequency - omega
   !  
-  ! if(solveOmega) then   
-  !   call initialize_scalar_field(ed,dEDdxi,'omega')
-  ! else
-  !   call initialize_scalar_field(ed,dEDdxi,'epsilon')
-  ! endif
+  if(solveOmega) then   
+    call initialize_scalar_field(ed,dEDdxi,'omega')
+  else
+    call initialize_scalar_field(ed,dEDdxi,'epsilon')
+  endif
 
 
   ! Density
@@ -157,29 +157,29 @@ subroutine init
   ! Concentration
   if(lcal(icon)) con=conin
 
-  ! Reynolds stress tensor components
-  if (lturb) then
-    uu = 0.0_dp
-    vv = 0.0_dp
-    ww = 0.0_dp
-    uv = 0.0_dp
-    uw = 0.0_dp
-    vw = 0.0_dp
-  endif
+  ! ! Reynolds stress tensor components
+  ! if (lturb) then
+  !   uu = 0.0_dp
+  !   vv = 0.0_dp
+  !   ww = 0.0_dp
+  !   uv = 0.0_dp
+  !   uw = 0.0_dp
+  !   vw = 0.0_dp
+  ! endif
 
-  ! Turbulent heat fluxes
-  if(lcal(ien).and.lbuoy) then
-    utt = 0.0_dp
-    vtt = 0.0_dp
-    wtt = 0.0_dp
-  endif
+  ! ! Turbulent heat fluxes
+  ! if(lcal(ien).and.lbuoy) then
+  !   utt = 0.0_dp
+  !   vtt = 0.0_dp
+  !   wtt = 0.0_dp
+  ! endif
 
-  ! Reynolds stress anisotropy
-  if(lturb.and.lasm) bij = 0.0_dp
+  ! ! Reynolds stress anisotropy
+  ! if(lturb.and.lasm) bij = 0.0_dp
 
-  ! Pressure and pressure correction
-  p = 0.0_dp
-  pp = p
+  ! ! Pressure and pressure correction
+  ! p = 0.0_dp
+  ! pp = p
 
 
   !
@@ -202,8 +202,10 @@ subroutine init
 
   enddo
 
-
+   
+  !
   ! Mass flow at boundaries of inner domain and buffer cells
+  !
   call exchange( u )
   call exchange( v )
   call exchange( w )
@@ -286,14 +288,14 @@ subroutine init
 
   ! Solve system
   ! call jacobi(p,ip)
-  call dpcg(p,ip) 
-  ! call iccg(p,ip) 
+  ! call dpcg(p,ip) 
+  call iccg(p,ip) 
   ! call bicgstab(p,ip) 
   ! call solve_csr(numCells,nnz,ioffset,ja,a,su,p)
 
   ! Update values at constant gradient bc faces - we need these values for correct gradients
 
-  ! call exchange ( p ) 
+  call exchange ( p ) 
 
   ipro = 0
 
@@ -325,9 +327,9 @@ subroutine init
   wallDistance = -sqrt(  dPdxi(1,1:numCells)**2+dPdxi(2,1:numCells)**2+dPdxi(3,1:numCells)**2  ) + &
                   sqrt(  dPdxi(1,1:numCells)**2+dPdxi(2,1:numCells)**2+dPdxi(3,1:numCells)**2 + 2*p(1:numCells)  )
 
-  do i = 1,numCells
-  write(*,*) wallDistance(i)
-  enddo
+  ! do i = 1,numCells
+  ! write(*,*) wallDistance(i)
+  ! enddo
 
   ! Clear arrays
   su = 0.0_dp
@@ -336,22 +338,22 @@ subroutine init
   dPdxi = 0.0_dp
 
 
-  ! Write wall distance field.
-  !+-----------------------------------------------------------------------------+
-  call get_unit( output_unit )
+  ! ! Write wall distance field.
+  ! !+-----------------------------------------------------------------------------+
+  ! call get_unit( output_unit )
 
-  open(unit=output_unit,file='processor'//trim(nproc_char)//'/VTK'// &
-  &                          '/wallDistance-'//'proc'//trim(nproc_char)//'.vtu')
+  ! open(unit=output_unit,file='processor'//trim(nproc_char)//'/VTK'// &
+  ! &                          '/wallDistance-'//'proc'//trim(nproc_char)//'.vtu')
 
-  ! Header
-  call vtu_write_XML_header ( output_unit )
-  ! Scalar field
-  call vtu_write_XML_scalar_field ( output_unit, 'wallDistance', wallDistance )
-  ! Mesh data
-  call vtu_write_XML_meshdata ( output_unit )
+  ! ! Header
+  ! call vtu_write_XML_header ( output_unit )
+  ! ! Scalar field
+  ! call vtu_write_XML_scalar_field ( output_unit, 'wallDistance', wallDistance )
+  ! ! Mesh data
+  ! call vtu_write_XML_meshdata ( output_unit )
 
-  close( output_unit )
-  !+-----------------------------------------------------------------------------+
+  ! close( output_unit )
+  ! !+-----------------------------------------------------------------------------+
 
 
 end subroutine

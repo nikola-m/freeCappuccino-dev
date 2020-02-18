@@ -282,6 +282,34 @@ subroutine vtu_write_XML_scalar_field ( output_unit, scalar_name, scalar_field )
 end subroutine vtu_write_XML_scalar_field
 
 
+subroutine vtu_write_XML_scalar_field_boundary ( output_unit, scalar_name, scalar_field, istart, iend )
+!
+! Writes scalar field data to Paraview XML, unstructured, ".vtu" file.
+!
+  implicit none
+
+  integer, intent(in) :: output_unit, istart, iend
+  character ( len = * ), intent(in) :: scalar_name
+  real(dp), dimension(numTotal), intent(in) :: scalar_field
+
+  integer :: icell
+
+! <Scalars in cell-centers>
+  write ( output_unit, '(8x,3a)' ) '<DataArray type="Float32" Name="',scalar_name,'" Format="ascii">'
+
+!
+! > Scalars in cell-centers and boundary faces > write scalar data
+!
+    do icell=istart,iend
+      write( output_unit, '(10x,e15.7)') scalar_field(icell) 
+    enddo
+
+
+  write ( output_unit, '(8x,a)' ) '</DataArray>'
+! </Scalars in cell-centers>
+
+end subroutine vtu_write_XML_scalar_field_boundary
+
 
 subroutine vtu_write_XML_vector_field ( output_unit, field_name, u, v, w )
 !
@@ -295,7 +323,7 @@ subroutine vtu_write_XML_vector_field ( output_unit, field_name, u, v, w )
 
   integer :: icell
 
-! <Scalars in cell-centers>
+! <Vectors in cell-centers>
   write ( output_unit, '(8x,3a)' ) '<DataArray type="Float32" Name="',trim( field_name ),'" NumberOfComponents="3" Format="ascii">'
 
 !
@@ -306,10 +334,37 @@ subroutine vtu_write_XML_vector_field ( output_unit, field_name, u, v, w )
     enddo
 
   write ( output_unit, '(8x,a)' ) '</DataArray>'
-! </Scalars in cell-centers>
+! </Vectors in cell-centers>
 
 end subroutine vtu_write_XML_vector_field
 
+
+subroutine vtu_write_XML_vector_field_boundary ( output_unit, field_name, u, v, w, istart, iend )
+!
+! Writes vector field data to Paraview XML, unstructured, ".vtu" file.
+!
+  implicit none
+
+  integer, intent(in) :: output_unit, istart, iend
+  character ( len = * ), intent(in) :: field_name
+  real(dp), dimension(numTotal), intent(in) :: u, v, w
+
+  integer :: icell
+
+! <Vectors in cell-centers>
+  write ( output_unit, '(8x,3a)' ) '<DataArray type="Float32" Name="',trim( field_name ),'" NumberOfComponents="3" Format="ascii">'
+
+!
+! > Scalars in cell-centers and boundary faces > write scalar data
+!
+    do icell=istart,iend
+      write( output_unit, '(10x,3(1x,e15.7))') u(icell), v(icell), w(icell)
+    enddo
+
+  write ( output_unit, '(8x,a)' ) '</DataArray>'
+! </Vectors in cell-centers>
+
+end subroutine vtu_write_XML_vector_field_boundary
 
 subroutine vtm_write_scalar_field ( scalar_name, scalar_field, timechar )
 !

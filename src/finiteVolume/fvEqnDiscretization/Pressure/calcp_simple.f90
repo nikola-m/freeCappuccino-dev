@@ -29,7 +29,7 @@ subroutine calcp_simple
   ! character(10) :: tol
   integer :: i, k, inp, ib, iface, istage
   integer :: ijp, ijn  
-  real(dp) :: ppref, cap, can, fmcor
+  real(dp) :: ppref, cap, can, fmcor,suma
 
 
   a = 0.0_dp
@@ -71,12 +71,10 @@ subroutine calcp_simple
     a(k) = a(k) - cap
 
     ! > Sources:
-
     su(ijp) = su(ijp) - flmass(i)
     su(ijn) = su(ijn) + flmass(i) 
 
   end do
-
 
   if(.not.const_mflux) call adjustMassFlow
 
@@ -114,6 +112,11 @@ subroutine calcp_simple
     endif 
 
   enddo 
+    
+  if(ltest) then  
+    suma = sum(su)
+    write(6,'(19x,a,1pe10.3)') ' Initial sum  =',suma
+  endif  
 
 !*Multiple pressure corrections loop *******************************************************************
   do ipcorr=1,npcor
@@ -150,7 +153,6 @@ subroutine calcp_simple
     ! Reference pressure correction - p'
     ppref = pp(pRefCell)
 
-
     !
     ! Correct mass fluxes at inner cv-faces only (only inner flux)
     !
@@ -179,7 +181,7 @@ subroutine calcp_simple
     enddo   
 
     ! Explicit correction of boundary conditions 
-    ! call correctBoundaryConditionsVelocity
+    call updateVelocityAtBoundary
 
     !.......................................................................................................!
     if(ipcorr.ne.npcor) then      

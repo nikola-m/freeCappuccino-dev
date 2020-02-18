@@ -131,7 +131,7 @@ subroutine calcsc(Fi,dFidxi,ifi)
   real(dp) :: cap, can, suadd
   ! real(dp) :: magStrainSq
   real(dp) :: off_diagonal_terms
-  real(dp) :: are,nxf,nyf,nzf,vnp,xtp,ytp,ztp,ut2,tau
+  real(dp) :: are,nxf,nyf,nzf,vnp,xtp,ytp,ztp,ut2
   real(dp) :: dudx,dudy,dudz,dvdx,dvdy,dvdz,dwdx,dwdy,dwdz
   real(dp) :: viss
   real(dp) :: fimax,fimin
@@ -569,8 +569,10 @@ subroutine calcsc(Fi,dFidxi,ifi)
         !
 
           su(ijp )= su(ijp)-gen(ijp)*vol(ijp) ! take out standard production from wall ajdecent cell.
-          viss=viscos
-          if(ypl(i).gt.ctrans) viss=visw(iwall)
+
+          ! viss=viscos
+          ! if(ypl(i).gt.ctrans) viss=visw(iwall)
+          viss = max(viscos,visw(iWall))
 
           ! Face area 
           are = sqrt(arx(iface)**2+ary(iface)**2+arz(iface)**2)
@@ -589,7 +591,7 @@ subroutine calcsc(Fi,dFidxi,ifi)
           ztp = W(ijp)-Vnp*nzf
 
           ! Its magnitude
-          Vtp = xtp*xtp+ytp*ytp+ztp*ztp
+          Vtp = sqrt(xtp*xtp+ytp*ytp+ztp*ztp)
 
           ! Tangent direction - unit vector
           xtp = xtp/vtp
@@ -599,9 +601,9 @@ subroutine calcsc(Fi,dFidxi,ifi)
           ! projektovanje razlike brzina na pravac tangencijalne brzine u cell centru ijp
           Ut2 = abs( (U(ijb)-U(ijp))*xtp + (V(ijb)-V(ijp))*ytp + (W(ijb)-W(ijp))*ztp )
 
-          Tau = viss*Ut2/dnw(iwall)
+          Tau(iWall) = viss*Ut2/dnw(iwall)
 
-          gen(ijp)=abs(tau)*cmu25*sqrt(te(ijp))/(dnw(iwall)*cappa)
+          gen(ijp)=abs(tau(iWall))*cmu25*sqrt(te(ijp))/(dnw(iwall)*cappa)
           su(ijp)=su(ijp)+gen(ijp)*vol(ijp)
 
         else
@@ -611,11 +613,11 @@ subroutine calcsc(Fi,dFidxi,ifi)
           ! to be zero, su equal the dissipation, and ap = 1
 
           ! Automatic wall treatment - quadratic blend of log-layer and vis sublayer value:
-          wlog=sqrt(te(ijp))/(cmu25*cappa*dnw(i))
+          wlog=sqrt(te(ijp))/(cmu25*cappa*dnw(iWall))
 
-          wvis=6.0_dp*(viscos/den(ijp))/(betai1*dnw(i)**2) 
+          wvis=6.0_dp*(viscos/den(ijp))/(betai1*dnw(iWall)**2) 
 
-          ed(ijp) = dsqrt(wvis**2+wlog**2)
+          ed(ijp) = sqrt(wvis**2+wlog**2)
           su(ijp)=ed(ijp)
 
           a( ioffset(ijp):ioffset(ijp+1)-1 ) = 0.0_dp
@@ -752,8 +754,9 @@ subroutine modify_mu_eff()
   real(dp) :: visold
   real(dp) :: nxf,nyf,nzf,are
   real(dp) :: Vnp,Vtp,xtp,ytp,ztp
-  real(dp) :: Ut2,Tau,Utau,viscw
+  real(dp) :: Ut2,Utau,viscw
   real(dp) :: wldist,etha,f2_sst,alphast
+  real(dp) :: Utauvis,Utaulog,Ustar,Upl
 
 
   ! Loop trough cells 
@@ -774,7 +777,7 @@ subroutine modify_mu_eff()
         ! find f2: 
         f2_sst = tanh(etha*etha)
 
-        vis(inp)=viscos+den(inp)*a1*te(inp)/(max(a1,ed(inp), magStrain(inp)*f2_sst))
+        vis(inp)=viscos+den(inp)*a1*te(inp)/(max(a1*ed(inp), magStrain(inp)*f2_sst))
 
         ! Low-re version..........................................................
         if (LowRe) then                                                          !
@@ -867,8 +870,8 @@ subroutine modify_mu_eff()
         ytp = V(ijp)-Vnp*nyf
         ztp = W(ijp)-Vnp*nzf
 
-        ! Its magnitude
-        Vtp = xtp*xtp+ytp*ytp+ztp*ztp
+        ! Magnitude of tangential velocity component
+        Vtp = sqrt(xtp*xtp+ytp*ytp+ztp*ztp)
 
         ! Tangent direction
         xtp = xtp/vtp
@@ -878,19 +881,35 @@ subroutine modify_mu_eff()
         ! projektovanje razlike brzina na pravac tangencijalne brzine u cell centru ijp
         Ut2 = abs( (U(ijb)-U(ijp))*xtp + (V(ijb)-V(ijp))*ytp + (W(ijb)-W(ijp))*ztp )
 
-        Tau = viscos*Ut2/dnw(iWall)
-        Utau = sqrt( Tau / den(ijb) )
-        ypl(iWall) = den(ijb)*Utau*dnw(iWall)/viscos
+        ! Tau(iWall) = viscos*Ut2/dnw(iWall)
+        ! Utau = sqrt( Tau(iWall) / den(ijb) )
+        ! ypl(iWall) = den(ijb)*Utau*dnw(iWall)/viscos
 
-        ! ! Ima i ova varijanta u cisto turb. granicni sloj varijanti sa prvom celijom u log sloju
-        ! ypl(i) = den(ijb)*cmu25*sqrt(te(ijp))*dnw(i)/viscos
-        ! ! ...ovo je tehnicki receno ystar iliti y* a ne y+
+        ! Ima i ova varijanta...ovo je tehnicki receno ystar iliti y* a ne y+
+        ypl(iWall) = den(ijp)*cmu25*sqrt(te(ijp))*dnw(iWall)/viscos
 
-        viscw = zero
+        !                                  
+        ! Automatic wall treatment
+        !
+        Utauvis=Vtp/ypl(iWall)
+        Utaulog=Vtp*cappa/log(Elog*ypl(iWall)) 
 
-        if(ypl(iWall) > ctrans) then
-          viscw = ypl(iWall)*viscos*cappa/log(Elog*ypl(iWall))
-        endif
+        Utau=sqrt(sqrt(Utauvis**4+Utaulog**4)) 
+        Ustar=sqrt(sqrt( Utauvis**4 + Sqrt(0.31*te(ijp))**4))  
+   
+        ypl(iWall)=den(ijp)*sqrt(utau*ustar)*dnw(iWall)/viscos
+
+        ! Wall shear stress
+        ! tau(iwall) = cappa*den(ijp)*Vtp*cmu25*sqrt(te(ijp))/log(Elog*ypl(iWall))
+        tau(iWall) = den(ijp)*Utau*Ustar
+
+        ! viscw = zero
+        ! if(ypl(iWall) > ctrans) then
+        !   viscw = ypl(iWall)*viscos*cappa/log(Elog*ypl(iWall))
+        ! endif
+
+        Upl = Vtp/Utau
+        viscw = ypl(iWall)*viscos/Upl
 
         visw(iWall) = max(viscos,viscw)
         vis(ijb) = visw(iWall)

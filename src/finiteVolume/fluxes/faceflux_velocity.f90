@@ -96,8 +96,8 @@ subroutine facefluxuvw(ijp, ijn, xf, yf, zf, arx, ary, arz, flomass, lambda, gam
   game = vis(ijp)*fxp+vis(ijn)*fxn
 
   ! Difusion coefficient
-  de = game*are/dpn
-
+  ! de = game*are/dpn
+  de = game*(arx*arx+ary*ary+arz*arz)/(xpn*arx+ypn*ary+zpn*arz)
 
   ! > Equation coefficients - implicit diffusion and convection
   ce = min(flomass,zero) 

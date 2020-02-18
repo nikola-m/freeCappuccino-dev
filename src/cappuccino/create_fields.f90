@@ -1,6 +1,6 @@
 !***********************************************************************
 !
-subroutine allocate_arrays
+subroutine create_fields
 !
 !***********************************************************************
 !
@@ -37,6 +37,7 @@ subroutine allocate_arrays
   allocate(wo(numTotal),stat=ierr) 
     if(ierr /= 0)write(*,*)"allocation error: wo" 
 
+  if( bdf2 .or. bdf3 ) then
 
   allocate(uoo(numTotal),stat=ierr) 
     if(ierr /= 0)write(*,*)"allocation error: uoo" 
@@ -47,6 +48,8 @@ subroutine allocate_arrays
   allocate(woo(numTotal),stat=ierr) 
     if(ierr /= 0)write(*,*)"allocation error: woo" 
 
+  endif
+ 
   if( bdf3 ) then
 
     allocate(uooo(numTotal),stat=ierr) 
@@ -85,21 +88,19 @@ subroutine allocate_arrays
   allocate(p(numTotal),stat=ierr) 
     if(ierr /= 0)write(*,*)"allocation error: p" 
 
-  if ( simple ) then
-
-    allocate(pp(numTotal),stat=ierr) 
-      if(ierr /= 0)write(*,*)"allocation error: pp"
-
-  endif 
-
+  allocate(pp(numTotal),stat=ierr) 
+    if(ierr /= 0)write(*,*)"allocation error: pp"
+ 
 
   if ( piso ) then
     
     allocate(po(numTotal),stat=ierr) 
     if(ierr /= 0)write(*,*)"allocation error: po" 
 
+    if ( bdf2 .or. bdf3 ) then
     allocate(poo(numTotal),stat=ierr) 
     if(ierr /= 0)write(*,*)"allocation error: poo" 
+    endif
 
     if (bdf3 ) then
       allocate(pooo(numTotal),stat=ierr) 
@@ -125,7 +126,7 @@ subroutine allocate_arrays
   allocate(edo(numTotal),stat=ierr) 
     if(ierr /= 0)write(*,*)"allocation error: edo" 
 
-  if( bdf ) then
+  if( bdf2 ) then
     allocate(teoo(numTotal),stat=ierr) 
       if(ierr /= 0)write(*,*)"allocation error: teoo" 
 
@@ -182,7 +183,7 @@ subroutine allocate_arrays
     allocate(cono(numTotal),stat=ierr) 
       if(ierr /= 0)write(*,*)"allocation error: cono"
 
-    if( bdf ) then
+    if( bdf2 ) then
       allocate(conoo(numTotal),stat=ierr) 
         if(ierr /= 0)write(*,*)"allocation error: conoo" 
     endif
@@ -201,7 +202,7 @@ subroutine allocate_arrays
     allocate(varto(numTotal),stat=ierr) 
       if(ierr /= 0)write(*,*)"allocation error: varto" 
 
-    if( bdf ) then
+    if( bdf2 ) then
       allocate(vartoo(numTotal),stat=ierr) 
         if(ierr /= 0)write(*,*)"allocation error: vartoo" 
     endif
@@ -260,11 +261,13 @@ subroutine allocate_arrays
 
     allocate(flmasso(numFaces),stat=ierr) 
       if(ierr /= 0)write(*,*)"allocation error: flmasso" 
-      
+
+    if ( bdf2 .or. bdf3 ) then      
     allocate(flmassoo(numFaces),stat=ierr) 
       if(ierr /= 0)write(*,*)"allocation error: flmassoo" 
+    endif
 
-    if (bdf3) then
+    if ( bdf3 ) then
       allocate(flmassooo(numFaces),stat=ierr) 
       if(ierr /= 0)write(*,*)"allocation error: flmassooo"
     endif
@@ -275,6 +278,8 @@ subroutine allocate_arrays
     if(ierr /= 0)write(*,*)"allocation error: visw"
   allocate( ypl(nwal),stat=ierr) 
     if(ierr /= 0)write(*,*)"allocation error: ypl"
+  allocate( tau(nwal),stat=ierr) 
+    if(ierr /= 0)write(*,*)"allocation error: tau"
 
   ! Turbulence production
   allocate(gen(numCells),stat=ierr) 

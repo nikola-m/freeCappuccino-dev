@@ -100,7 +100,7 @@ subroutine calcsc(Fi,dFidxi,ifi)
   real(dp) :: cap, can, suadd
   ! real(dp) :: magStrainSq
   real(dp) :: off_diagonal_terms
-  real(dp) :: are,nxf,nyf,nzf,vnp,xtp,ytp,ztp,ut2,tau
+  real(dp) :: are,nxf,nyf,nzf,vnp,xtp,ytp,ztp,ut2
   real(dp) :: dudx,dudy,dudz,dvdx,dvdy,dvdz,dwdx,dwdy,dwdz
   real(dp) :: viss
   real(dp) :: fimax,fimin
@@ -356,9 +356,9 @@ subroutine calcsc(Fi,dFidxi,ifi)
         ! projektovanje razlike brzina na pravac tangencijalne brzine u cell centru ijp
         Ut2 = abs( (U(ijb)-U(ijp))*xtp + (V(ijb)-V(ijp))*ytp + (W(ijb)-W(ijp))*ztp )
 
-        Tau = viss*Ut2/dnw(iwall)
+        Tau(iwall) = viss*Ut2/dnw(iwall)
 
-        gen(ijp)=abs(tau)*cmu25*sqrt(te(ijp))/(dnw(iwall)*cappa)
+        gen(ijp)=abs(tau(iwall))*cmu25*sqrt(te(ijp))/(dnw(iwall)*cappa)
         su(ijp)=su(ijp)+gen(ijp)*vol(ijp)
 
 
@@ -466,7 +466,7 @@ subroutine modify_mu_eff()
   real(dp) :: visold
   real(dp) :: nxf,nyf,nzf,are
   real(dp) :: Vnp,Vtp,xtp,ytp,ztp
-  real(dp) :: Ut2,Tau,Utau,viscw
+  real(dp) :: Ut2,Utau,viscw
   real(dp) :: third,delta
 
   third = 1./3.0_dp
@@ -571,8 +571,8 @@ subroutine modify_mu_eff()
         ! projektovanje razlike brzina na pravac tangencijalne brzine u cell centru ijp
         Ut2 = abs( (U(ijb)-U(ijp))*xtp + (V(ijb)-V(ijp))*ytp + (W(ijb)-W(ijp))*ztp )
 
-        Tau = viscos*Ut2/dnw(iWall)
-        Utau = sqrt( Tau / den(ijb) )
+        Tau(iWall) = viscos*Ut2/dnw(iWall)
+        Utau = sqrt( Tau(iWall) / den(ijb) )
         ypl(iWall) = den(ijb)*Utau*dnw(iWall)/viscos
 
         ! ! Ima i ova varijanta u cisto turb. granicni sloj varijanti sa prvom celijom u log sloju

@@ -84,15 +84,15 @@ subroutine facefluxmass(ijp, ijn, xf, yf, zf, arx, ary, arz, lambda, cap, can, f
   dene = den(ijp)*fxp+den(ijn)*fxn
 
   ! COEFFICIENTS OF PRESSURE-CORRECTION EQUATION
-  sfdpnr = 1.0d0/(arx*xpn*nxx+ary*ypn*nyy+arz*zpn*nzz)
+  ! sfdpnr = 1.0d0/(arx*xpn*nxx+ary*ypn*nyy+arz*zpn*nzz+small)
+  sfdpnr = 1.0d0/(arx*xpn+ary*ypn+arz*zpn)  
   ! (Sf.Sf) / (dpn.Sf)
-  ! smdpn = (arx*arx+ary*ary+arz*arz)/(arx*xpn*nxx+ary*ypn*nyy+arz*zpn*nzz)
-  ! smdpn = (arx*arx+ary*ary+arz*arz)/(arx*xpn+ary*ypn+arz*zpn)
+  ! smdpn = (arx*arx+ary*ary+arz*arz)*sfdpnr
+  smdpn = (arx*arx+ary*ary+arz*arz)/(arx*xpn+ary*ypn+arz*zpn)
   ! |Sf| / (dpn.nf)
-  smdpn = are/(xpn*nxx+ypn*nyy+zpn*nzz)
+  !smdpn = are/(xpn*nxx+ypn*nyy+zpn*nzz)
   cap = -dene*Dpu*smdpn
   can = cap
-
 
 !
 ! CELL FACE PRESSURE GRADIENTS AND VELOCITIES
@@ -180,7 +180,6 @@ subroutine facefluxmass(ijp, ijn, xf, yf, zf, arx, ary, arz, lambda, cap, can, f
 
   ! MASS FLUX via Rhie-Chow Interpolation
   fluxmass = dene*(ue*arx+ve*ary+we*arz)
-
 
   ! !******************************************
   ! ! Nonorthogonal contribution to  rhs vector
@@ -312,7 +311,7 @@ subroutine facefluxmass_piso(ijp, ijn, xf, yf, zf, arx, ary, arz, lambda, cap, c
 
   ! Local variables
   real(dp) :: fxn, fxp
-  real(dp) :: are
+  real(dp) :: are,dpn
   real(dp) :: nx,ny,nz
   real(dp) :: xpn,ypn,zpn,dene
   real(dp) :: ui,vi,wi
@@ -332,7 +331,7 @@ subroutine facefluxmass_piso(ijp, ijn, xf, yf, zf, arx, ary, arz, lambda, cap, c
   zpn=zc(ijn)-zc(ijp)
 
   ! Distance from P to neighbor N
-  ! dpn=sqrt(xpn**2+ypn**2+zpn**2) 
+  dpn=sqrt(xpn**2+ypn**2+zpn**2) 
 
   ! cell face area
   are=sqrt(arx**2+ary**2+arz**2)
@@ -348,7 +347,7 @@ subroutine facefluxmass_piso(ijp, ijn, xf, yf, zf, arx, ary, arz, lambda, cap, c
   ! COEFFICIENTS OF PRESSURE EQUATION
   Kj = vol(ijp)*apu(ijp)*fxp + vol(ijn)*apu(ijn)*fxn
   ! cap = - dene*Kj*are/dpn
-  cap = -dene*Kj*are/(xpn*nx+ypn*ny+zpn*nz)
+  cap = -dene*Kj*(arx*arx+ary*ary+arz*arz)/(xpn*arx+ypn*ary+zpn*arz)
   can = cap
 
   ! Interpolate velocities (H/Ap) to face center:

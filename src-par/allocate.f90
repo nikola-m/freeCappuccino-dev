@@ -282,6 +282,9 @@ subroutine allocate_arrays
   allocate(  ypl(nwal), stat=ierr) 
     if(ierr /= 0)write(*,*)"allocation error: ypl"
 
+  allocate(  tau(nwal), stat=ierr) 
+    if(ierr /= 0)write(*,*)"allocation error: tau"
+
   ! Turbulence production
   allocate( gen( numCells ), stat=ierr) 
     if(ierr /= 0)write(*,*)"allocation error: gen"  

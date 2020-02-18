@@ -23,8 +23,8 @@ subroutine writefiles
   integer :: output_unit
   character( len = 5) :: nproc_char
 
-  ! Write in a char variable current timestep number and create a folder with this name
-  write(timechar,'(i6)') itime
+  ! Write in a char variable current timestep number
+  call i4_to_s_left ( itime, timechar )
 
   ! nproc_char <- myid zapisan levo u vidu stringa.
   call i4_to_s_left ( myid, nproc_char )
@@ -33,56 +33,64 @@ subroutine writefiles
 
   call get_unit( output_unit )
 
-  open(unit=output_unit,file='processor'//trim(nproc_char)//'/VTK'// &
-  &                          '/innerField-'//'proc'//trim(nproc_char)//'-'//trim(adjustl(timechar))//'.vtu')
+  open(unit=output_unit,file='vtk/solution_fields_'//'proc_'//trim(nproc_char)//'_'//trim(timechar),form='unformatted')
 
+  write(output_unit) numCells
+  write(output_unit) numTotal
+  write(output_unit) u
+  write(output_unit) v
+  write(output_unit) w
+  write(output_unit) p
+  write(output_unit) te
+  write(output_unit) ed
+  write(output_unit) vis
 
   ! Header
-  call vtu_write_XML_header ( output_unit )
+  ! call vtu_write_XML_header ( output_unit )
 
-  !+-----------------------------------------------------------------------------+
+  ! !+-----------------------------------------------------------------------------+
 
-  ! Write fields to VTU file
+  ! ! Write fields to VTU file
 
-  call vtu_write_XML_vector_field( output_unit, 'U', u, v, w )
-
-
-  call vtu_write_XML_scalar_field ( output_unit, 'p', p )
+  ! call vtu_write_XML_vector_field( output_unit, 'U', u, v, w )
 
 
-  if( lturb ) then
-
-    call vtu_write_XML_scalar_field ( output_unit, 'mueff', vis )
-
-  endif
+  ! call vtu_write_XML_scalar_field ( output_unit, 'p', p )
 
 
-  if(solveTKE) then
+  ! if( lturb ) then
 
-    call vtu_write_XML_scalar_field ( output_unit, 'k', te )
+  !   call vtu_write_XML_scalar_field ( output_unit, 'mueff', vis )
 
-  endif
-
-
-  if( solveEpsilon ) then
-
-    call vtu_write_XML_scalar_field ( output_unit, 'epsilon', ed )
-
-  endif
+  ! endif
 
 
-  if( solveOmega ) then
+  ! if(solveTKE) then
 
-    call vtu_write_XML_scalar_field ( output_unit, 'omega', ed )
+  !   call vtu_write_XML_scalar_field ( output_unit, 'k', te )
 
-  endif      
+  ! endif
 
-  !+-----------------------------------------------------------------------------+
+
+  ! if( solveEpsilon ) then
+
+  !   call vtu_write_XML_scalar_field ( output_unit, 'epsilon', ed )
+
+  ! endif
+
+
+  ! if( solveOmega ) then
+
+  !   call vtu_write_XML_scalar_field ( output_unit, 'omega', ed )
+
+  ! endif      
+
+  ! !+-----------------------------------------------------------------------------+
 
   ! Mesh data
-  call vtu_write_XML_meshdata ( output_unit )
+  ! call vtu_write_XML_meshdata ( output_unit )
 
-  close( output_unit )
+  ! close( output_unit )
 
 
 end subroutine

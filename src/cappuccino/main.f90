@@ -19,11 +19,12 @@ program cappuccino
   use sparse_matrix
   use temperature
   use concentration
+  use utils, only: show_logo
 
   implicit none
 
   integer :: iter
-  integer :: narg
+  ! integer :: narg
   integer :: itimes, itimee
   real(dp):: source
   real :: start, finish
@@ -33,24 +34,30 @@ program cappuccino
 !
 
 !  Check command line arguments
-  narg=command_argument_count()
+  ! narg=command_argument_count()
   call get_command_argument(1,input_file)
   call get_command_argument(2,monitor_file)
   call get_command_argument(3,restart_file)
   call get_command_argument(4,out_folder_path)
 
+  ! Open simulation log file
+  open(unit=6,file=monitor_file)
+  rewind 6
+
+  ! Print Cappuccino logo in the header of monitor file
+  call show_logo
+
+
 !-----------------------------------------------------------
 !  Initialization, mesh definition, sparse matrix allocation
 !-----------------------------------------------------------
-  call openfiles
-
   call read_input_file
 
   call read_mesh
 
   call create_CSR_matrix
 
-  call allocate_arrays
+  call create_fields
 
   call init
 
@@ -82,7 +89,7 @@ program cappuccino
 
     iteration_loop: do iter=1,maxit 
 
-      write(*,'(2x,a,i0)') 'Iter. ',iter
+      write(*,'(2(2x,a,i0))') 'Timestep: ',itime,',Iteration: ',iter
 
       call cpu_time(start)
 

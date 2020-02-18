@@ -19,12 +19,12 @@ program cappuccino
   use sparse_matrix
   use temperature
   use concentration
+  use utils, only: show_logo
   use mpi
 
   implicit none
 
   integer :: iter, i, ijp, ijn, inp, ib, iface
-  integer :: narg
   integer :: itimes, itimee
   real(dp):: magUbarStar, rUAw, gragPplus, flowDirection
   real(dp):: source
@@ -38,14 +38,8 @@ program cappuccino
 ! MPI start up
 
   call MPI_INIT(ierr)                   
-
-  call MPI_COMM_SIZE(MPI_COMM_WORLD, & 
-                               nproc,&  
-                               ierr  )  
-
-  call MPI_COMM_RANK(MPI_COMM_WORLD, & 
-                               myid, &  
-                               ierr  )  
+  call MPI_COMM_SIZE( MPI_COMM_WORLD, nproc, ierr )  
+  call MPI_COMM_RANK( MPI_COMM_WORLD, myid, ierr )  
   
   this = myid + 1
 
@@ -59,9 +53,6 @@ program cappuccino
 
 
 !  Check command line arguments
-  narg=command_argument_count()
-  if (narg==0.or.narg<4) write(*,'(a)') 'Usage: '&
-  &'./cappuccino <input_file> <monitor_file> <restart_file> <out_folder_path>'
   call get_command_argument(1,input_file)
   call get_command_argument(2,monitor_file)
   call get_command_argument(3,restart_file)
@@ -73,8 +64,16 @@ program cappuccino
 
   if (myid .eq. 0) then
 
-    ! Open files
-    call openfiles
+    ! Simulation log file, monitor file for residuals
+    open(unit=6,file=monitor_file)
+    rewind 6
+    
+    ! Print cappuccino logo to log file.
+    call show_logo
+
+    write(*,'(a)') ' '
+    write(*,'(a,i2)') ' Parallel run. Number of processes, np = ', nproc
+    write(*,'(a)') ' '
 
   endif
 
@@ -132,9 +131,7 @@ program cappuccino
 
       ! Calculate velocities.
       call calcuvw 
-  !  ! MPI final call
-  ! call MPI_Finalize(ierr)
-  ! stop  
+
       ! Pressure-velocity coupling. Two options: SIMPLE and PISO
       if(SIMPLE)   call CALCP
       if(PISO)     call PISO_multiple_correction
@@ -153,16 +150,9 @@ program cappuccino
       if (myid .eq. 0) then
         call cpu_time(finish)
         write(timechar,'(f9.3)') finish-start
-        write(6,'(3a)') '  ExecutionTime = ',trim(adjustl(timechar)),' s'
+        write(6,'(3a)') '  ExecutionTime = ',adjustl(timechar),' s'
         write(6,*)
       endif
-
-
-      ! ! Residual normalization, convergence check  
-      ! do i=1,nphi
-      !   resor(i)=resor(i)*rnor(i)
-      ! end do
-
 
       ! Check residual
       source = max( resor(iu),resor(iv),resor(iw),resor(ip) ) 
@@ -172,40 +162,40 @@ program cappuccino
 
       ! If iteration diverges
       if(source.gt.slarge) then
-          if ( myid .eq. 0 ) write(6,"(//,10x,a)") "*** Program terminated -  iterations diverge ***" 
-          call abort_mission
+        if ( myid .eq. 0 ) write(6,"(//,10x,a)") "*** Program terminated -  iterations diverge ***" 
+        call abort_mission
       endif
 
       ! If residuals fall to level below tolerance level - simulation is finished.
       if(.not.ltransient  .and. source.lt.sormax ) then
-          call write_restart_files
-          call writefiles        
-          exit time_loop
+        call write_restart_files
+        call writefiles        
+        exit time_loop
       end if
 
       if(ltransient) then 
 
-          ! Has converged within timestep or has reached maximum no. of SIMPLE iterations per timetstep:
-          if(source.lt.sormax.or.iter.ge.maxit) then 
+        ! Has converged within timestep or has reached maximum no. of SIMPLE iterations per timetstep:
+        if(source.lt.sormax.or.iter.ge.maxit) then 
 
-            if(const_mflux) then
-              ! Correct driving force for a constant mass flow rate.
-              include 'constant_mass_flow_forcing.f90'
-            endif
-
-            ! Write field values after nzapis iterations or at the end of time-dependent simulation:
-            if( mod(itime,nzapis).eq.0 .and. itime.ne.numstep ) then
-              call write_restart_files
-              call writefiles
-            endif
-
-            ! Write values at monitoring points and recalculate time-average values for statistics:
-            call writehistory 
-            call calc_statistics 
-
-            cycle time_loop
-         
+          if(const_mflux) then
+            ! Correct driving force for a constant mass flow rate.
+            include 'constant_mass_flow_forcing.f90'
           endif
+
+          ! Write field values after nzapis iterations or at the end of time-dependent simulation:
+          if( mod(itime,nzapis).eq.0 .and. itime.ne.numstep ) then
+            call write_restart_files
+            call writefiles
+          endif
+
+          ! Write values at monitoring points and recalculate time-average values for statistics:
+          call writehistory 
+          call calc_statistics 
+
+          cycle time_loop
+       
+        endif
 
       end if 
 
@@ -213,8 +203,8 @@ program cappuccino
 
     ! Write field values after nzapis iterations or at the end of false-time-stepping simulation:
     if(.not.ltransient .and. ( mod(itime,nzapis).eq.0 .or. itime.eq.numstep ) ) then
-        call write_restart_files
-        call writefiles
+      call write_restart_files
+      call writefiles
     endif
 
 

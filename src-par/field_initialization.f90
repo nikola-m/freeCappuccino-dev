@@ -211,7 +211,7 @@ implicit none
   call i4_to_s_left ( myid, nproc_char )
 
   call get_unit ( input_unit )
-  open ( unit = input_unit, file = 'processor'//adjustl(nproc_char)//'/0/'//trim(field_name))
+  open ( unit = input_unit, file = 'processor'//trim(nproc_char)//'/0/'//trim(field_name))
   if(myid .eq. 0) write(*,'(a)') '  0/'//trim(field_name)
   rewind input_unit
 

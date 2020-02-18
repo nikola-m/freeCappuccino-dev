@@ -69,6 +69,7 @@ subroutine calcsc(Fi,dFidxi,ifi)
   real(dp) :: off_diagonal_terms
   real(dp) :: coef,dcoef
   real(dp) :: fimax,fimin
+  real(dp) :: arx,ary,arz,are,nxf,nyf,nzf,dTn
 
 
 ! Variable specific coefficients:
@@ -200,14 +201,13 @@ subroutine calcsc(Fi,dFidxi,ifi)
 
     elseif ( bctype(ib) == 'wallIsoth') then
 
-      ! Isothermal wall boundaries
+      ! Isothermal wall boundaries (that's Dirichlet on temperature)
 
       do i=1,nfaces(ib)
 
         iface = startFace(ib) + i
         ijp = owner(iface)
         ijb = iBndValueStart(ib) + i
-
 
         dcoef = (viscos+(vis(ijp)-viscos)/sigt)/pranl ! Vrlo diskutabilno, proveriti!
         coef=dcoef*srdw(i)
@@ -218,7 +218,7 @@ subroutine calcsc(Fi,dFidxi,ifi)
 
     elseif ( bctype(ib) == 'wallAdiab') then
 
-      ! Adiabatic wall boundaries
+      ! Adiabatic wall boundaries (that's actually zero grad on temperature)
 
       do i=1,nfaces(ib)
 
@@ -233,13 +233,34 @@ subroutine calcsc(Fi,dFidxi,ifi)
 
     elseif ( bctype(ib) == 'wallQFlux') then
 
+      ! Prescribed heat flux wall boundaries (that's actually non homo Neumann on temperature)
+
       do i=1,nfaces(ib)
 
         iface = startFace(ib) + i
         ijp = owner(iface)
         ijb = iBndValueStart(ib) + i
 
+        dcoef = (viscos+(vis(ijp)-viscos)/sigt)/pranl
+        coef=dcoef*srdw(i)
 
+        ! Value of the temprature gradient in normal direction is set trough 
+        ! proper choice of component values. Let's project in to normal direction
+        ! to recover normal gradient.
+
+        ! Face area 
+        are = sqrt(arx(iface)**2+ary(iface)**2+arz(iface)**2)
+
+        ! Face normals
+        nxf = arx(iface)/are
+        nyf = ary(iface)/are
+        nzf = arz(iface)/are
+
+        ! Gradient in face-normal direction        
+        dTn = (dTdxi(1,ijb)*nxf+dTdxi(2,ijb)*nyf+dTdxi(3,ijb)*nzf))
+
+        ! Explicit source
+        su(ijp) = su(ijp) + coef*dTn
 
       enddo
 
@@ -248,7 +269,7 @@ subroutine calcsc(Fi,dFidxi,ifi)
     
   enddo ! Boundary conditions loop  
 
-
+  
 
   ! Modify coefficients for Crank-Nicolson
   if (cn) then

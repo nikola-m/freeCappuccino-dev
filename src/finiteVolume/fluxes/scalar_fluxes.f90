@@ -96,7 +96,8 @@ subroutine facefluxsc(ijp, ijn, xf, yf, zf, arx, ary, arz, &
 
 
   ! Difusion coefficient for linear system
-  de = game*are/dpn
+  ! de = game*are/dpn
+  de = game*(arx*arx+ary*ary+arz*arz)/(xpn*arx+ypn*ary+zpn*arz)
 
   ! Convection fluxes - uds
   fm = flmass
@@ -117,6 +118,7 @@ subroutine facefluxsc(ijp, ijn, xf, yf, zf, arx, ary, arz, &
 
   nrelax = 0
   approach  = 'skewness'
+  ! approach = 'offset'
 
   call sngrad(ijp, ijn, xf, yf, zf, arx, ary, arz, lambda, &
               Fi, dFidxi, nrelax, approach, dfixi, dfiyi, dfizi, &

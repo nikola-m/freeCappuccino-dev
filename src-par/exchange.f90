@@ -39,7 +39,6 @@ subroutine exchange(phi)
     buffer(i) = phi( bufind(i) )
   enddo 
 
-
 ! >> Exchange the values
 
   ! Idi po svim domenima sa kojima je ovaj konektovan
@@ -54,7 +53,7 @@ subroutine exchange(phi)
     iEnd   = neighbProcOffset(iDomain+1)-1
 
     length = iEnd-iStart+1
-
+ 
     call MPI_SENDRECV_REPLACE & 
      (buffer(iStart),   &     ! buffer
       length,           &     ! length   

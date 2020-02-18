@@ -33,7 +33,7 @@ subroutine init
 
   ! character(len=5)  :: maxno
   ! character(10) :: tol
-  integer :: i, ijp, ijn, iface, output_unit, ijb, ib
+  integer :: i, ijp, ijn, iface, ijb, ib
   integer :: nsw_backup
   real(dp) :: fxp, fxn, ui, vi, wi
   real(dp) :: sor_backup
@@ -46,17 +46,47 @@ subroutine init
 ! Various initialisations
 !
 
-! Parameter Initialisation
+  ! Parameter Initialisation
 
-  ! Set the string for second scalar equation, which appears in linear solver log, default is 'epsilon',
-  ! Note, change also the script 'plotResiduals'
+  ! Parameters used in postprocessing phase
   if (lturb) then
 
-    if ( TurbModel==3 .or. TurbModel==4 ) then
+    select case (TurbModel)
 
-      solveOmega = .true.
+      case (1)
+        solveTKE = .true.
+        solveEpsilon = .true.
 
-    endif
+      case (2)
+        solveTKE = .true.
+        solveEpsilon = .true.
+
+      case (3) 
+        solveTKE = .true.
+        solveOmega = .true.
+
+      case (4)
+        solveTKE = .true.
+        solveOmega = .true.
+
+      case (6)
+        solveTKE = .true.
+
+      case (7)
+        solveTKE = .true.
+        solveEpsilon = .true.
+
+      case (8)
+        solveTKE = .true.
+        solveEpsilon = .true.
+
+      case (9)
+        solveTKE = .true.
+        solveEpsilon = .true.
+
+      case default
+          
+      end select
     
   endif
 
@@ -83,20 +113,20 @@ subroutine init
 ! 1.2)  Field Initialisation
   call initialize_vector_field(u,v,w,dUdxi,'U')
 
-  ! Initialize previous time step value to current value.
-  uo = u
-  vo = v
-  wo = w
+  ! ! Initialize previous time step value to current value.
+  ! uo = u
+  ! vo = v
+  ! wo = w
 
-  uoo = u
-  voo = v
-  woo = w
+  ! uoo = u
+  ! voo = v
+  ! woo = w
 
-  if (bdf3) then
-    uooo = u
-    vooo = v
-    wooo = w
-  endif
+  ! if (bdf3) then
+  !   uooo = u
+  !   vooo = v
+  !   wooo = w
+  ! endif
 
   ! Field initialisation scalars
   ! 
@@ -154,10 +184,10 @@ subroutine init
   ! if(lturb.and.lasm) bij = 0.0_dp
 
   ! Pressure and pressure correction
-  p = 0.0_dp
-  if ( simple ) pp = p
-  if ( piso )   po = p
-  if ( piso )   poo = p
+  ! p = 0.0_dp
+  ! if ( simple ) pp = p
+  ! if ( piso .and. (bdf2.or.bdf3) )   po = p
+  ! if ( piso .and. bdf3 )   poo = p
 
   ! Initialize mass flow
   do i=1,numInnerFaces
@@ -177,7 +207,7 @@ subroutine init
 
   if (piso) then
     flmasso = flmass
-    flmassoo = flmass
+    if (bdf3) flmassoo = flmass
   endif
 
 !
@@ -228,13 +258,13 @@ subroutine init
   su(1:numCells) = -Vol(1:numCells)
 
   ! Initialize solution
-  p = 0.0_dp
+  pp = 0.0_dp
 
   !  Coefficient array for Laplacian
   sv = 1.0_dp       
 
   ! Laplacian operator and BCs         
-  call laplacian(sv,p) 
+  call laplacian(sv,pp) 
 
   sor_backup = sor(ip)
   nsw_backup = nsw(ip)
@@ -243,7 +273,7 @@ subroutine init
   nsw(ip) = 500
 
   ! Solve system
-  call iccg(p,ip) 
+  call iccg(pp,ip) 
   ! call bicgstab(p,ip) 
   ! call pmgmres_ilu ( numCells, nnz, ioffset, ja, a, diag, p(1:numCells), ip, su, 100, 4, 1e-8, sor(ip) )
   ! write(maxno,'(i5)') nsw(ip)
@@ -266,7 +296,7 @@ subroutine init
         ijp = owner(iface)
         ijb = iBndValueStart(ib) + i
 
-        p(ijb) = p(ijp)
+        pp(ijb) = pp(ijp)
 
       enddo
 
@@ -277,34 +307,21 @@ subroutine init
   nsw(ip) = nsw_backup
 
   ! Gradient of solution field stored in p (gradient stored in dPdxi) :
-  call grad(p,dPdxi)
+  call grad(pp,dPdxi)
 
   ! Wall distance computation from Poisson eq. solution stored in pp:
-  wallDistance = -sqrt(  dPdxi(1,:)*dPdxi(1,:)+dPdxi(2,:)*dPdxi(2,:)+dPdxi(3,:)*dPdxi(3,:)  ) + &
-                  sqrt(  dPdxi(1,:)*dPdxi(1,:)+dPdxi(2,:)*dPdxi(2,:)+dPdxi(3,:)*dPdxi(3,:) + 2*p(1:numCells)  )
+  wallDistance = -sqrt(  dPdxi(1,:)*dPdxi(1,:)+dPdxi(2,:)*dPdxi(2,:)+dPdxi(3,:)*dPdxi(3,:) ) + &
+                  sqrt(  dPdxi(1,:)*dPdxi(1,:)+dPdxi(2,:)*dPdxi(2,:)+dPdxi(3,:)*dPdxi(3,:) + 2*pp(1:numCells) )
 
   ! Clear arrays
   su = 0.0_dp
   sv = 0.0_dp 
-  p = 0.0_dp
   dPdxi = 0.0_dp
 
-
-  ! Write wall distance field.
-  !+-----------------------------------------------------------------------------+
-  call get_unit( output_unit )
-
-  open(unit=output_unit,file='VTK/wallDistance.vtu')
-
-  ! Header
-  call vtu_write_XML_header ( output_unit )
-  ! Scalar field
-  call vtu_write_XML_scalar_field ( output_unit, 'wallDistance', wallDistance )
-  ! Mesh data
-  call vtu_write_XML_meshdata ( output_unit )
-
-  close( output_unit )
-  !+-----------------------------------------------------------------------------+
-
+  if (piso) then 
+    deallocate( pp )
+  else ! simple
+    pp = p
+  endif
 
 end subroutine

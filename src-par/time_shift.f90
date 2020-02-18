@@ -6,7 +6,7 @@ subroutine time_shift
 
   implicit none
 
-  if( (bdf .and. itime == 1) .or. (bdf2 .and. itime == 1) .or. (bdf3 .and. itime == 1) ) then
+  if( bdf ) then
 
     uo = u 
     vo = v 
@@ -21,7 +21,7 @@ subroutine time_shift
       po = p
     endif
   
-  elseif( (bdf .and. itime > 1) .or. (bdf2 .and. itime > 1) .or. (bdf3 .and. itime == 2) ) then
+  elseif( bdf2 ) then
 
     uoo = uo 
     voo = vo 
@@ -49,7 +49,7 @@ subroutine time_shift
       po = p
     endif
 
-  elseif( bdf3 .and. itime > 2) then
+  elseif( bdf3 ) then
 
     uooo = uoo 
     vooo = voo 

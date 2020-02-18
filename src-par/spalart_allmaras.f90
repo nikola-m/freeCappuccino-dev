@@ -529,7 +529,7 @@ subroutine modify_mu_eff()
   real(dp) :: visold
   real(dp) :: nxf,nyf,nzf,are
   real(dp) :: Vnp,Vtp,xtp,ytp,ztp
-  real(dp) :: Ut2,Tau,Utau,viscw
+  real(dp) :: Ut2,Utau,viscw
   real(dp) :: nu_tilda,nu,xi,fv1
 
   !
@@ -625,7 +625,7 @@ subroutine modify_mu_eff()
         ztp = W(ijp)-Vnp*nzf
 
         ! Its magnitude
-        Vtp = xtp*xtp+ytp*ytp+ztp*ztp
+        Vtp = sqrt(xtp*xtp+ytp*ytp+ztp*ztp)
 
         ! Tangent direction
         xtp = xtp/vtp
@@ -635,8 +635,8 @@ subroutine modify_mu_eff()
         ! projektovanje razlike brzina na pravac tangencijalne brzine u cell centru ijp
         Ut2 = abs( (U(ijb)-U(ijp))*xtp + (V(ijb)-V(ijp))*ytp + (W(ijb)-W(ijp))*ztp )
 
-        Tau = viscos*Ut2/dnw(iWall)
-        Utau = sqrt( Tau / den(ijb) )
+        Tau(iWall) = viscos*Ut2/dnw(iWall)
+        Utau = sqrt( Tau(iWall) / den(ijb) )
         ypl(iWall) = den(ijb)*Utau*dnw(iWall)/viscos
 
         ! ! Ima i ova varijanta u cisto turb. granicni sloj varijanti sa prvom celijom u log sloju

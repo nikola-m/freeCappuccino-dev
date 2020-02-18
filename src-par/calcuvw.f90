@@ -189,13 +189,10 @@ subroutine calcuvw
   !=======================================================================
   ! Calculate Reynols stresses explicitly and additional asm terms:
   !=======================================================================
-  if( lturb .and. lasm ) then
-
-    call calcstress
-
-    call Additional_algebraic_stress_terms
-    
-  end if
+  ! if( lturb .and. lasm ) then
+  !   call calcstress
+  !   call Additional_algebraic_stress_terms
+  ! end if
       
 
   ! Calculate terms integrated over inner faces
@@ -371,8 +368,9 @@ subroutine calcuvw
         ijb = iBndValueStart(ib) + i
         iWall = iWall + 1
 
-        viss = viscos ! viskoznost interpolirana na boundary face
-        if(lturb.and.ypl(iWall).gt.ctrans) viss=visw(iWall)
+        ! viss = viscos ! viskoznost interpolirana na boundary face
+        ! if(lturb.and.ypl(iWall).gt.ctrans) viss=visw(iWall)
+        viss = max(viscos,visw(iWall))
 
         ! Face area
         are = sqrt(arx(iface)**2+ary(iface)**2+arz(iface)**2)
@@ -599,8 +597,8 @@ subroutine calcuvw
   enddo
 
   ! Solve fvm equations
-  call jacobi(u,iu)
-  ! call bicgstab(u,iu)
+  ! call jacobi(u,iu) 
+  call bicgstab(u,iu)
 
 !
 !.....Assemble and solve system for V component of velocity
@@ -689,8 +687,8 @@ subroutine calcuvw
   enddo
 
   ! Solve fvm equations
-  call jacobi(v,iv)
-  ! call bicgstab(v,iv)
+  ! call jacobi(v,iv)
+  call bicgstab(v,iv)
 
 !
 !.....Assemble and solve system for W component of velocity
@@ -779,8 +777,8 @@ subroutine calcuvw
   enddo
 
   ! Solve fvm equations
-  call jacobi(w,iw)
-  ! call bicgstab(w,iw)
+  ! call jacobi(w,iw)
+  call bicgstab(w,iw)
 
   ! MPI exchange:
   call exchange( u )

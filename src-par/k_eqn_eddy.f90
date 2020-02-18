@@ -90,7 +90,7 @@ subroutine calcsc(Fi,dFidxi,ifi)
   real(dp) :: cap, can, suadd
   ! real(dp) :: magStrainSq
   real(dp) :: off_diagonal_terms
-  real(dp) :: are,nxf,nyf,nzf,vnp,xtp,ytp,ztp,ut2,tau
+  real(dp) :: are,nxf,nyf,nzf,vnp,xtp,ytp,ztp,ut2
   real(dp) :: dudx,dudy,dudz,dvdx,dvdy,dvdz,dwdx,dwdy,dwdz
   real(dp) :: viss
   real(dp) :: fimax,fimin
@@ -368,7 +368,7 @@ subroutine calcsc(Fi,dFidxi,ifi)
         ztp = W(ijp)-Vnp*nzf
 
         ! Its magnitude
-        Vtp = xtp*xtp+ytp*ytp+ztp*ztp
+        Vtp = sqrt(xtp*xtp+ytp*ytp+ztp*ztp)
 
         ! Tangent direction - unit vector
         xtp = xtp/vtp
@@ -378,13 +378,13 @@ subroutine calcsc(Fi,dFidxi,ifi)
         ! projektovanje razlike brzina na pravac tangencijalne brzine u cell centru ijp
         Ut2 = abs( (U(ijb)-U(ijp))*xtp + (V(ijb)-V(ijp))*ytp + (W(ijb)-W(ijp))*ztp )
 
-        Tau = viss*Ut2/dnw(iWall)
+        Tau(iWall) = viss*Ut2/dnw(iWall)
 
         ! Production of TKE in wall adjecent cell
         ! First substract the standard production from source term
         su(ijp)=su(ijp)-gen(ijp)*vol(ijp)
         ! Calculate production for wall adjecent cell
-        gen(ijp)=abs(tau)*cmu25*sqrt(te(ijp))/(dnw(iWall)*cappa)
+        gen(ijp)=abs(tau(iWall))*cmu25*sqrt(te(ijp))/(dnw(iWall)*cappa)
         ! Add this production to source vector
         su(ijp)=su(ijp)+gen(ijp)*vol(ijp)
 
@@ -531,7 +531,7 @@ subroutine modify_mu_eff()
   real(dp) :: visold
   real(dp) :: nxf,nyf,nzf,are
   real(dp) :: Vnp,Vtp,xtp,ytp,ztp
-  real(dp) :: Ut2,Tau,Utau,viscw
+  real(dp) :: Ut2,Utau,viscw
   real(dp) :: third,delta
 
   third = 1./3.0_dp
@@ -626,7 +626,7 @@ subroutine modify_mu_eff()
         ztp = W(ijp)-Vnp*nzf
 
         ! Its magnitude
-        Vtp = xtp*xtp+ytp*ytp+ztp*ztp
+        Vtp = sqrt(xtp*xtp+ytp*ytp+ztp*ztp)
 
         ! Tangent direction
         xtp = xtp/vtp
@@ -636,13 +636,12 @@ subroutine modify_mu_eff()
         ! projektovanje razlike brzina na pravac tangencijalne brzine u cell centru ijp
         Ut2 = abs( (U(ijb)-U(ijp))*xtp + (V(ijb)-V(ijp))*ytp + (W(ijb)-W(ijp))*ztp )
 
-        Tau = viscos*Ut2/dnw(iWall)
-        Utau = sqrt( Tau / den(ijb) )
-        ypl(iWall) = den(ijb)*Utau*dnw(iWall)/viscos
+        Tau(iWall) = viscos*Ut2/dnw(iWall)
+        Utau = sqrt( Tau(iWall) / den(ijb) )
+        ! ypl(iWall) = den(ijb)*Utau*dnw(iWall)/viscos
 
-        ! ! Ima i ova varijanta u cisto turb. granicni sloj varijanti sa prvom celijom u log sloju
-        ! ypl(i) = den(ijb)*cmu25*sqrt(te(ijp))*dnw(i)/viscos
-        ! ! ...ovo je tehnicki receno ystar iliti y* a ne y+
+        ! ! Ima i ova varijanta
+        ypl(iWall) = den(ijp)*cmu25*sqrt(te(ijp))*dnw(iWall)/viscos
 
         viscw = zero
 

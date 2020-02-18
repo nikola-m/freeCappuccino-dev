@@ -6,10 +6,10 @@
 LFLAGS = -llapack
 F90FLAGS = -Wall -O2
 
-L95FLAGS = -fopenmp -llis -llapack
-F95FLAGS = -Wall -O2 -cpp
+# L95FLAGS = -fopenmp -llis -llapack
+# F95FLAGS = -Wall -O2 -cpp
 
-LIS_DIR = /usr/local/include 
+# LIS_DIR = /usr/local/include 
 
 # Compiler:
 F90 = mpif90
@@ -22,7 +22,6 @@ MOD_FILES=\
     tensor_fields.f90 \
     field_initialization.f90 \
     sparse_matrix.f90 \
-    LIS_linear_solver_library.f90 \
     gradients.f90 \
     output.f90 \
     interpolation.f90 \
@@ -74,7 +73,6 @@ CAFFA_FILES=\
     correct_turbulence_inlet.f90 \
     fvm_laplacian.f90 \
     init.f90 \
-    openfiles.f90 \
     PISO_multiple_correction.f90 \
     readfiles.f90 \
     read_input.f90 \
@@ -104,19 +102,19 @@ POISSONOBJS = ${POISSON_FILES:.f90=.o}
 # Targets for make.
 ##################################################################
 
-all: caffa3d-mpi poisson-mpi 
+all: cappuccino-mpi poisson-mpi
 
-caffa3d-mpi: ${MODS} ${MPI} ${TURBULENCE} ${LINEAR_SOLVERS} ${CAFFAOBJS}
+cappuccino-mpi: ${MODS} ${MPI} ${TURBULENCE} ${LINEAR_SOLVERS} ${CAFFAOBJS}
 	@echo  "Linking" $@ "... "
-	${F90} ${CAFFAOBJS} ${MODS} ${MPI} ${TURBULENCE} ${LINEAR_SOLVERS} ${LFLAGS} ${L95FLAGS} ${INCS} -o ../bin/caffa3d-mpi 
+	${F90} ${CAFFAOBJS} ${MODS} ${MPI} ${TURBULENCE} ${LINEAR_SOLVERS} ${LFLAGS} ${INCS} -o ../bin/cappuccino-mpi 
 
 poisson-mpi: ${MODS} ${MPI} ${LINEAR_SOLVERS} ${POISSONOBJS}
 	@echo  "Linking" $@ "... "
-	${F90} ${POISSONOBJS} ${MODS} ${MPI} ${LINEAR_SOLVERS} ${L95FLAGS} ${INCS} -o ../bin/poisson-mpi
+	${F90} ${POISSONOBJS} ${MODS} ${MPI} ${LINEAR_SOLVERS} ${LFLAGS} ${INCS} -o ../bin/poisson-mpi
 
 .PHONY: clean
 clean:
-	@rm  *.o *.mod ../bin/caffa3d-mpi ../bin/poisson-mpi
+	@rm  *.o *.mod ../bin/cappuccino-mpi ../bin/poisson-mpi
 
 ##################################################################
 # Generic rules

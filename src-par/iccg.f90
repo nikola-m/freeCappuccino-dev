@@ -30,7 +30,7 @@ subroutine iccg(fi,ifi)
 !
   integer :: i, k, ns, l, itr_used, ib, iface, ijn, ipro
   real(dp), dimension(numCells) :: zk
-  real(dp), dimension(numPCells) :: pk,d
+  real(dp), dimension(numTotal) :: pk,d
   real(dp) :: rsm, resmax, res0, resl, tol
   real(dp) :: s0, sk, alf, bet, pkapk
 
@@ -97,7 +97,7 @@ subroutine iccg(fi,ifi)
     end do
   enddo
 
-  call exchange__(d)
+  call exchange(d)
 
   ! Contribution from cells at processor boundary.
   ipro = 0
@@ -113,7 +113,7 @@ subroutine iccg(fi,ifi)
         ijn = iBndValueStart(ib) + i
         ipro = ipro + 1
 
-        d( k ) = d( k ) - apr( ipro )*d( numCells + ipro )*apr( ipro )
+        d( k ) = d( k ) - apr( ipro )*d( ijn )*apr( ipro )
 
       enddo
 
@@ -174,7 +174,7 @@ subroutine iccg(fi,ifi)
 !
   pk(1:numCells) = zk + bet*pk(1:numCells)
 
-  call exchange__( pk )
+  call exchange( pk )
 
 !
 ! Calculate scalar product (pk.a pk) and alpha (overwrite zk)
@@ -201,7 +201,7 @@ subroutine iccg(fi,ifi)
         ijn = iBndValueStart(ib) + i
         ipro = ipro + 1
 
-        zk( k ) = zk( k ) + apr( ipro ) * pk( numCells + ipro )
+        zk( k ) = zk( k ) + apr( ipro ) * pk( ijn )
 
       enddo
 

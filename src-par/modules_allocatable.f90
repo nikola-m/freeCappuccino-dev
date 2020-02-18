@@ -136,7 +136,7 @@ module parameters
   integer,  dimension(nphi) :: nsw       ! Number of allowed iterations in linear solver for each variable
   real(dp), dimension(nphi) :: sor       ! Tolerance level for linear solver iterations for each variable
   real(dp), dimension(nphi) :: resor     ! Residual
-  real(dp), dimension(nphi) :: rnor      ! Residual normalisation factor
+  ! real(dp), dimension(nphi) :: rnor      ! Residual normalisation factor
   real(dp), dimension(nphi) :: prtinv    ! Inverse Prandtl numbers, (see diffusion term discretisation)
   real(dp), dimension(nphi) :: urf       ! Underrelaxation factor
   real(dp), dimension(nphi) :: urfr      ! Recipr. value of urf: 1/urf
@@ -176,7 +176,7 @@ module variables
     real(dp), dimension(:), allocatable :: uu,vv,ww,uv,uw,vw  ! Reynolds stress tensor components
     real(dp), dimension(:,:), allocatable :: bij              ! Reynolds stress anisotropy tensor
     real(dp), dimension(:), allocatable :: fmi,fmo,fmoc,fmpro ! Mass fluxes trough boundary faces
-    real(dp), dimension(:), allocatable :: visw,ypl           ! Effective visc. for boundary face, the y+ non-dimensional distance from wall
+    real(dp), dimension(:), allocatable :: visw,ypl,tau       ! Effective visc. for boundary face, the y+ non-dimensional distance from wall, wll shear stress
  
      ! values from n-1 timestep
     real(dp), dimension(:), allocatable :: uo, vo, wo

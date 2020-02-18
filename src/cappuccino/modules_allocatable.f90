@@ -187,7 +187,7 @@ module variables
     real(dp), dimension(:), allocatable :: uu,vv,ww,uv,uw,vw  ! Reynolds stress tensor components
     real(dp), dimension(:,:), allocatable :: bij              ! Reynolds stress anisotropy tensor
     real(dp), dimension(:), allocatable :: fmi, fmo           ! Mass fluxes trough boundary faces
-    real(dp), dimension(:), allocatable :: visw,ypl           ! Effective visc. for boundary face, the y+ non-dimensional distance from wall
+    real(dp), dimension(:), allocatable :: visw,ypl,tau       ! Effective visc. for boundary face, the y+ non-dimensional distance from wall, tau - wall shear stress
   
     ! values from n-1 timestep
     real(dp), dimension(:), allocatable :: uo, vo, wo

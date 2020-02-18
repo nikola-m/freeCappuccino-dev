@@ -84,7 +84,8 @@ subroutine facefluxmass(ijp, ijn, xf, yf, zf, arx, ary, arz, lambda, cap, can, f
   dene = den(ijp)*fxp+den(ijn)*fxn
 
   ! COEFFICIENTS OF PRESSURE-CORRECTION EQUATION
-  sfdpnr = 1./(arx*xpn*nxx+ary*ypn*nyy+arz*zpn*nzz)
+  ! sfdpnr = 1./(arx*xpn*nxx+ary*ypn*nyy+arz*zpn*nzz)
+  sfdpnr = 1./(arx*xpn+ary*ypn+arz*zpn)  
   smdpn = (arx*arx+ary*ary+arz*arz)*sfdpnr
   cap = -dene*Dpu*smdpn
   can = cap
@@ -258,6 +259,10 @@ subroutine facefluxmass2(ijp, ijn, xf, yf, zf, arx, ary, arz, lambda, cap, can, 
   ui = face_value_central( ijp,ijn, xf, yf, zf, u, dUdxi )
   vi = face_value_central( ijp,ijn, xf, yf, zf, v, dVdxi )
   wi = face_value_central( ijp,ijn, xf, yf, zf, w, dWdxi )
+
+  ! ui = face_value_cds( ijp, ijn, lambda, u )
+  ! vi = face_value_cds( ijp, ijn, lambda, v )
+  ! wi = face_value_cds( ijp, ijn, lambda, w )
 
   dpxi = ( dPdxi(1,ijn)*fxp + dPdxi(1,ijp)*fxn ) * xpn
   dpyi = ( dPdxi(2,ijn)*fxp + dPdxi(2,ijp)*fxn ) * ypn
