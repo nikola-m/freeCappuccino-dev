@@ -11,8 +11,8 @@ subroutine openfiles
 
   ! character(8)  :: date
   ! character(10) :: time
-  character( len = 5) :: nproc_char
-  integer :: id
+  ! character( len = 5) :: nproc_char
+  ! integer :: id
 
 !
 !***********************************************************************
@@ -31,10 +31,10 @@ subroutine openfiles
   ! Create folders for process data
   ! do id=0,nproc-1
 
-  !   ! nproc_char <- myid zapisan levo u vidu stringa.
-  !   call i4_to_s_left ( id, nproc_char )
+    ! nproc_char <- myid zapisan levo u vidu stringa.
+    ! call i4_to_s_left ( id, myid )
 
-  !   call execute_command_line('mkdir processor'//trim(nproc_char)//'/vtk')
+    ! call execute_command_line('mkdir processor'//trim(nproc_char)//'/vtk')
  
   ! enddo
 

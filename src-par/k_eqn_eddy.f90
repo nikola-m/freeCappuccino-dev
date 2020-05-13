@@ -51,11 +51,43 @@ end subroutine
 
 subroutine correct_turbulence_inlet_k_eqn_eddy()
 !
-! Update effective viscosity at inlet
+! Update turbulent and effective viscosity at inlet.
 !
+  use types
+  use parameters
+  use geometry, only:numBoundaries,nfaces,startFace,iBndValueStart,arx,ary,arz 
+  use variables
+
   implicit none
 
-  call modify_mu_eff_inlet()
+  integer :: i,ib,ijb,iface
+  real(dp) :: are, Delta
+
+  !
+  ! Boundary faces 
+  !
+  do ib=1,numBoundaries
+
+    if ( bctype(ib) == 'inlet' ) then
+
+      do i=1,nfaces(ib)
+
+        iface = startFace(ib) + i
+        ijb = iBndValueStart(ib) + i
+
+        are = sqrt( arx(iface)**2 + ary(iface)**2 + arz(iface)**2 )
+        Delta = sqrt(are)
+
+        ! Update effective viscosity:
+        ! \mu_{eff}=\mu+\mu_t; \mu_t = C_k * k^{0.5} * Delta
+
+        vis(ijb) = viscos + den(ijb)*ck*sqrt(te(ijb))*delta
+
+      end do
+
+    endif
+
+  enddo 
 
 end subroutine
 
@@ -200,14 +232,16 @@ subroutine calcsc(Fi,dFidxi,ifi)
     !=====================================
     ! UNSTEADY TERM
     !=====================================
-    if( bdf ) then
-      apotime = den(inp)*vol(inp)/timestep
-      su(inp) = su(inp) + apotime*teo(inp)
-      sp(inp) = sp(inp) + apotime
-    elseif( bdf2 ) then
-      apotime=den(inp)*vol(inp)/timestep
-      su(inp) = su(inp) + apotime*( 2*teo(inp) - 0.5_dp*teoo(inp) )
-      sp(inp) = sp(inp) + 1.5_dp*apotime
+    if (ltransient) then
+      if( bdf .or. cn ) then
+        apotime = den(inp)*vol(inp)/timestep
+        su(inp) = su(inp) + apotime*teo(inp)
+        sp(inp) = sp(inp) + apotime
+      elseif( bdf2 ) then
+        apotime=den(inp)*vol(inp)/timestep
+        su(inp) = su(inp) + apotime*( 2*teo(inp) - 0.5_dp*teoo(inp) )
+        sp(inp) = sp(inp) + 1.5_dp*apotime
+      endif
     endif
 
 
@@ -348,8 +382,9 @@ subroutine calcsc(Fi,dFidxi,ifi)
         ! > Wall boundary conditions for turbulence kinetic energy eq.
         !
 
-        viss=viscos
-        if(ypl(iWall).gt.ctrans) viss=visw(iWall)
+        ! viss=viscos
+        ! if(ypl(iWall).gt.ctrans) viss=visw(iWall)
+        viss = max(viscos,visw(iWall))
 
         ! Face area 
         are = sqrt(arx(iface)**2+ary(iface)**2+arz(iface)**2)
@@ -536,19 +571,15 @@ subroutine modify_mu_eff()
 
   third = 1./3.0_dp
 
-  !
-  ! Loop trough cells 
-  !
-
   do inp=1,numCells
-        ! Store old value
-        visold=vis(inp)
-        delta = vol(inp)**third
-        ! Update effective viscosity:
-        ! \mu_{eff}=\mu+\mu_t; \mu_t = C_k * k^{0.5} * Delta
-        vis(inp)=viscos + den(inp)*ck*sqrt(te(inp))*delta
-        ! Underelaxation
-        vis(inp)=urf(ivis)*vis(inp)+(1.0_dp-urf(ivis))*visold
+    ! Store old value
+    visold=vis(inp)
+    delta = vol(inp)**third
+    ! Update effective viscosity:
+    ! \mu_{eff}=\mu+\mu_t; \mu_t = C_k * k^{0.5} * Delta
+    vis(inp)=viscos + den(inp)*ck*sqrt(te(inp))*delta
+    ! Underelaxation
+    vis(inp)=urf(ivis)*vis(inp)+(1.0_dp-urf(ivis))*visold
   enddo
 
   !
@@ -664,47 +695,6 @@ subroutine modify_mu_eff()
 end subroutine
 
 
-subroutine modify_mu_eff_inlet()
-!
-! Update turbulent and effective viscosity at inlet.
-!
-  use types
-  use parameters
-  use geometry, only:numBoundaries,nfaces,startFace,iBndValueStart,arx,ary,arz 
-  use variables
-
-  implicit none
-
-  integer :: i,ib,ijb,iface
-  real(dp) :: are, Delta
-
-  !
-  ! Boundary faces 
-  !
-  do ib=1,numBoundaries
-
-    if ( bctype(ib) == 'inlet' ) then
-
-      do i=1,nfaces(ib)
-
-        iface = startFace(ib) + i
-        ijb = iBndValueStart(ib) + i
-
-        are = sqrt( arx(iface)**2 + ary(iface)**2 + arz(iface)**2 )
-        Delta = sqrt(are)
-
-        ! Update effective viscosity:
-        ! \mu_{eff}=\mu+\mu_t; \mu_t = C_k * k^{0.5} * Delta
-
-        vis(ijb) = viscos + den(ijb)*ck*sqrt(te(ijb))*delta
-
-      end do
-
-    endif
-
-  enddo 
-
-end subroutine
 
 
 end module k_eqn_eddy

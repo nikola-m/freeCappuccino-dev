@@ -13,6 +13,7 @@ subroutine calcuvw
   use gradients, only: grad
   use faceflux_velocity
   use fieldManipulation, only: calcPressDiv
+  use mhd
 
   implicit none
 !
@@ -92,15 +93,14 @@ subroutine calcuvw
 
   endif
 
-
-
   ! Velocity gradients: 
+  call updateVelocityAtBoundary
   call grad(U,dUdxi)
   call grad(V,dVdxi)
   call grad(W,dWdxi)
 
-
-
+  ! Update values of Lorentz force vector components in MHD case.
+  if(lcal(iep)) call calculate_Lorentz_force
 
   !----------------------------------------------------------------------------
   ! CALCULATE SOURCE TERMS INTEGRATED OVER VOLUME
@@ -132,68 +132,81 @@ subroutine calcuvw
     endif
 
     !
-    ! Unsteady term
+    ! MHD: Lorentz force source terms
     !
-    if( bdf ) then
-    !
-    ! Backward differentiation formula of 1st order.
-    !
-      apotime = den(inp)*vol(inp)/timestep
+    if(lcal(iep)) then
 
-      ! RHS vector contribution
-      su(inp) = su(inp) + apotime*uo(inp)
-      sv(inp) = sv(inp) + apotime*vo(inp)
-      sw(inp) = sw(inp) + apotime*wo(inp)
-
-      ! Matrix diagonal element contribution
-      spu(inp) = spu(inp) + apotime
-      spv(inp) = spv(inp) + apotime
-      sp(inp)  = sp(inp)  + apotime
-
-    elseif( bdf2 ) then
-    !
-    ! Three Level Implicit Time Integration (BDF2) - 2nd order.
-    !
-      apotime = den(inp)*vol(inp)/timestep
-
-      ! RHS vector contribution
-      su(inp) = su(inp) + apotime*( 2*uo(inp) - 0.5_dp*uoo(inp) )
-      sv(inp) = sv(inp) + apotime*( 2*vo(inp) - 0.5_dp*voo(inp) ) 
-      sw(inp) = sw(inp) + apotime*( 2*wo(inp) - 0.5_dp*woo(inp) )
-
-      ! Matrix diagonal element contribution
-      spu(inp) = spu(inp) + 1.5_dp*apotime
-      spv(inp) = spv(inp) + 1.5_dp*apotime
-      sp(inp)  = sp(inp)  + 1.5_dp*apotime
-
-
-    elseif( bdf3 ) then
-    !
-    ! Three Level Implicit Time Integration (BDF2) - 2nd order.
-    !
-      apotime = den(inp)*vol(inp)/timestep
-
-      ! RHS vector contribution
-      su(inp) = su(inp) + apotime*( 3*uo(inp) - 1.5_dp*uoo(inp) + 1./3.0_dp*uooo(inp) )
-      sv(inp) = sv(inp) + apotime*( 3*vo(inp) - 1.5_dp*voo(inp) + 1./3.0_dp*vooo(inp) ) 
-      sw(inp) = sw(inp) + apotime*( 3*wo(inp) - 1.5_dp*woo(inp) + 1./3.0_dp*wooo(inp) )
-
-      ! Matrix diagonal element contribution
-      spu(inp) = spu(inp) + 11./6.0_dp*apotime
-      spv(inp) = spv(inp) + 11./6.0_dp*apotime
-      sp(inp)  = sp(inp)  + 11./6.0_dp*apotime
+      ! Add Lorentz force volume source terms.
+      su(inp) = su(inp) + sigma*florx(inp)*vol(inp)
+      sv(inp) = sv(inp) + sigma*flory(inp)*vol(inp)
+      sw(inp) = sw(inp) + sigma*florz(inp)*vol(inp)  
 
     endif
 
-  end do
 
+    !
+    ! Unsteady term
+    !
+    if(ltransient) then
+
+      if( bdf .or. cn ) then
+      !
+      ! Backward differentiation formula of 1st order.
+      !
+        apotime = den(inp)*vol(inp)/timestep
+
+        ! RHS vector contribution
+        su(inp) = su(inp) + apotime*uo(inp)
+        sv(inp) = sv(inp) + apotime*vo(inp)
+        sw(inp) = sw(inp) + apotime*wo(inp)
+
+        ! Matrix diagonal element contribution
+        spu(inp) = spu(inp) + apotime
+        spv(inp) = spv(inp) + apotime
+        sp(inp)  = sp(inp)  + apotime
+
+      elseif( bdf2 ) then
+      !
+      ! Three Level Implicit Time Integration (BDF2) - 2nd order.
+      !
+        apotime = den(inp)*vol(inp)/timestep
+
+        ! RHS vector contribution
+        su(inp) = su(inp) + apotime*( 2*uo(inp) - 0.5_dp*uoo(inp) )
+        sv(inp) = sv(inp) + apotime*( 2*vo(inp) - 0.5_dp*voo(inp) ) 
+        sw(inp) = sw(inp) + apotime*( 2*wo(inp) - 0.5_dp*woo(inp) )
+
+        ! Matrix diagonal element contribution
+        spu(inp) = spu(inp) + 1.5_dp*apotime
+        spv(inp) = spv(inp) + 1.5_dp*apotime
+        sp(inp)  = sp(inp)  + 1.5_dp*apotime
+
+
+      elseif( bdf3 ) then
+      !
+      ! Three Level Implicit Time Integration (BDF2) - 2nd order.
+      !
+        apotime = den(inp)*vol(inp)/timestep
+
+        ! RHS vector contribution
+        su(inp) = su(inp) + apotime*( 3*uo(inp) - 1.5_dp*uoo(inp) + 1./3.0_dp*uooo(inp) )
+        sv(inp) = sv(inp) + apotime*( 3*vo(inp) - 1.5_dp*voo(inp) + 1./3.0_dp*vooo(inp) ) 
+        sw(inp) = sw(inp) + apotime*( 3*wo(inp) - 1.5_dp*woo(inp) + 1./3.0_dp*wooo(inp) )
+
+        ! Matrix diagonal element contribution
+        spu(inp) = spu(inp) + 11./6.0_dp*apotime
+        spv(inp) = spv(inp) + 11./6.0_dp*apotime
+        sp(inp)  = sp(inp)  + 11./6.0_dp*apotime
+
+      endif
+
+    endif ! unsteady term
+
+  end do
 
   !----------------------------------------------------------------------------
   ! Calculate Reynols stresses explicitly and additional asm terms:
   !----------------------------------------------------------------------------
-
-  ! NOTE: Ovo mu treba za neki postprocessing ili a neke druge clanove ali ne znam zasto ga ovde racuna - nema smisla
-  ! jer nije osvezio polje brzina...
   ! if(lturb) then
   !   call calcstress
   !   if (lasm) call Additional_algebraic_stress_terms
@@ -345,9 +358,9 @@ subroutine calcuvw
         ijb = iBndValueStart(ib) + i
         iWall = iWall + 1
 
-        viss = viscos ! viskoznost interpolirana na boundary face
-        if(lturb.and.ypl(iWall).gt.ctrans) viss=visw(iWall)
-        ! viss=max(viscos,visw(iWall))
+        ! viss = viscos ! viskoznost interpolirana na boundary face
+        ! if(lturb.and.ypl(iWall).gt.ctrans) viss=visw(iWall)
+        viss=max(viscos,visw(iWall))
 
         ! Face area
         are = sqrt(arx(iface)**2+ary(iface)**2+arz(iface)**2)

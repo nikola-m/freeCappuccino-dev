@@ -66,11 +66,35 @@ subroutine correct_turbulence_inlet_k_epsilon_std()
 !
 !***********************************************************************
 !
+  use types
+  use parameters
+  use geometry, only:numBoundaries,nfaces,iBndValueStart
+  use variables
+
   implicit none
 !
 !***********************************************************************
 !
-  call modify_mu_eff_inlet()
+  integer :: i,ib,ijb
+
+  !
+  ! Boundary faces 
+  !
+  do ib=1,numBoundaries
+
+    if ( bctype(ib) == 'inlet' ) then
+
+      do i=1,nfaces(ib)
+
+        ijb = iBndValueStart(ib) + i
+
+        Vis(ijb) = viscos+den(ijb)*te(ijb)**2*cmu/(ed(ijb)+small)
+
+      end do
+
+    endif
+
+  enddo 
 
 end subroutine
 
@@ -216,7 +240,7 @@ subroutine calcsc(Fi,dFidxi,ifi)
     !=====================================
     ! UNSTEADY TERM
     !=====================================
-    if( bdf ) then
+    if( bdf .or. cn ) then
       apotime = den(inp)*vol(inp)/timestep
       su(inp) = su(inp) + apotime*teo(inp)
       sp(inp) = sp(inp) + apotime
@@ -285,7 +309,7 @@ subroutine calcsc(Fi,dFidxi,ifi)
     !=====================================
     !.....UNSTEADY TERM
     !=====================================
-    if( bdf ) then
+    if( bdf .or. cn ) then
       apotime = den(inp)*vol(inp)/timestep
       su(inp) = su(inp) + apotime*edo(inp)
       sp(inp) = sp(inp) + apotime
@@ -832,48 +856,6 @@ subroutine modify_mu_eff()
 
 
 end subroutine modify_mu_eff
-
-
-
-!***********************************************************************
-!
-subroutine modify_mu_eff_inlet()
-!
-! Update turbulent and effective viscosity at inlet.
-!
-!***********************************************************************
-!
-  use types
-  use parameters
-  use geometry, only:numBoundaries,nfaces,iBndValueStart
-  use variables
-
-  implicit none
-!
-!***********************************************************************
-!
-  integer :: i,ib,ijb
-
-  !
-  ! Boundary faces 
-  !
-  do ib=1,numBoundaries
-
-    if ( bctype(ib) == 'inlet' ) then
-
-      do i=1,nfaces(ib)
-
-        ijb = iBndValueStart(ib) + i
-
-        Vis(ijb) = viscos+den(ijb)*te(ijb)**2*cmu/(ed(ijb)+small)
-
-      end do
-
-    endif
-
-  enddo 
-
-end subroutine modify_mu_eff_inlet
 
 
 end module k_epsilon_std

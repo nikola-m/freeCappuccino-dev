@@ -49,7 +49,6 @@ subroutine bpres(p,istage)
 
     enddo
 
-
   else ! istage==2 and higher
 
     ! ! Loop Boundary faces:

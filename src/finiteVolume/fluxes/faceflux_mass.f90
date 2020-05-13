@@ -287,7 +287,7 @@ end subroutine
 
 !***********************************************************************
 !
-subroutine facefluxmass_piso(ijp, ijn, xf, yf, zf, arx, ary, arz, lambda, cap, can, flmass, fmo, fmoo,fmooo)
+subroutine facefluxmass_piso(ijp, ijn, xf, yf, zf, arx, ary, arz, lambda, cap, can, flmass)!, fmo, fmoo,fmooo)
 !
 !***********************************************************************
 !
@@ -307,7 +307,7 @@ subroutine facefluxmass_piso(ijp, ijn, xf, yf, zf, arx, ary, arz, lambda, cap, c
   real(dp), intent(in) :: lambda
   real(dp), intent(inout) :: cap, can
   real(dp), intent(inout) :: flmass
-  real(dp), intent(in) :: fmo,fmoo,fmooo
+  ! real(dp), intent(in) :: fmo,fmoo,fmooo
 
   ! Local variables
   real(dp) :: fxn, fxp
@@ -315,7 +315,7 @@ subroutine facefluxmass_piso(ijp, ijn, xf, yf, zf, arx, ary, arz, lambda, cap, c
   real(dp) :: nx,ny,nz
   real(dp) :: xpn,ypn,zpn,dene
   real(dp) :: ui,vi,wi
-  real(dp) :: ufo, vfo, wfo
+  ! real(dp) :: ufo, vfo, wfo
   real(dp) :: Kj
 
 
@@ -385,70 +385,70 @@ subroutine facefluxmass_piso(ijp, ijn, xf, yf, zf, arx, ary, arz, lambda, cap, c
 
   ! endif
 
-  if (bdf2) then
+  ! if (bdf2) then
 
-    ! From timestep n-1
-    ufo = face_value_cds( ijp, ijn, lambda, uo ) 
-    vfo = face_value_cds( ijp, ijn, lambda, vo ) 
-    wfo = face_value_cds( ijp, ijn, lambda, wo )  
+  !   ! From timestep n-1
+  !   ufo = face_value_cds( ijp, ijn, lambda, uo ) 
+  !   vfo = face_value_cds( ijp, ijn, lambda, vo ) 
+  !   wfo = face_value_cds( ijp, ijn, lambda, wo )  
 
-    ui = 2*Kj * ( ( fmo / (dene*are) - (ufo*nx+vfo*ny+wfo*nz) ) * nx )
-    vi = 2*Kj * ( ( fmo / (dene*are) - (ufo*nx+vfo*ny+wfo*nz) ) * ny )
-    wi = 2*Kj * ( ( fmo / (dene*are) - (ufo*nx+vfo*ny+wfo*nz) ) * nz )
+  !   ui = 2*Kj * ( ( fmo / (dene*are) - (ufo*nx+vfo*ny+wfo*nz) ) * nx )
+  !   vi = 2*Kj * ( ( fmo / (dene*are) - (ufo*nx+vfo*ny+wfo*nz) ) * ny )
+  !   wi = 2*Kj * ( ( fmo / (dene*are) - (ufo*nx+vfo*ny+wfo*nz) ) * nz )
 
-    flmass = flmass + (ui*arx+vi*ary+wi*arz)
+  !   flmass = flmass + (ui*arx+vi*ary+wi*arz)
 
-    ! From timestep n-2
-    ufo = face_value_cds( ijp, ijn, lambda, uoo ) 
-    vfo = face_value_cds( ijp, ijn, lambda, voo ) 
-    wfo = face_value_cds( ijp, ijn, lambda, woo )  
+  !   ! From timestep n-2
+  !   ufo = face_value_cds( ijp, ijn, lambda, uoo ) 
+  !   vfo = face_value_cds( ijp, ijn, lambda, voo ) 
+  !   wfo = face_value_cds( ijp, ijn, lambda, woo )  
 
-    ui = -0.5_dp * Kj * ( ( fmoo / (dene*are) - (ufo*nx+vfo*ny+wfo*nz) ) * nx )
-    vi = -0.5_dp * Kj * ( ( fmoo / (dene*are) - (ufo*nx+vfo*ny+wfo*nz) ) * ny )
-    wi = -0.5_dp * Kj * ( ( fmoo / (dene*are) - (ufo*nx+vfo*ny+wfo*nz) ) * nz )
+  !   ui = -0.5_dp * Kj * ( ( fmoo / (dene*are) - (ufo*nx+vfo*ny+wfo*nz) ) * nx )
+  !   vi = -0.5_dp * Kj * ( ( fmoo / (dene*are) - (ufo*nx+vfo*ny+wfo*nz) ) * ny )
+  !   wi = -0.5_dp * Kj * ( ( fmoo / (dene*are) - (ufo*nx+vfo*ny+wfo*nz) ) * nz )
 
-    flmass = flmass + (ui*arx+vi*ary+wi*arz)
+  !   flmass = flmass + (ui*arx+vi*ary+wi*arz)
 
-  endif 
-
-
-  if (bdf3) then
-
-    ! From timestep n-1
-    ufo = face_value_cds( ijp, ijn, lambda, uo ) 
-    vfo = face_value_cds( ijp, ijn, lambda, vo ) 
-    wfo = face_value_cds( ijp, ijn, lambda, wo )  
-
-    ui = 3*Kj * ( ( fmo / (dene*are) - (ufo*nx+vfo*ny+wfo*nz) ) * nx )
-    vi = 3*Kj * ( ( fmo / (dene*are) - (ufo*nx+vfo*ny+wfo*nz) ) * ny )
-    wi = 3*Kj * ( ( fmo / (dene*are) - (ufo*nx+vfo*ny+wfo*nz) ) * nz )
-
-    flmass = flmass + (ui*arx+vi*ary+wi*arz)
-
-    ! From timestep n-2
-    ufo = face_value_cds( ijp, ijn, lambda, uoo ) 
-    vfo = face_value_cds( ijp, ijn, lambda, voo ) 
-    wfo = face_value_cds( ijp, ijn, lambda, woo )  
-
-    ui = -1.5_dp * Kj * ( ( fmoo / (dene*are) - (ufo*nx+vfo*ny+wfo*nz) ) * nx )
-    vi = -1.5_dp * Kj * ( ( fmoo / (dene*are) - (ufo*nx+vfo*ny+wfo*nz) ) * ny )
-    wi = -1.5_dp * Kj * ( ( fmoo / (dene*are) - (ufo*nx+vfo*ny+wfo*nz) ) * nz )
-
-    flmass = flmass + (ui*arx+vi*ary+wi*arz)
+  ! endif 
 
 
-    ! From timestep n-3
-    ufo = face_value_cds( ijp, ijn, lambda, uooo ) 
-    vfo = face_value_cds( ijp, ijn, lambda, vooo ) 
-    wfo = face_value_cds( ijp, ijn, lambda, wooo )  
+  ! if (bdf3) then
 
-    ui = 1./3.0_dp * Kj * ( ( fmooo / (dene*are) - (ufo*nx+vfo*ny+wfo*nz) ) * nx )
-    vi = 1./3.0_dp * Kj * ( ( fmooo / (dene*are) - (ufo*nx+vfo*ny+wfo*nz) ) * ny )
-    wi = 1./3.0_dp * Kj * ( ( fmooo / (dene*are) - (ufo*nx+vfo*ny+wfo*nz) ) * nz )
+  !   ! From timestep n-1
+  !   ufo = face_value_cds( ijp, ijn, lambda, uo ) 
+  !   vfo = face_value_cds( ijp, ijn, lambda, vo ) 
+  !   wfo = face_value_cds( ijp, ijn, lambda, wo )  
 
-    flmass = flmass + (ui*arx+vi*ary+wi*arz)
+  !   ui = 3*Kj * ( ( fmo / (dene*are) - (ufo*nx+vfo*ny+wfo*nz) ) * nx )
+  !   vi = 3*Kj * ( ( fmo / (dene*are) - (ufo*nx+vfo*ny+wfo*nz) ) * ny )
+  !   wi = 3*Kj * ( ( fmo / (dene*are) - (ufo*nx+vfo*ny+wfo*nz) ) * nz )
 
-  endif
+  !   flmass = flmass + (ui*arx+vi*ary+wi*arz)
+
+  !   ! From timestep n-2
+  !   ufo = face_value_cds( ijp, ijn, lambda, uoo ) 
+  !   vfo = face_value_cds( ijp, ijn, lambda, voo ) 
+  !   wfo = face_value_cds( ijp, ijn, lambda, woo )  
+
+  !   ui = -1.5_dp * Kj * ( ( fmoo / (dene*are) - (ufo*nx+vfo*ny+wfo*nz) ) * nx )
+  !   vi = -1.5_dp * Kj * ( ( fmoo / (dene*are) - (ufo*nx+vfo*ny+wfo*nz) ) * ny )
+  !   wi = -1.5_dp * Kj * ( ( fmoo / (dene*are) - (ufo*nx+vfo*ny+wfo*nz) ) * nz )
+
+  !   flmass = flmass + (ui*arx+vi*ary+wi*arz)
+
+
+  !   ! From timestep n-3
+  !   ufo = face_value_cds( ijp, ijn, lambda, uooo ) 
+  !   vfo = face_value_cds( ijp, ijn, lambda, vooo ) 
+  !   wfo = face_value_cds( ijp, ijn, lambda, wooo )  
+
+  !   ui = 1./3.0_dp * Kj * ( ( fmooo / (dene*are) - (ufo*nx+vfo*ny+wfo*nz) ) * nx )
+  !   vi = 1./3.0_dp * Kj * ( ( fmooo / (dene*are) - (ufo*nx+vfo*ny+wfo*nz) ) * ny )
+  !   wi = 1./3.0_dp * Kj * ( ( fmooo / (dene*are) - (ufo*nx+vfo*ny+wfo*nz) ) * nz )
+
+  !   flmass = flmass + (ui*arx+vi*ary+wi*arz)
+
+  ! endif
 
 end subroutine
 

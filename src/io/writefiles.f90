@@ -15,6 +15,7 @@ subroutine writefiles
   use sparse_matrix
   use output
   use utils, only: i4_to_s_left
+  use mhd
 
   implicit none
 !
@@ -95,6 +96,8 @@ subroutine writefiles
 
   call vtu_write_XML_vector_field( output_unit, 'U', u, v, w )
 
+  if( lcal(iep) ) call vtu_write_XML_vector_field( output_unit, 'uxB', curix, curiy, curiz )
+
 !
 ! > Scalars in cell-centers 
 !
@@ -108,6 +111,11 @@ subroutine writefiles
   if( solveEpsilon ) call vtu_write_XML_scalar_field ( output_unit, 'epsilon', ed )
 
   if( solveOmega ) call vtu_write_XML_scalar_field ( output_unit, 'omega', ed )
+
+  if( lcal(ien) ) call vtu_write_XML_scalar_field ( output_unit, 'T', t )
+
+  if( lcal(iep) ) call vtu_write_XML_scalar_field ( output_unit, 'Epot', Epot )
+
 
 !
 ! > Mesh data
@@ -195,6 +203,8 @@ subroutine writefiles
 
     call vtu_write_XML_vector_field_boundary( output_unit, 'U', u, v, w, istart, iend )
 
+    if( lcal(iep) ) call vtu_write_XML_vector_field_boundary( output_unit, 'uxB', curix, curiy, curiz, istart, iend )
+
     !
     ! > Scalars in face-centers 
     !
@@ -208,6 +218,12 @@ subroutine writefiles
     if( solveEpsilon ) call vtu_write_XML_scalar_field_boundary ( output_unit, 'epsilon', ed, istart, iend )
 
     if( solveOmega ) call vtu_write_XML_scalar_field_boundary ( output_unit, 'omega', ed, istart, iend )
+
+    if( lcal(ien) ) call vtu_write_XML_scalar_field_boundary ( output_unit, 'T', t, istart, iend )
+
+    if( lcal(iep) ) call vtu_write_XML_scalar_field_boundary ( output_unit, 'Epot', Epot, istart, iend )
+
+
 
     ! Write y+ and shear force at wall boundary regions
     if ( bctype(ib) == 'wall' ) then

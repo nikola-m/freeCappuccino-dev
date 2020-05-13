@@ -162,7 +162,7 @@ subroutine bicgstab(fi,ifi)
     zk(i) = zk(i)*d(i)
   enddo
 
-  call exchange( zk )
+
 
 !
 ! Matvec 1: Uk = A*pk
@@ -175,25 +175,27 @@ subroutine bicgstab(fi,ifi)
   enddo
 
 
-  ! Processor boundaries
-  ipro = 0
-  do ib=1,numBoundaries
+  ! ! Processor boundaries
+  ! ipro = 0
+  ! call exchange( zk )
 
-    if ( bctype(ib) == 'process' ) then
+  ! do ib=1,numBoundaries
 
-      do i=1,nfaces(ib)
-        iface = startFace(ib) + i
-        k = owner(iface)
-        ijn = iBndValueStart(ib) + i
-        ipro = ipro + 1
+  !   if ( bctype(ib) == 'process' ) then
 
-        uk( k ) = uk( k ) + apr( ipro ) * zk( ijn )
+  !     do i=1,nfaces(ib)
+  !       iface = startFace(ib) + i
+  !       k = owner(iface)
+  !       ijn = iBndValueStart(ib) + i
+  !       ipro = ipro + 1
 
-      enddo
+  !       uk( k ) = uk( k ) + apr( ipro ) * zk( ijn )
 
-    endif
+  !     enddo
 
-  enddo
+  !   endif
+
+  ! enddo
 
 !
 ! Calculate scalar product uk*reso, and gamma
@@ -239,8 +241,6 @@ subroutine bicgstab(fi,ifi)
     zk(i) = zk(i)*d(i)
   enddo
 
-  call exchange( zk )
-
 !
 ! Matvec 2: v = A*y (vk = A*zk); vk = csrMatVec(a,zk)
 !
@@ -251,25 +251,27 @@ subroutine bicgstab(fi,ifi)
     enddo
   enddo 
 
-  ! Processor boundaries
-  ipro = 0
-  do ib=1,numBoundaries
+  ! ! Processor boundaries
+  ! ipro = 0
+  ! call exchange( zk )
+    
+  ! do ib=1,numBoundaries
 
-    if ( bctype(ib) == 'process' ) then
+  !   if ( bctype(ib) == 'process' ) then
 
-      do i=1,nfaces(ib)
-        iface = startFace(ib) + i
-        k = owner(iface)
-        ijn = iBndValueStart(ib) + i
-        ipro = ipro + 1
+  !     do i=1,nfaces(ib)
+  !       iface = startFace(ib) + i
+  !       k = owner(iface)
+  !       ijn = iBndValueStart(ib) + i
+  !       ipro = ipro + 1
 
-        vk( k ) = vk( k ) + apr( ipro ) * zk( ijn )
+  !       vk( k ) = vk( k ) + apr( ipro ) * zk( ijn )
 
-      enddo
+  !     enddo
 
-    endif
+  !   endif
 
-  enddo
+  ! enddo
 
 !
 ! Calculate alpha (alf)

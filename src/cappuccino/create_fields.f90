@@ -11,6 +11,7 @@ subroutine create_fields
   use hcoef
   use title_mod
   use statistics
+  use mhd
 
   implicit none 
 !
@@ -91,7 +92,9 @@ subroutine create_fields
   allocate(pp(numTotal),stat=ierr) 
     if(ierr /= 0)write(*,*)"allocation error: pp"
  
-
+  allocate(dPdxi(3,numTotal),stat=ierr) 
+    if(ierr /= 0)write(*,*)"allocation error: dPdxi"
+    
   if ( piso ) then
     
     allocate(po(numTotal),stat=ierr) 
@@ -108,9 +111,6 @@ subroutine create_fields
     endif
 
   endif 
-
-  allocate(dPdxi(3,numTotal),stat=ierr) 
-    if(ierr /= 0)write(*,*)"allocation error: dPdxi"
 
 
   ! Turbulent K.E. and dissipation or any other turbulent scalar taking its place
@@ -156,16 +156,16 @@ subroutine create_fields
     allocate(t(numTotal),stat=ierr) 
       if(ierr /= 0)write(*,*)"allocation error: t"
 
+    allocate(dTdxi(3,numTotal),stat=ierr) 
+      if(ierr /= 0)write(*,*)"allocation error: dTdxi"
+
     allocate(to(numTotal),stat=ierr) 
       if(ierr /= 0)write(*,*)"allocation error: to"
 
-    if( bdf ) then
+    if( bdf2 ) then
       allocate(too(numTotal),stat=ierr) 
         if(ierr /= 0)write(*,*)"allocation error: too" 
     endif
-
-    allocate(dTdxi(3,numTotal),stat=ierr) 
-      if(ierr /= 0)write(*,*)"allocation error: dTdxi"
 
     if (ltransient) then
       allocate(t_aver(numTotal),stat=ierr) 
@@ -365,6 +365,36 @@ subroutine create_fields
       if(ierr /= 0)write(*,*)"allocation error: rW" 
 
   endif
+
+  if (lcal(iep)) then
+
+  allocate(BMAGX(numTotal),stat=ierr) 
+    if(ierr /= 0)write(*,*)"allocation error: bmagx" 
+  allocate(BMAGY(numTotal),stat=ierr) 
+    if(ierr /= 0)write(*,*)"allocation error: bmagy"
+  allocate(BMAGZ(numTotal),stat=ierr) 
+    if(ierr /= 0)write(*,*)"allocation error: bmagz"
+
+  allocate(CURIX(numTotal),stat=ierr) 
+    if(ierr /= 0)write(*,*)"allocation error: curix"
+  allocate(CURIY(numTotal),stat=ierr) 
+    if(ierr /= 0)write(*,*)"allocation error: curiy"
+  allocate(CURIZ(numTotal),stat=ierr) 
+    if(ierr /= 0)write(*,*)"allocation error: curiz"
+
+  allocate(FLORX(numTotal),stat=ierr) 
+    if(ierr /= 0)write(*,*)"allocation error: florx"
+  allocate(FLORY(numTotal),stat=ierr) 
+    if(ierr /= 0)write(*,*)"allocation error: flory"
+  allocate(FLORZ(numTotal),stat=ierr) 
+    if(ierr /= 0)write(*,*)"allocation error: florz"  
+
+  allocate(EPOT(numTotal),stat=ierr) 
+    if(ierr /= 0)write(*,*)"allocation error: epot"   
+  allocate(dEpotdxi(3,numTotal),stat=ierr) 
+    if(ierr /= 0)write(*,*)"allocation error: dEpotdxi"       
+
+  endif 
 
   ! allocate( phimax( numCells ), stat=ierr) 
   !   if(ierr /= 0)write(*,*)"allocation error: phimax" 

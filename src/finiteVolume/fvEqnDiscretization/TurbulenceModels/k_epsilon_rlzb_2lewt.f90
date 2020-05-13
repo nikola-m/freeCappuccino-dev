@@ -126,6 +126,7 @@ subroutine calcsc(Fi,dFidxi,ifi)
   real(dp) :: dudx,dudy,dudz,dvdx,dvdy,dvdz,dwdx,dwdy,dwdz
   real(dp) :: viss
   real(dp) :: fimax,fimin
+  real(dp) :: k12,Rey,lambeps,leps,eps2l
 
 
 ! Variable specific coefficients:
@@ -228,7 +229,7 @@ subroutine calcsc(Fi,dFidxi,ifi)
       !=====================================
       ! UNSTEADY TERM
       !=====================================
-      if( bdf ) then
+      if( bdf .or. cn ) then
         apotime = den(inp)*vol(inp)/timestep
         su(inp) = su(inp) + apotime*teo(inp)
         sp(inp) = sp(inp) + apotime
@@ -262,8 +263,7 @@ subroutine calcsc(Fi,dFidxi,ifi)
     su(inp)=c1*genp*ed(inp)*vol(inp)
 
     ! Destruction of dissipation
-    sp(inp)=c2*den(inp)*ed(inp)*vol(inp)/ &
-                             ( te(inp)+sqrt(viscos/densit*ed(inp)) )
+    sp(inp)=c2*den(inp)*ed(inp)*vol(inp)/( te(inp)+sqrt(viscos/densit*ed(inp)) )
 
     ! Negative value of production moved to lhs.
     sp(inp) = sp(inp) - c1*genn*ed(inp)*vol(inp)
@@ -300,7 +300,7 @@ subroutine calcsc(Fi,dFidxi,ifi)
     !=====================================
     !.....UNSTEADY TERM
     !=====================================
-      if( bdf ) then
+      if( bdf .or. cn ) then
         apotime = den(inp)*vol(inp)/timestep
         su(inp) = su(inp) + apotime*edo(inp)
         sp(inp) = sp(inp) + apotime
@@ -457,20 +457,20 @@ subroutine calcsc(Fi,dFidxi,ifi)
           ! Add this production to source vector
           su(ijp)=su(ijp)+gen(ijp)*vol(ijp)
 
-        else
-        !
-        ! > Wall boundary conditions for dissipation rate of turbulence kinetic energy eq.
-        !
+        ! else
+        ! !
+        ! ! > Wall boundary conditions for dissipation rate of turbulence kinetic energy eq.
+        ! !
 
-          ! Wall boundaries approximated with wall functions
-          ! for correct values of dissipation all coefficients have
-          ! to be zero, su equal the dissipation, and diagonal element a(diag(ijp)) = 1
+        !   ! Wall boundaries approximated with wall functions
+        !   ! for correct values of dissipation all coefficients have
+        !   ! to be zero, su equal the dissipation, and diagonal element a(diag(ijp)) = 1
 
-          a( ioffset(ijp):ioffset(ijp+1)-1 ) = 0.0_dp
-          sp(ijp) = 1.0_dp
+        !   a( ioffset(ijp):ioffset(ijp+1)-1 ) = 0.0_dp
+        !   sp(ijp) = 1.0_dp
 
-          ed(ijp)=cmu75*te(ijp)**1.5/(cappa*dnw(iWall))
-          su(ijp)=ed(ijp)
+        !   ed(ijp)=cmu75*te(ijp)**1.5/(cappa*dnw(iWall))
+        !   su(ijp)=ed(ijp)
 
         endif
 
@@ -479,6 +479,61 @@ subroutine calcsc(Fi,dFidxi,ifi)
     endif
     
   enddo ! Boundary conditions loop  
+
+
+
+  if(ifi .eq.ied) then
+
+  ! The two-layer apprach - enhanced wall treatment
+  ! Penalty approach to set epsilon in 'near wall region' based on Rey
+  ! This will overwite what is set for the wall adjecent layer in boundary conditions loop above
+  ! and expand the region where epsilon is set to a specifi value - the whole region where Rey < Rey*
+
+    ! Loop over cells
+    do inp=1,numCells
+
+      ! sqrt(tke)
+      k12 = sqrt(abs(te(inp)))
+
+      !
+      ! Re number based on wall distance
+      !
+      Rey = den(inp)*wallDistance(inp)*k12/viscos
+
+      if (Rey < Reyst) then
+
+        !
+        ! **Now perform Jonger blending (check parameters in the header of the module and change in needed)
+        !
+
+        ! Blending factor
+        lambeps = 0.5_dp*( 1 + tanh( (Rey - Reyst)/Ablend ) )
+
+
+        ! While here we will also produce new value for epsilon based on blending between two values
+        leps = wallDistance(inp)*Clst*( 1.0-exp(-Rey/Aeps) ) ! the Chen-Patel length scale 
+
+        ! Inner layer value for issipation
+        eps2l = k12**3/leps 
+
+        !
+        ! **Now perform Jonger blending for dissipation
+        !  
+        ed(inp) = ( lambeps*ed(inp) + (1.0-lambeps)*eps2l )
+
+        !
+        ! Penalty formulation - not exactly but close
+        !
+        a( ioffset(inp):ioffset(inp+1)-1 ) = 0.0_dp
+        sp(inp) = 1.0_dp
+        su(inp)=ed(inp)
+
+      endif
+
+    enddo
+
+  endif
+
 
   ! Modify coefficients for Crank-Nicolson
   if (cn) then
@@ -604,13 +659,13 @@ subroutine modify_mu_eff()
   integer :: iface, ijp,ijb,iWall,ivisc
   real(dp) :: visold
   real(dp) :: nxf,nyf,nzf,are
-  real(dp) :: Vnp,Vtp,xtp,ytp,ztp,Ut2
+  real(dp) :: Vnp,Vtp,xtp,ytp,ztp
   real(dp) :: viscw
   real(dp) :: dudx,dudy,dudz,dvdx,dvdy,dvdz,dwdx,dwdy,dwdz
   real(dp) :: s11,s12,s13,s21,s22,s23,s31,s32,s33,w12,w13,w23
   real(dp) :: wrlzb,ffi,ass,ust,cmur,stild
-  real(dp) :: k12,Rey,lmu,mut2l,mut,lambeps,leps,eps2l
-  real(dp) :: Upvisc,Uplog,Uplblend,Gmblend,Utau
+  real(dp) :: k12,Rey,lmu,mut2l,mut,lambeps
+  real(dp) :: Uplblend,Utau
   
   ivisc = 0
 
@@ -706,17 +761,6 @@ subroutine modify_mu_eff()
     ! Underelaxation
     vis(inp)=urf(ivis)*vis(inp)+(1.0_dp-urf(ivis))*visold
 
-    ! While here we will also produce new value for epsilon based on blending between two values
-    leps = wallDistance(inp)*Clst*( 1.0-exp(-Rey/Aeps) ) ! the Chen-Patel length scale 
-
-    ! Inner layer value for issipation
-    eps2l = k12**3/leps 
-
-    !
-    ! **Now perform Jonger blending for dissipation
-    !  
-    ed(inp) = ( lambeps*ed(inp) + (1.0-lambeps)*eps2l )
-
   enddo
 
   write(*,'(a,i0,a)') "  Two-layer model: Rey < Rey* in ",ivisc," cells."
@@ -798,52 +842,78 @@ subroutine modify_mu_eff()
         ! Its magnitude
         Vtp = sqrt(xtp*xtp+ytp*ytp+ztp*ztp)
 
-        ! Tangent direction
-        xtp = xtp/vtp
-        ytp = ytp/vtp
-        ztp = ztp/vtp
+        ! ! Tangent direction
+        ! xtp = xtp/vtp
+        ! ytp = ytp/vtp
+        ! ztp = ztp/vtp
 
         ! projektovanje razlike brzina na pravac tangencijalne brzine u cell centru ijp
-        Ut2 = abs( (U(ijb)-U(ijp))*xtp + (V(ijb)-V(ijp))*ytp + (W(ijb)-W(ijp))*ztp )
+        ! Ut2 = abs( (U(ijb)-U(ijp))*xtp + (V(ijb)-V(ijp))*ytp + (W(ijb)-W(ijp))*ztp )
 
         ! Tau(iWall) = viscos*Ut2/dnw(iWall)
         ! Utau = sqrt( Tau(iWall) / den(ijb) )
         ! ypl(iWall) = den(ijb)*Utau*dnw(iWall)/viscos
 
         ! Ima i ova varijanta..ovo je tehnicki receno ystar iliti y* a ne y+
-        ypl(iWall) = den(ijp)*cmu25*sqrt(te(ijp))*dnw(iWall)/viscos
+        ! ypl(iWall) = den(ijp)*cmu25*sqrt(te(ijp))*dnw(iWall)/viscos
 
         viscw = zero
 
-        if(ypl(iWall) > ctrans) then
 
-          viscw = ypl(iWall)*viscos*cappa/log(Elog*ypl(iWall))
+        ! *** Enhanced wall treatment - Reichardt blending ***
 
-          ! Shear stress for log region
-          tau(iwall) = cappa*den(ijp)*Vtp*cmu25*sqrt(te(ijp))/log(Elog*ypl(iWall))
+        ! Below is a variant where we use Reichardt blending
+        ! for whole span of y+ values.
+        ! Some authors say that Reichardt function for u+ approximates
+        ! the composite u+(y+) curve, better that Kader blending function.
+ 
+        utau = sqrt( viscos*Vtp/(densit*dnw(iWall)) + cmu25*te(ijp) ) ! It's actually u* in original reference...
 
-        elseif( ypl(iWall) > 3.0 ) then
+        ypl(iWall) = den(ijp)*Utau*dnw(iWall)/viscos 
 
-          !
-          ! Enhanced wall treatment
-          !
-          Upvisc = ypl(iWall)
-          Uplog  = log(Elog*ypl(iWall))/cappa
-          Gmblend = -0.01_dp*ypl(iWall)**4/(1.+5*ypl(iWall))        
-          Uplblend = exp(Gmblend)*Upvisc + exp(1./Gmblend)*Uplog          
-          viscw = ypl(iWall)*viscos/Uplblend  
+        Uplblend = one/cappa*log(one+cappa*ypl(iWall)) + &
+                   7.8_dp*(1.-exp(-ypl(iWall)/11.0_dp)-(ypl(iWall)/11.0_dp)*exp(-ypl(iWall)/3.0_dp))
+          
+        viscw = den(ijp)*utau*dnw(iWall)/Uplblend  
 
-          ! Blended version of shear stress
-          tau(iwall) = den(ijp) * (Vtp/Uplblend)**2
+        ! Blended version of shear stress - probati ovo(!?)
+        ! tau(iWall) = den(ijp) * (Vtp/Uplblend)**2
 
-        else
+        ! Varijanta 2, u originalnoj referenci...
+        tau(iWall) = den(ijp) * Vtp*Utau/Uplblend
 
-          ! Shear stress for viscous region
-          tau(iWall) = viscos*Ut2/dnw(iWall)
-          Utau = sqrt( Tau(iWall) / den(ijp) )
-          ypl(iWall) = den(ijp)*Utau*dnw(iWall)/viscos
+        !*** END: Enhanced wall treatment - Reichardt blending ***
 
-        endif
+
+        ! if(ypl(iWall) > ctrans) then
+
+        !   viscw = ypl(iWall)*viscos*cappa/log(Elog*ypl(iWall))
+
+        !   ! Shear stress for log region
+        !   tau(iwall) = cappa*den(ijp)*Vtp*cmu25*sqrt(te(ijp))/log(Elog*ypl(iWall))
+
+        ! elseif( ypl(iWall) > 3.0 ) then
+
+        !   !
+        !   ! Enhanced wall treatment
+        !   !
+        !   Upvisc = ypl(iWall)
+        !   Uplog  = log(Elog*ypl(iWall))/cappa
+        !   Gmblend = -0.01_dp*ypl(iWall)**4/(1.+5*ypl(iWall))        
+        !   Uplblend = exp(Gmblend)*Upvisc + exp(1./Gmblend)*Uplog          
+        !   viscw = ypl(iWall)*viscos/Uplblend  
+
+        !   ! Blended version of shear stress
+        !   tau(iwall) = den(ijp) * (Vtp/Uplblend)**2
+
+        ! else
+
+        !   ! Shear stress for viscous region
+        !   tau(iWall) = viscos*Ut2/dnw(iWall)
+        !   Utau = sqrt( Tau(iWall) / den(ijp) )
+        !   ypl(iWall) = den(ijp)*Utau*dnw(iWall)/viscos
+
+        ! endif
 
         ! Set visw used in calcuvw wall bc treatment
         visw(iWall) = max(viscos,viscw)

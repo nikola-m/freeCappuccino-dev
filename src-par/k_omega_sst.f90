@@ -81,11 +81,22 @@ end subroutine
 
 subroutine correct_turbulence_inlet_k_omega_sst()
 !
-! Update effective viscosity at inlet
+! Update turbulent and effective viscosity at inlet.
 !
+
   implicit none
 
-  call modify_mu_eff_inlet()
+  integer :: i,ib,ijb
+
+  ! Set values at inlet faces
+  do ib=1,numBoundaries
+    if ( bctype(ib) == 'inlet' ) then
+      do i=1,nfaces(ib)
+        ijb = iBndValueStart(ib) + i
+        Vis(ijb) = viscos+den(ijb)*te(ijb)/(ed(ijb)+small)
+      end do
+    endif
+  enddo 
 
 end subroutine
 
@@ -113,15 +124,15 @@ subroutine calcsc(Fi,dFidxi,ifi)
 ! Local variables
 !
   integer ::  i, k, inp, ijp, ijn, ijb, ib, iface, iwall, ipro
-  real(dp) :: gam, prtr, prtr_ijp, prtr_ijn, apotime, const, urfrs, urfms
+  real(dp) :: gam, prtr, prtr_ijp, apotime, const, urfrs, urfms
   real(dp) :: utp, vtp, wtp, utn, vtn, wtn
   real(dp) :: genp, genn
   real(dp) :: uttbuoy, vttbuoy, wttbuoy
   real(dp) :: cap, can, suadd
-  ! real(dp) :: magStrainSq
+  real(dp) :: magStrainSq
   real(dp) :: off_diagonal_terms
   real(dp) :: are,nxf,nyf,nzf,vnp,xtp,ytp,ztp,ut2
-  real(dp) :: dudx,dudy,dudz,dvdx,dvdy,dvdz,dwdx,dwdy,dwdz
+  ! real(dp) :: dudx,dudy,dudz,dvdx,dvdy,dvdz,dwdx,dwdy,dwdz
   real(dp) :: viss
   real(dp) :: fimax,fimin
   real(dp) :: wldist,domegapl,ksi,tmp                            
@@ -158,26 +169,26 @@ subroutine calcsc(Fi,dFidxi,ifi)
 
   do inp=1,numCells
 
-    dudx = dudxi(1,inp)
-    dudy = dudxi(2,inp)
-    dudz = dudxi(3,inp)
+    ! dudx = dudxi(1,inp)
+    ! dudy = dudxi(2,inp)
+    ! dudz = dudxi(3,inp)
 
-    dvdx = dvdxi(1,inp)
-    dvdy = dvdxi(2,inp)
-    dvdz = dvdxi(3,inp)
+    ! dvdx = dvdxi(1,inp)
+    ! dvdy = dvdxi(2,inp)
+    ! dvdz = dvdxi(3,inp)
 
-    dwdx = dwdxi(1,inp)
-    dwdy = dwdxi(2,inp)
-    dwdz = dwdxi(3,inp)
+    ! dwdx = dwdxi(1,inp)
+    ! dwdy = dwdxi(2,inp)
+    ! dwdz = dwdxi(3,inp)
 
-    ! Minus here in fron because UU,UV,... calculated in calcstress hold -tau_ij
-    ! So the exact production is calculated as tau_ij*dui/dxj
-    gen(inp) = -den(inp)*( uu(inp)*dudx+uv(inp)*(dudy+dvdx)+ &
-                           uw(inp)*(dudz+dwdx)+vv(inp)*dvdy+ &
-                           vw(inp)*(dvdz+dwdy)+ww(inp)*dwdz )
+    ! ! Minus here in fron because UU,UV,... calculated in calcstress hold -tau_ij
+    ! ! So the exact production is calculated as tau_ij*dui/dxj
+    ! gen(inp) = -den(inp)*( uu(inp)*dudx+uv(inp)*(dudy+dvdx)+ &
+    !                        uw(inp)*(dudz+dwdx)+vv(inp)*dvdy+ &
+    !                        vw(inp)*(dvdz+dwdy)+ww(inp)*dwdz )
 
-    ! magStrainSq=magStrain(inp)*magStrain(inp)
-    ! gen(inp)=abs(vis(inp)-viscos)*magStrainSq
+    magStrainSq=magStrain(inp)*magStrain(inp)
+    gen(inp)=abs(vis(inp)-viscos)*magStrainSq
 
     ! PRODUCTION LIMITER FOR SST AND SAS MODELS:
     ! 10*bettainf=10*0.09=0.9 -> see below TODO BETTAST for Low-Re
@@ -271,7 +282,7 @@ subroutine calcsc(Fi,dFidxi,ifi)
     !=====================================
     ! UNSTEADY TERM
     !=====================================
-    if( bdf ) then
+    if( bdf .or. cn ) then
       apotime = den(inp)*vol(inp)/timestep
       su(inp) = su(inp) + apotime*teo(inp)
       sp(inp) = sp(inp) + apotime
@@ -309,9 +320,13 @@ subroutine calcsc(Fi,dFidxi,ifi)
     domegapl=max(2*den(inp)/(SIGMOM2*ed(inp)) * (dtedx*deddx+dtedy*deddy+dtedz*deddz),1e-10)
 
     ! Find ksi
-    ksi=min(max(sqrt(te(inp))/(BETTAST*wldist*ed(inp)),  &
-               (500.0_dp*viscos/den(inp))/(wldist**2*ed(inp))),  &
-            4.0_dp*den(inp)*te(inp)/(SIGMOM2*domegapl*wldist**2))
+    ksi=min(  max(                                                   &
+                  sqrt(te(inp))/(BETTAST*wldist*ed(inp)+small),      &
+                  500.0_dp*viscos/den(inp)/(wldist**2*ed(inp)+small) &
+                 ),                                                  &
+              4.0_dp*den(inp)*te(inp)/(SIGMOM2*domegapl*wldist**2)   &
+            )
+
 
     ! Find the SST model blending function f_sst:
     fsst(inp) = tanh(ksi**4)
@@ -368,7 +383,6 @@ subroutine calcsc(Fi,dFidxi,ifi)
     su(inp)=su(inp)+domega*vol(inp)
 
 
-
     ! Destruction of dissipation. 
 
     ! Destruction coefficient beta_sst
@@ -416,14 +430,16 @@ subroutine calcsc(Fi,dFidxi,ifi)
     !=====================================
     ! UNSTEADY TERM
     !=====================================
-    if( bdf ) then
-      apotime = den(inp)*vol(inp)/timestep
-      su(inp) = su(inp) + apotime*edo(inp)
-      sp(inp) = sp(inp) + apotime
-    elseif( bdf2 ) then
-      apotime=den(inp)*vol(inp)/timestep
-      su(inp) = su(inp) + apotime*( 2*edo(inp) - 0.5_dp*edoo(inp) )
-      sp(inp) = sp(inp) + 1.5_dp*apotime
+    if (ltransient) then
+      if( bdf ) then
+        apotime = den(inp)*vol(inp)/timestep
+        su(inp) = su(inp) + apotime*edo(inp)
+        sp(inp) = sp(inp) + apotime
+      elseif( bdf2 ) then
+        apotime=den(inp)*vol(inp)/timestep
+        su(inp) = su(inp) + apotime*( 2*edo(inp) - 0.5_dp*edoo(inp) )
+        sp(inp) = sp(inp) + 1.5_dp*apotime
+      endif
     endif
 
   ! End of Epsilon volume source terms
@@ -443,16 +459,16 @@ subroutine calcsc(Fi,dFidxi,ifi)
     ! In SST model the Effective diffusivity is a field variable:
     if(ifi.eq.ite) then
       prtr_ijp = fsst(ijp)*(1./sigmk1)  + (1.0_dp-fsst(ijp))*(1./sigmk2)
-      prtr_ijn = fsst(ijn)*(1./sigmk1)  + (1.0_dp-fsst(ijn))*(1./sigmk2)
+      ! prtr_ijn = fsst(ijn)*(1./sigmk1)  + (1.0_dp-fsst(ijn))*(1./sigmk2)
     else
       prtr_ijp = fsst(ijp)*(1./sigmom1) + (1.0_dp-fsst(ijp))*(1./sigmom2)
-      prtr_ijn = fsst(ijn)*(1./sigmom1) + (1.0_dp-fsst(ijn))*(1./sigmom2)
+      ! prtr_ijn = fsst(ijn)*(1./sigmom1) + (1.0_dp-fsst(ijn))*(1./sigmom2)
     endif
 
     call facefluxsc( ijp, ijn, &
                      xf(i), yf(i), zf(i), arx(i), ary(i), arz(i), &
                      flmass(i), facint(i), gam, &
-                     fi, dFidxi, prtr_ijp, prtr_ijn, cap, can, suadd )
+                     fi, dFidxi, prtr_ijp, cap, can, suadd )
 
     ! > Off-diagonal elements:
 
@@ -591,9 +607,10 @@ subroutine calcsc(Fi,dFidxi,ifi)
         ! > Wall boundary conditions for turbulence kinetic energy eq.
         !
 
-          viss=viscos
-          if(ypl(iWall).gt.ctrans) viss=visw(iWall)
-
+          ! viss=viscos
+          ! if(ypl(iWall).gt.ctrans) viss=visw(iWall)
+          viss = max(viscos,visw(iWall))
+          
           ! Face area 
           are = sqrt(arx(iface)**2+ary(iface)**2+arz(iface)**2)
 
@@ -626,8 +643,10 @@ subroutine calcsc(Fi,dFidxi,ifi)
           ! Production of TKE in wall adjecent cell
           ! First substract the standard production from source term
           su(ijp)=su(ijp)-gen(ijp)*vol(ijp)
+
           ! Calculate production for wall adjecent cell
           gen(ijp)=abs(tau(iWall))*cmu25*sqrt(te(ijp))/(dnw(iWall)*cappa)
+          
           ! Add this production to source vector
           su(ijp)=su(ijp)+gen(ijp)*vol(ijp)
 
@@ -847,8 +866,11 @@ subroutine modify_mu_eff()
   real(dp) :: visold
   real(dp) :: nxf,nyf,nzf,are
   real(dp) :: Vnp,Vtp,xtp,ytp,ztp
-  real(dp) :: Ut2,Utau,viscw
+  ! real(dp) :: Ut2
+  real(dp) :: Utau,viscw
   real(dp) :: wldist,etha,f2_sst,alphast
+  ! real(dp) :: Utauvis,Utaulog,Upl
+  real(dp) :: Uplblend
 
   !
   ! Loop trough cells 
@@ -856,36 +878,36 @@ subroutine modify_mu_eff()
 
   do inp=1,numCells
 
-        ! Store old value
-        visold=vis(inp)
+    ! Store old value
+    visold=vis(inp)
 
-        ! Update effective viscosity:
+    ! Update effective viscosity:
 
-        ! Wall distance
-        wldist = walldistance(inp)
+    ! Wall distance
+    wldist = walldistance(inp)
 
-        ! find etha:
-        etha=max(2*sqrt(te(inp))/(bettast*wldist*ed(inp)), &
-                 (500*viscos/den(inp))/(wldist**2*ed(inp))) 
+    ! find etha:
+    etha=max(2*sqrt(te(inp))/(bettast*wldist*ed(inp)), &
+             (500*viscos/den(inp))/(wldist**2*ed(inp))) 
 
-        ! find f2: 
-        f2_sst = tanh(etha*etha)
+    ! find f2: 
+    f2_sst = tanh(etha*etha)
 
-        vis(inp)=viscos+den(inp)*a1*te(inp)/(max(a1*ed(inp), magStrain(inp)*f2_sst))
+    vis(inp)=viscos+den(inp)*a1*te(inp)/(max(a1*ed(inp), magStrain(inp)*f2_sst))
 
-        ! Low-re version..........................................................
-        if (LowRe) then                                                          !
-        ! Let's find alpha*                                                      !                                         
-          alphast=(0.024_dp+(densit*te(inp))/(6*viscos*ed(inp)))   &             !           
-                 /(1.0_dp+(densit*te(inp))/(6*viscos*ed(inp)))                   !
-          vis(inp)=viscos+den(inp)*te(inp)/(ed(inp)+small)               &       !  
-                *1.0_dp/max(1.0_dp/alphast, magStrain(inp)*f2_sst/(a1*ed(inp)))  !                                                   
-        ! End of low-re version..................................................!
-        end if
+    ! Low-re version..........................................................
+    if (LowRe) then                                                          !
+    ! Let's find alpha*                                                      !                                         
+      alphast=(0.024_dp+(densit*te(inp))/(6*viscos*ed(inp)))   &             !           
+             /(1.0_dp+(densit*te(inp))/(6*viscos*ed(inp)))                   !
+      vis(inp)=viscos+den(inp)*te(inp)/(ed(inp)+small)               &       !  
+            *1.0_dp/max(1.0_dp/alphast, magStrain(inp)*f2_sst/(a1*ed(inp)))  !                                                   
+    ! End of low-re version..................................................!
+    end if
 
 
-        ! Underelaxation
-        vis(inp)=urf(ivis)*vis(inp)+(1.0_dp-urf(ivis))*visold
+    ! Underelaxation
+    vis(inp)=urf(ivis)*vis(inp)+(1.0_dp-urf(ivis))*visold
 
   enddo
 
@@ -966,27 +988,50 @@ subroutine modify_mu_eff()
         ! Its magnitude
         Vtp = sqrt(xtp*xtp+ytp*ytp+ztp*ztp)
 
-        ! Tangent direction
-        xtp = xtp/vtp
-        ytp = ytp/vtp
-        ztp = ztp/vtp
+        ! ! Tangent direction
+        ! xtp = xtp/vtp
+        ! ytp = ytp/vtp
+        ! ztp = ztp/vtp
 
-        ! projektovanje razlike brzina na pravac tangencijalne brzine u cell centru ijp
-        Ut2 = abs( (U(ijb)-U(ijp))*xtp + (V(ijb)-V(ijp))*ytp + (W(ijb)-W(ijp))*ztp )
+        ! ! projektovanje razlike brzina na pravac tangencijalne brzine u cell centru ijp
+        ! Ut2 = abs( (U(ijb)-U(ijp))*xtp + (V(ijb)-V(ijp))*ytp + (W(ijb)-W(ijp))*ztp )
 
-        Tau(iWall) = viscos*Ut2/dnw(iWall)
-        Utau = sqrt( Tau(iWall) / den(ijb) )
-        ypl(iWall) = den(ijb)*Utau*dnw(iWall)/viscos
+        ! Tau(iWall) = viscos*Ut2/dnw(iWall)
+        ! Utau = sqrt( Tau(iWall) / den(ijb) )
+        ! ypl(iWall) = den(ijb)*Utau*dnw(iWall)/viscos
 
         ! ! Ima i ova varijanta u cisto turb. granicni sloj varijanti sa prvom celijom u log sloju
         ! ypl(i) = den(ijb)*cmu25*sqrt(te(ijp))*dnw(i)/viscos
         ! ! ...ovo je tehnicki receno ystar iliti y* a ne y+
 
-        viscw = zero
+        ! viscw = zero
+        ! if(ypl(iWall) > ctrans) then
+        !   viscw = ypl(iWall)*viscos*cappa/log(Elog*ypl(iWall))
+        ! endif
 
-        if(ypl(iWall) > ctrans) then
-          viscw = ypl(iWall)*viscos*cappa/log(Elog*ypl(iWall))
-        endif
+        ! *** Enhanced wall treatment - Reichardt blending ***
+
+        ! Below is a variant where we use Reichardt blending
+        ! for whole span of y+ values.
+        ! Some authors say that Reichardt function for u+ approximates
+        ! the composite u+(y+) curve, better that Kader blending function.
+ 
+        utau = sqrt( viscos*Vtp/(densit*dnw(iWall)) + cmu25*te(ijp) ) ! It's actually u* in original reference...
+
+        ypl(iWall) = den(ijp)*Utau*dnw(iWall)/viscos 
+
+        Uplblend = one/cappa*log(one+cappa*ypl(iWall)) + &
+                   7.8_dp*(1.-exp(-ypl(iWall)/11.0_dp)-(ypl(iWall)/11.0_dp)*exp(-ypl(iWall)/3.0_dp))
+          
+        viscw = den(ijp)*utau*dnw(iWall)/Uplblend  
+
+        ! Blended version of shear stress - probati ovo(!?)
+        ! tau(iWall) = den(ijp) * (Vtp/Uplblend)**2
+
+        ! Varijanta 2, u originalnoj referenci...
+        tau(iWall) = den(ijp) * Vtp*Utau/Uplblend
+
+        !*** END: Enhanced wall treatment - Reichardt blending ***
 
         visw(iWall) = max(viscos,viscw)
         vis(ijb) = visw(iWall)
@@ -1003,41 +1048,6 @@ subroutine modify_mu_eff()
 
   
 end subroutine modify_mu_eff
-
-
-subroutine modify_mu_eff_inlet()
-!
-! Update turbulent and effective viscosity at inlet.
-!
-  use types
-  use parameters
-  use geometry, only:numBoundaries,nfaces,iBndValueStart
-  use variables
-
-  implicit none
-
-  integer :: i,ib,ijb
-
-  !
-  ! Boundary faces 
-  !
-  do ib=1,numBoundaries
-
-    if ( bctype(ib) == 'inlet' ) then
-
-      do i=1,nfaces(ib)
-
-        ijb = iBndValueStart(ib) + i
-
-        Vis(ijb) = viscos+den(ijb)*te(ijb)/(ed(ijb)+small)
-
-      end do
-
-    endif
-
-  enddo 
-
-end subroutine modify_mu_eff_inlet
 
 
 end module k_omega_sst

@@ -40,12 +40,13 @@ subroutine write_restart_files
   write(restart_unit) ed
   write(restart_unit) t
   write(restart_unit) vis
-  write(restart_unit) uu
-  write(restart_unit) vv
-  write(restart_unit) ww
-  write(restart_unit) uv
-  write(restart_unit) uw
-  write(restart_unit) vw
+  write(restart_unit) visw  
+  ! write(restart_unit) uu
+  ! write(restart_unit) vv
+  ! write(restart_unit) ww
+  ! write(restart_unit) uv
+  ! write(restart_unit) uw
+  ! write(restart_unit) vw
   write(restart_unit) uo
   write(restart_unit) vo
   write(restart_unit) wo
@@ -63,18 +64,13 @@ subroutine write_restart_files
 
     call get_unit ( statistics_file )
 
-    open(unit=statistics_file,file=trim(out_folder_path)//'/statistics')   ! <- u_aver, v_aver,... are here, statistics restart file 2
+    open( unit=statistics_file, file='statistics'//'-'//trim(nproc_char), form='unformatted' )  
     rewind statistics_file
-
-    write(statistics_file,*) n_sample
-    write(statistics_file,*) u_aver,v_aver,w_aver, &
-                             uu_aver,vv_aver,ww_aver, &
-                             uv_aver,uw_aver,vw_aver,te_aver, &
-                             te_aver
+    write(statistics_file) n_sample,u_aver,v_aver,w_aver,uu_aver,vv_aver,ww_aver,uv_aver,uw_aver,vw_aver,te_aver
     close (statistics_file)
 
   endif
 
-  if( myid.eq.0 ) write(6,*)'=*=*= Simulation restart files have been written. =*=*='
+  if( myid.eq.0 ) write(6,*)' **Created simulation restart files.'
 
 end subroutine

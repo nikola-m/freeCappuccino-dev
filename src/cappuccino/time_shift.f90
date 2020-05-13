@@ -6,7 +6,7 @@ subroutine time_shift
 
   implicit none
 
-  if( bdf ) then
+  if( bdf .or. cn ) then
 
     uo = u 
     vo = v 
@@ -16,10 +16,10 @@ subroutine time_shift
     if (lcal(ien)) to = t         
     if (lcal(ivart)) varto = vart 
     if (lcal(icon)) cono = con 
-    if (piso) then 
-      flmasso = flmass
-      po = p
-    endif
+    ! if (piso) then 
+    !   flmasso = flmass
+    !   po = p
+    ! endif
   
   elseif( bdf2 ) then
 
@@ -31,10 +31,10 @@ subroutine time_shift
     if (lcal(ien)) too = to 
     if (lcal(ivart)) vartoo = varto 
     if (lcal(icon)) conoo = cono 
-    if (piso) then 
-      flmassoo = flmasso
-      poo = po
-    endif
+    ! if (piso) then 
+    !   flmassoo = flmasso
+    !   poo = po
+    ! endif
 
     uo = u 
     vo = v 
@@ -44,10 +44,10 @@ subroutine time_shift
     if (lcal(ien)) to = t         
     if (lcal(ivart)) varto = vart 
     if (lcal(icon)) cono = con 
-    if (piso) then 
-      flmasso = flmass
-      po = p
-    endif
+    ! if (piso) then 
+    !   flmasso = flmass
+    !   po = p
+    ! endif
 
   elseif( bdf3 ) then
 
@@ -65,10 +65,10 @@ subroutine time_shift
     if (lcal(ien)) too = to 
     if (lcal(ivart)) vartoo = varto 
     if (lcal(icon)) conoo = cono 
-    if (piso) then 
-      flmassoo = flmasso
-      poo = po
-    endif
+    ! if (piso) then 
+    !   flmassoo = flmasso
+    !   poo = po
+    ! endif
 
     uo = u 
     vo = v 
@@ -78,10 +78,10 @@ subroutine time_shift
     if (lcal(ien)) to = t         
     if (lcal(ivart)) varto = vart 
     if (lcal(icon)) cono = con 
-    if (piso) then 
-      flmasso = flmass
-      po = p
-    endif
+    ! if (piso) then 
+    !   flmasso = flmass
+    !   po = p
+    ! endif
 
   endif
 

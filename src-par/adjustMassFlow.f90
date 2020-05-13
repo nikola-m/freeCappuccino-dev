@@ -52,6 +52,7 @@ subroutine adjustMassFlow
 
   enddo
 
+  call global_sum(flowo)
 
   ! Correct mass flux to satisfy global mass conservation & add to source
   fac = flomas/(flowo+small)

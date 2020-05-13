@@ -89,14 +89,14 @@ subroutine facefluxuvw(ijp, ijn, xf, yf, zf, arx, ary, arz, flomass, lambda, gam
   are=sqrt(arx**2+ary**2+arz**2)
 
 
-
   ! > Equation coefficients:
 
   ! Cell face viscosity
   game = vis(ijp)*fxp+vis(ijn)*fxn
 
   ! Difusion coefficient
-  de = game*are/dpn
+  !de = game*are/dpn
+  de = game * (arx*arx+ary*ary+arz*arz)/(xpn*arx+ypn*ary+zpn*arz)
 
 
   ! > Equation coefficients - implicit diffusion and convection

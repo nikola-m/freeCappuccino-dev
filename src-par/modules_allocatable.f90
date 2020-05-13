@@ -108,13 +108,13 @@ module parameters
   logical :: flux_limiter = .false.
     
   ! Logicals, mostly read from simulation-input file:
-  logical :: lturb,lread,lwrite,ltest             ! turbulent simulation, read restart file, write restart file, print residual of the linear solver,.,..      
+  logical :: lturb,lread,lwrite,ltest,lreadstat   ! is it a turbulent case, do you read restart file, write restart file, print stuff, read statistics files     
   logical :: ltransient                           ! LTRANSIENT is TRUE for transient (non-stationary) simulations              
   logical :: levm,lasm,lles,ldes,lsgdh,lggdh,lafm ! eddy-viscosity, algebraic stress model or LES, DES, simple gradient or generalized gradient hypothesis, algerbaic flux model
-  logical :: bdf,bdf2,bdf3,cn                               ! control for the time-stepping algorithm
-  logical :: simple,piso,pimple                   ! control for the velocity-pressure coupling algorithm
+  logical :: bdf,bdf2,bdf3,cn                     ! control for the time-stepping algorithm
+  logical :: simple,piso                          ! control for the velocity-pressure coupling algorithm
   logical :: const_mflux                          ! control for constant flow rate 
-  logical :: solveOmega, solveEpsilon, SolveTKE   ! Selfexplanatory, used in 'init'
+  logical :: solveOmega, solveEpsilon, SolveTKE   ! Self explanatory, used in 'init'
 
 
   integer :: ncorr                   ! PISO control parameter: no. of Piso corrections.
@@ -175,7 +175,7 @@ module variables
     real(dp), dimension(:), allocatable :: con                ! Concentration
     real(dp), dimension(:), allocatable :: uu,vv,ww,uv,uw,vw  ! Reynolds stress tensor components
     real(dp), dimension(:,:), allocatable :: bij              ! Reynolds stress anisotropy tensor
-    real(dp), dimension(:), allocatable :: fmi,fmo,fmoc,fmpro ! Mass fluxes trough boundary faces
+    ! real(dp), dimension(:), allocatable :: fmi,fmo,fmoc,fmpro ! Mass fluxes trough boundary faces
     real(dp), dimension(:), allocatable :: visw,ypl,tau       ! Effective visc. for boundary face, the y+ non-dimensional distance from wall, wll shear stress
  
      ! values from n-1 timestep
@@ -229,7 +229,7 @@ module title_mod
   character(len=4), dimension(10) ::  chvar = (/'  U ', '  V ', '  W ', '  P ', ' TE ', ' ED ', '  T ', ' VIS', 'VART', ' CON' /)
   character(len=7), dimension(10) ::  chvarSolver = &
   (/'U      ', 'V      ', 'W      ', 'p      ', 'k      ', 'epsilon', 'Temp   ', 'Visc   ', 'VarTemp', 'Conc   ' /)
-  character(len=100):: input_file,inlet_file,grid_file,monitor_file,restart_file,out_folder_path
+  character(len=100):: input_file,inlet_file,grid_file,monitor_file,restart_file
 end module title_mod
 
 
@@ -249,6 +249,8 @@ module statistics
     real(dp), dimension(:), allocatable :: t_aver
     real(dp), dimension(:), allocatable :: ut_aver,vt_aver,wt_aver
     real(dp), dimension(:), allocatable :: tt_aver
+    real(dp), dimension(:), allocatable :: con_aver
+    real(dp), dimension(:), allocatable :: wss_aver   
                                              
 end module statistics
 

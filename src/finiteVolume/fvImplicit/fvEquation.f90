@@ -5,7 +5,7 @@ module fvEquation
 use types
 use geometry
 use sparse_matrix
-use tensor_fields
+use tensorFields
 use linear_solver, only: spsolve
 
 implicit none
@@ -15,12 +15,7 @@ implicit none
 !
 type, extends(csrMatrix) :: fvEquation
 
-  ! Field related 
-  ! type(volScalarField) :: phi 
-  real(dp), dimension(:), allocatable :: x    ! Solution vector
-  real(dp), dimension(:), allocatable :: o    ! Past time values of solution vector field 
-  real(dp), dimension(:), allocatable :: oo   ! Second level past times for BDF2 time differencing scheme
-  real(dp), dimension(:), allocatable :: su    ! right hand side vector (vector of sources)
+  real(dp), dimension(:), allocatable :: su   ! right hand side vector (vector of sources)
   real(dp), dimension(:), allocatable :: sp   ! vector of sources that goes into main matrix diagonal (vector of sources)
   real(dp), dimension(:), allocatable :: res  ! Residual vector for linear solvers
 
@@ -29,6 +24,7 @@ type, extends(csrMatrix) :: fvEquation
   integer :: itr_max              ! Max no. of iterations
   integer :: tol_abs              ! Absolute tolerance level to be reached before exiting iterations.
   integer :: tol_rel              ! Relative tolerance level to be reached before exiting iterations. 
+  real(dp) :: resor               ! Residual norm - e.g. L1 norm of initial residual
 
 end type fvEquation
 
@@ -60,7 +56,7 @@ type, extends(csrMatrix) :: fvVectorEquation
   real(dp), dimension(:), allocatable :: sv
   real(dp), dimension(:), allocatable :: sw
 
-  real(dp), dimension(:), allocatable :: res ! Residula vector
+  real(dp), dimension(:), allocatable :: res ! Residual vector
 
   ! Linear solution control parameters
   character( len = 20 ) :: solver ! Name of designated solver like 'iccg', etc.
@@ -72,15 +68,15 @@ end type fvVectorEquation
 
 
 interface operator(==)
-   module procedure add_source_to_fvEquation
-   module procedure add_volVectorFieldSource_to_fvVectorEquation
-   module procedure add_fvEquations
-   module procedure add_fvVectorEquations
+   module procedure subtract_source_from_fvEquation  
+   module procedure subtract_volVectorFieldSource_from_fvVectorEquation
+   module procedure subtract_fvEquations
+   module procedure subtract_fvVectorEquations
 end interface
 
 
 ! Overload summation to be able to add fvEquation and volScalarField
-! This enables to have fvm_... routines which usually return FvEquation on rhs of == sign
+! This enables to have fvi... routines which usually return fvEquation on rhs of == sign
 interface operator(+)
    module procedure add_source_to_fvEquation  
    module procedure add_volVectorFieldSource_to_fvVectorEquation
@@ -90,10 +86,10 @@ end interface
 
 
 interface operator(-)
-   module procedure substract_source_from_fvEquation  
-   module procedure substract_volVectorFieldSource_from_fvVectorEquation
-   module procedure substract_fvEquations
-   module procedure substract_fvVectorEquations
+   module procedure subtract_source_from_fvEquation  
+   module procedure subtract_volVectorFieldSource_from_fvVectorEquation
+   module procedure subtract_fvEquations
+   module procedure subtract_fvVectorEquations
 end interface
 
 public
@@ -111,7 +107,7 @@ function new_fvEquation( ) result(fvEqn)
     allocate(fvEqn % ja ( nnz ))
     allocate(fvEqn % a ( nnz ))
 
-    allocate(fvEqn % s ( numCells ))
+    allocate(fvEqn % su ( numCells ))
     allocate(fvEqn % sp ( numCells ))
     allocate(fvEqn % res ( numCells ))
 
@@ -138,7 +134,7 @@ function new_fvVectorEquation( ) result(fvEqn)
 
     allocate(fvEqn % ioffset ( numCells+1 ))
     allocate(fvEqn % ja ( nnz ))
-    allocate(fvEqn % coef ( nnz ))
+    allocate(fvEqn % a ( nnz ))
 
     allocate(fvEqn % su ( numCells ))
     allocate(fvEqn % sv ( numCells ))
@@ -173,7 +169,6 @@ end function new_fvVectorEquation
 
 
 
-
 function add_source_to_fvEquation(fvEqnIn,source) result( fvEqnOut )
 !
 ! Adds source to eqn. system rhs vector.
@@ -199,7 +194,6 @@ function add_source_to_fvEquation(fvEqnIn,source) result( fvEqnOut )
   enddo
 
 end function add_source_to_fvEquation
-
 
 
 
@@ -233,7 +227,7 @@ end function add_volVectorFieldSource_to_fvVectorEquation
 
 
 
-function substract_source_from_fvEquation(fvEqnIn,source) result( fvEqnOut )
+function subtract_source_from_fvEquation(fvEqnIn,source) result( fvEqnOut )
 !
 ! Adds source to eqn. system rhs vector.
 !
@@ -254,15 +248,15 @@ function substract_source_from_fvEquation(fvEqnIn,source) result( fvEqnOut )
   fvEqnOut = new_fvEquation()
 
   do i=1,numCells
-      fvEqnOut % source(i) = fvEqnIn % source(i) - source % mag(i)
+      fvEqnOut%source( i ) = fvEqnIn%source( i ) - source%mag( i )
   enddo
 
-end function substract_source_from_fvEquation
+end function subtract_source_from_fvEquation
 
 
 
 
-function substract_volVectorFieldSource_from_fvVectorEquation(fvEqn,vecSource) result( fvEqn_new )
+function subtract_volVectorFieldSource_from_fvVectorEquation(fvEqn,vecSource) result( fvEqn_new )
 !
 ! Adds source to eqn. system rhs vector.
 !
@@ -288,7 +282,7 @@ function substract_volVectorFieldSource_from_fvVectorEquation(fvEqn,vecSource) r
       fvEqn_new % sw(i) = fvEqn % sw(i) - vecSource % z(i)
   enddo
 
-end function substract_volVectorFieldSource_from_fvVectorEquation
+end function subtract_volVectorFieldSource_from_fvVectorEquation
 
 
 function add_fvEquations(fvEqn1,fvEqn2) result( fvEqn_new )
@@ -357,7 +351,7 @@ function add_fvVectorEquations(fvEqn1,fvEqn2) result( fvEqn_new )
 end function add_fvVectorEquations
 
 
-function substract_fvEquations(fvEqn1,fvEqn2) result( fvEqn_new )
+function subtract_fvEquations(fvEqn1,fvEqn2) result( fvEqn_new )
 !
 ! Substracts two objects of type(fvEquation).
 !
@@ -384,10 +378,10 @@ function substract_fvEquations(fvEqn1,fvEqn2) result( fvEqn_new )
       fvEqn_new % coef(i) = fvEqn1 % coef(i) - fvEqn2 % coef(i)
   enddo
 
-end function substract_fvEquations
+end function subtract_fvEquations
 
 
-function substract_fvVectorEquations(fvEqn1,fvEqn2) result( fvEqn )
+function subtract_fvVectorEquations(fvEqn1,fvEqn2) result( fvEqn )
 !
 ! Substracts two objects of type(fvVectorEquation).
 !
@@ -408,19 +402,19 @@ function substract_fvVectorEquations(fvEqn1,fvEqn2) result( fvEqn )
   fvEqn = new_fvVectorEquation()
 
   do i=1,numCells
-      fvEqn % su(i) = fvEqn1 % su(i) - fvEqn2 % su(i)
-      fvEqn % sv(i) = fvEqn1 % sv(i) - fvEqn2 % sv(i)
-      fvEqn % sw(i) = fvEqn1 % sw(i) - fvEqn2 % sw(i)
+    fvEqn%su(i) = fvEqn1%su(i) - fvEqn2%su(i)
+    fvEqn%sv(i) = fvEqn1%sv(i) - fvEqn2%sv(i)
+    fvEqn%sw(i) = fvEqn1%sw(i) - fvEqn2%sw(i)
 
-      fvEqn % spu(i) = fvEqn1 % spu(i) - fvEqn2 % spu(i)
-      fvEqn % spv(i) = fvEqn1 % spv(i) - fvEqn2 % spv(i)
-      fvEqn % spw(i) = fvEqn1 % spw(i) - fvEqn2 % spw(i)
+    fvEqn%spu(i) = fvEqn1%spu(i) - fvEqn2%spu(i)
+    fvEqn%spv(i) = fvEqn1%spv(i) - fvEqn2%spv(i)
+    fvEqn%spw(i) = fvEqn1%spw(i) - fvEqn2%spw(i)
   enddo
   do i=1,nnz
-      fvEqn % coef(i) = fvEqn1 % coef(i) - fvEqn2 % coef(i)
+      fvEqn%coef(i) = fvEqn1%coef(i) - fvEqn2%coef(i)
   enddo
 
-end function substract_fvVectorEquations
+end function subtract_fvVectorEquations
 
 
 subroutine solve_fvEqn( fvEqn )

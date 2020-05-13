@@ -91,7 +91,7 @@ subroutine calcsc(Fi,dFidxi,ifi)
   do inp=1,numCells
 
     ! Unsteady Term
-    if( bdf ) then
+    if( bdf .or. cn ) then
       apotime = den(inp)*vol(inp)/timestep
       su(inp) = su(inp) + apotime*to(inp)
       sp(inp) = sp(inp) + apotime

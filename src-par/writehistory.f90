@@ -15,16 +15,22 @@
 !
 !***********************************************************************
 !
-  integer :: inp,imon
+  integer :: i,inp,imon
 
-  if(ltransient) then
-    if( myid .eq. 0 ) then
-    do imon=1,mpoints
-      read(89,*) inp
-      write(91+imon,'(2x,1p7e14.5,2x)') time,u(inp),v(inp),w(inp),te(inp),ed(inp)
+  if(ltransient ) then
+
+    read(89,*) mpoints
+
+    do i=1,mpoints
+
+      read(89,*) imon,inp
+
+      write(91+imon,'(2x,1p7e14.5,2x)') time,u(inp),v(inp),w(inp),p(inp),te(inp),vis(inp)
+
     end do
+
     rewind 89
-  endif
+
   end if
 
 end subroutine

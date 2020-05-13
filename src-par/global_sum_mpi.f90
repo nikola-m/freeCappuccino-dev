@@ -17,18 +17,20 @@
   
   implicit none
 
-  real(dp) :: phi
+  real(dp), intent(inout) :: phi
 
-  real(dp) :: phisum
   integer :: ierr
+  real(dp) :: phisum
 
-  call mpi_allreduce      &               
+  CALL MPI_BARRIER(MPI_COMM_WORLD,IERR)
+
+  CALL MPI_ALLREDUCE      &               
    (phi,                  & ! send buffer
     phisum,               & ! recv buffer 
     1,                    & ! length     
-    mpi_double_precision, & ! datatype  
-    mpi_sum,              & ! operation 
-    mpi_comm_world,       & ! communicator            
+    MPI_DOUBLE_PRECISION, & ! datatype  mpi_double_precision
+    MPI_SUM,              & ! operation 
+    MPI_COMM_WORLD,       & ! communicator            
     ierr) 
 
   phi = phisum

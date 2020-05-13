@@ -103,8 +103,8 @@ subroutine facefluxuvw(ijp, ijn, xf, yf, zf, arx, ary, arz, flomass, lambda, gam
   ce = min(flomass,zero) 
   cp = max(flomass,zero)
 
-  can = -de + min(flomass,zero)
-  cap = -de - max(flomass,zero)
+  can = -de + ce
+  cap = -de - cp
 
 
 
@@ -148,9 +148,13 @@ subroutine facefluxuvw(ijp, ijn, xf, yf, zf, arx, ary, arz, flomass, lambda, gam
   ! > Explicit convection: 
 
   ! Explicit convective fluxes for UDS
-  fuuds = max(flomass,zero)*u(ijp)+min(flomass,zero)*u(ijn)
-  fvuds = max(flomass,zero)*v(ijp)+min(flomass,zero)*v(ijn)
-  fwuds = max(flomass,zero)*w(ijp)+min(flomass,zero)*w(ijn)
+  fuuds = cp*u(ijp)+ce*u(ijn)
+  fvuds = cp*v(ijp)+ce*v(ijn)
+  fwuds = cp*w(ijp)+ce*w(ijn)
+  
+  ! fuuds = max(flomass,zero)*u(ijp)+min(flomass,zero)*u(ijn)
+  ! fvuds = max(flomass,zero)*v(ijp)+min(flomass,zero)*v(ijn)
+  ! fwuds = max(flomass,zero)*w(ijp)+min(flomass,zero)*w(ijn)
 
 
 ! EXPLICIT CONVECTIVE FLUXES FOR HIGH ORDER BOUNDED SCHEMES
@@ -213,12 +217,12 @@ subroutine facefluxuvw_boundary(ijp, ijb, xf, yf, zf, arx, ary, arz, flomass, ca
   real(dp) :: xi,yi,zi
 
   real(dp) :: duxi,duyi,duzi, &
-                dvxi,dvyi,dvzi, &
-                dwxi,dwyi,dwzi
+              dvxi,dvyi,dvzi, &
+              dwxi,dwyi,dwzi
 
   real(dp) :: duxii,dvxii,dwxii, &
-                duyii,dvyii,dwyii, &
-                duzii,dvzii,dwzii
+              duyii,dvyii,dwyii, &
+              duzii,dvzii,dwzii
 
   real(dp) :: d2x,d2y,d2z,d1x,d1y,d1z
 
@@ -227,16 +231,18 @@ subroutine facefluxuvw_boundary(ijp, ijb, xf, yf, zf, arx, ary, arz, flomass, ca
   real(dp) :: fdue,fdve,fdwe,fdui,fdvi,fdwi
 !----------------------------------------------------------------------
 
+  ! [NOTE]: Leaving things commented out so people can see the difference 
+  !         between this and the version for iner faces.
 
   ! > Geometry:
 
-  ! Face interpolation factor
+  ! Face interpolation factor:
   ! fxn=lambda 
   ! fxp=1.0_dp-lambda
   fxn=1.0_dp
   fxp=0.0_dp
 
-  ! Distance vector between cell centers
+  ! Distance vector between cell centers:
   ! xpn=xc(ijb)-xc(ijp)
   ! ypn=yc(ijb)-yc(ijp)
   ! zpn=zc(ijb)-zc(ijp)
@@ -310,6 +316,14 @@ subroutine facefluxuvw_boundary(ijp, ijb, xf, yf, zf, arx, ary, arz, flomass, ca
 
 
   !.....interpolate gradients defined at cv centers to faces
+
+  ![NOTE]: Commented out version is for inner faces..
+  !        fxn = 1.0, so we should take values of gradient from
+  !        face center (ijb index, b as 'boundary'), 
+  !        but since we have constant gradient for
+  !        inlet and outlet, for which this routine is called,
+  !        we take adjecent cell center value of gradient instead.
+
   ! duxi = dUdxi(1,ijp)*fxp+dUdxi(1,ijb)*fxn
   ! duyi = dUdxi(2,ijp)*fxp+dUdxi(2,ijb)*fxn
   ! duzi = dUdxi(3,ijp)*fxp+dUdxi(3,ijb)*fxn
@@ -368,16 +382,19 @@ subroutine facefluxuvw_boundary(ijp, ijb, xf, yf, zf, arx, ary, arz, flomass, ca
   ! > Explicit convection: 
   ! - None -
 
+  ! [NOTE]: No need to have explicit convection.
 
-! Explicit part of diffusion fluxes and sources due to deffered correction,
-! for all schemes!
+! Explicit part of diffusion fluxes and sources due to deffered correction.
 
+  ![NOTE]: Deferred correction blending coefficient (gam) is taken to be zero
+  !        so we have only explicit diffusion below.
+  
   ! sup = -gam*(fuhigh-fuuds)+fdue-fdui
   ! svp = -gam*(fvhigh-fvuds)+fdve-fdvi
   ! swp = -gam*(fwhigh-fwuds)+fdwe-fdwi
   sup = fdue-fdui
   svp = fdve-fdvi
-  swp = fdwe-fdwi  !...because gam=0
+  swp = fdwe-fdwi 
 
 end subroutine
 

@@ -21,7 +21,10 @@ subroutine readfiles
 !***********************************************************************
 !
 
-  if( myid.eq.0 ) write(6,*)'=*=*= Reading simulation restart files. =*=*='
+  if( myid.eq.0 ) then
+    write(6,'(a)') ' '    
+    write(6,'(a)') ' **Reading simulation restart files.'
+  endif
 
   ! NOTE: nproc_char <- this (=myid + 1) written as left aligned string.
   call i4_to_s_left ( myid, nproc_char )
@@ -43,12 +46,13 @@ subroutine readfiles
   read(restart_unit) ed
   read(restart_unit) t
   read(restart_unit) vis
-  read(restart_unit) uu
-  read(restart_unit) vv
-  read(restart_unit) ww
-  read(restart_unit) uv
-  read(restart_unit) uw
-  read(restart_unit) vw
+  read(restart_unit) visw  
+  ! read(restart_unit) uu
+  ! read(restart_unit) vv
+  ! read(restart_unit) ww
+  ! read(restart_unit) uv
+  ! read(restart_unit) uw
+  ! read(restart_unit) vw
   read(restart_unit) uo
   read(restart_unit) vo
   read(restart_unit) wo
@@ -59,38 +63,19 @@ subroutine readfiles
   rewind restart_unit
   close (restart_unit)
 
-  !
-  ! > Exchange the values at process boundaries
-  !
-  call exchange(u)
-  call exchange(v)
-  call exchange(w)
-  call exchange(p)
-  call exchange(flmass)
-  call exchange(te)
-  call exchange(ed)
-  call exchange(t)
-  call exchange(vis)
-
   ! Initialize pressure correction with current pressure field.
   pp = p
 
   !------------------------------------------------
   ! [read statistics after first collection: ]
   !------------------------------------------------
-  if (ltransient) then
+  if (ltransient .and. lreadstat) then
 
     call get_unit ( statistics_file )
 
-    open(unit=statistics_file,file=trim(out_folder_path)//'/statistics')   ! <- u_aver, v_aver,... are here, statistics restart file 2
-
+    open( unit=statistics_file, file='statistics'//'-'//trim(nproc_char), form='unformatted' )  
     rewind statistics_file
-
-    read(statistics_file,*) n_sample
-    read(statistics_file,*) u_aver,v_aver,w_aver, &
-                            uu_aver,vv_aver,ww_aver, &
-                            uv_aver,uw_aver,vw_aver, &
-                            te_aver
+    read(statistics_file) n_sample,u_aver,v_aver,w_aver,uu_aver,vv_aver,ww_aver,uv_aver,uw_aver,vw_aver,te_aver
     close ( statistics_file )
 
   endif

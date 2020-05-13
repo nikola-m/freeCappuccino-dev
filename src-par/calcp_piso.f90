@@ -1,10 +1,10 @@
 !***********************************************************************
 !
-subroutine PISO_multiple_correction
+subroutine calcp_piso
 !
 !***********************************************************************
 !
-! This implementation fo PISO algorithm follows descripton given in
+! This implementation of PISO algorithm follows descripton given in
 ! Ferziger, Peric - Computational Methods for Fluid Dynamics, 2nd ed.
 ! It uses PRESSURE instead of PRESSURE CORRECTION as a variable.
 ! The same approach is also used in OpenFOAM library.
@@ -62,7 +62,8 @@ subroutine PISO_multiple_correction
   use gradients
   use hcoef
   use fieldmanipulation
-  use faceflux_mass, only: facefluxmass_piso,fluxmc
+  use faceflux_mass
+  use mpi
 
   implicit none
 !
@@ -72,11 +73,15 @@ subroutine PISO_multiple_correction
   integer :: i, k, inp, iface, if, ib, ipro, istage
   integer :: ijp, ijn
   real(dp) :: cap, can
-  real(dp) :: pavg,fmcor
+  real(dp) :: pavg
+  real(dp) :: ppref
+  real(dp) :: fmcor
 
   ! Before entering the corection loop backup a_nb coefficient arrays:
   h = a 
   hpr = apr 
+
+  ! if( const_mflux ) call constant_mass_flow_forcing
 
   !+++++PISO Corrector loop++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
   DO icorr=1,ncorr
@@ -98,130 +103,62 @@ subroutine PISO_multiple_correction
     sw = rW
 
     ! Assemble H(U) = - sum_j {a_j*U_pj}, j - runs trough neighbour indices
-    do i = 1,numInnerFaces
-        ijp = owner(i)
-        ijn = neighbour(i)
-
-        k = icell_jcell_csr_index(i)
-        su(ijp) = su(ijp) - h(k)*u(ijn)
-
-        k = jcell_icell_csr_index(i)
-        su(ijn) = su(ijn) - h(k)*u(ijp)
-    enddo
-
-    ! Processor boundary
-
-    ipro = 0
-
-    do ib=1,numBoundaries
-
-      if ( bctype(ib) == 'process' ) then
-
-        do i=1,nfaces(ib)
-          iface = startFace(ib) + i
-          ijp = owner(iface)
-          ijn = iBndValueStart(ib) + i
-          ipro = ipro + 1
-
-          su(ijp) = su(ijp) - hpr(ipro)*u(ijn)
-
-
-        enddo
-
-      endif
-
-    enddo
-
-
-    ! Assemble H(V) = - sum_j {a_j*V_pj}, j - runs trough neighbour indices
-    do i = 1,numInnerFaces
-        ijp = owner(i)
-        ijn = neighbour(i)
-
-        k = icell_jcell_csr_index(i)
-        sv(ijp) = sv(ijp) - h(k)*v(ijn)
-
-        k = jcell_icell_csr_index(i)
-        sv(ijn) = sv(ijn) - h(k)*v(ijp)
-    enddo
-
-    ! Processor boundary
-
-    ipro = 0
-
-    do ib=1,numBoundaries
-
-      if ( bctype(ib) == 'process' ) then
-
-        do i=1,nfaces(ib)
-          iface = startFace(ib) + i
-          ijp = owner(iface)
-          ijn = iBndValueStart(ib) + i
-          ipro = ipro + 1
-
-          sv(ijp) = sv(ijp) - hpr(ipro)*v(ijn)
-
-        enddo
-
-      endif
-
-    enddo
-
+    ! Assemble H(V) = - sum_j {a_j*V_pj}, j - runs trough neighbour indices  
     ! Assemble H(W) = - sum_j {a_j*W_pj}, j - runs trough neighbour indices
+
     do i = 1,numInnerFaces
-        ijp = owner(i)
-        ijn = neighbour(i)
+      ijp = owner(i)
+      ijn = neighbour(i)
 
-        k = icell_jcell_csr_index(i)
-        sw(ijp) = sw(ijp) - h(k)*w(ijn)
+      k = icell_jcell_csr_index(i)
+      su(ijp) = su(ijp) - h(k)*u(ijn)
+      sv(ijp) = sv(ijp) - h(k)*v(ijn)
+      sw(ijp) = sw(ijp) - h(k)*w(ijn)
 
-        k = jcell_icell_csr_index(i)
-        sw(ijn) = sw(ijn) - h(k)*w(ijp)
+      k = jcell_icell_csr_index(i)
+      su(ijn) = su(ijn) - h(k)*u(ijp)
+      sv(ijn) = sv(ijn) - h(k)*v(ijp)    
+      sw(ijn) = sw(ijn) - h(k)*w(ijp)
+
     enddo
 
     ! Processor boundary
 
     ipro = 0
-
     do ib=1,numBoundaries
-
       if ( bctype(ib) == 'process' ) then
-
         do i=1,nfaces(ib)
           iface = startFace(ib) + i
           ijp = owner(iface)
           ijn = iBndValueStart(ib) + i
           ipro = ipro + 1
-
-          sw(ijp) = sw(ijp) - hpr(ipro)*w(ijn)
-
+          su(ijp) = su(ijp) - hpr(ipro)*u(ijn)
+          sv(ijp) = sv(ijp) - hpr(ipro)*v(ijn)  
+          sw(ijp) = sw(ijp) - hpr(ipro)*w(ijn)                  
         enddo
-
       endif
-
     enddo
- 
+
+
     ! HbyA
     u(1:numCells) = apu*su
     v(1:numCells) = apv*sv
     w(1:numCells) = apw*sw
 
+
     ! Tentative (!) velocity gradients used for velocity interpolation: 
+    call updateVelocityAtBoundary
     call grad(U,dUdxi)
     call grad(V,dVdxi)
     call grad(W,dWdxi) 
 
+
     !~~~~ Non orthogonal corrections loop ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    !
-    ! Multiple non-orthogonal passes amount to Discretizing Laplacian which includes adding 
-    ! non-orthogonal contribution to RHS and forming RHS from mass fluxes formed using tentative velocity.
-    !
-    DO ipcorr=1,npcor
 
     ! Initialize coefficient array and source:
     a = 0.0_dp
-    apr = 0
+    apr = 0.0_dp
     su = 0.0_dp 
 
     ! > Assemble off diagonal entries of system matrix and find mass flux,
@@ -262,20 +199,23 @@ subroutine PISO_multiple_correction
 
     end do
 
-    !
-    ! Loop over faces on processor boundary
-    !
-    ipro = 0
+
+    ! Contribution form process boundaries
+
+    iPro = 0
 
     do ib=1,numBoundaries
-      
+
       if ( bctype(ib) == 'process' ) then
+
+        ! Faces on process boundary
 
         do i=1,nfaces(ib)
 
           if = startFace(ib) + i
           ijp = owner(if)
-          ipro = ipro + 1
+          ijn = iBndValueStart(ib) + i
+          ipro = ipro+1
 
           call facefluxmass_piso(ijp, ijn, xf(if), yf(if), zf(if), arx(if), ary(if), arz(if), fpro(ipro), cap, can, flmass(if))
 
@@ -290,35 +230,117 @@ subroutine PISO_multiple_correction
 
           ! > Sources:
 
-          su(ijp) = su(ijp) - flmass(i)  
+          su(ijp) = su(ijp) - flmass(if)   
 
         enddo
 
       endif 
 
-    end do
+    enddo ! Boundary loop
 
 
     !// "adjusts the inlet and outlet fluxes to obey continuity, which is necessary for creating a well-posed
     !// problem where a solution for pressure exists." - Comment in OF pisoFOAM code.
 
-    if(.not.const_mflux) call adjustMassFlow
+    call adjustMassFlow
 
-      !                                                                                  
+      ! Add contributions to source of the inlet and outlet boundaries.
+
+      ! Loop over boundaries
+      do ib=1,numBoundaries
+        
+        if ( bctype(ib) == 'inlet' ) then
+
+          do i=1,nfaces(ib)
+
+            iface = startFace(ib) + i
+            ijp = owner(iface)
+
+            ! Minus sign is there to make fmi(i) positive since it enters the cell.
+            ! Check out comments in bcin.f90
+            su(ijp) = su(ijp) - flmass(iface)
+
+          end do
+
+        elseif ( bctype(ib) == 'outlet' ) then
+
+          do i=1,nfaces(ib)
+
+            iface = startFace(ib) + i
+            ijp = owner(iface)
+
+            ! fmout is positive because of same direction of velocity and surface normal vectors
+            ! but the mass flow is going out of the cell, therefore minus sign.
+            su(ijp) = su(ijp) - flmass(iface)
+                
+          end do
+
+        endif 
+
+      enddo 
+
+    !
+    ! Multiple non-orthogonal passes amount to Discretizing Laplacian which includes adding 
+    ! non-orthogonal contribution to RHS and forming RHS from mass fluxes formed using tentative velocity.
+    !
+    DO ipcorr=1,npcor
+
+      !!  "If you have a pressure equations with boundaries that do not fix pressure level, you have to fix a reference pressure." H.Jasak cfd-online forum
+      !// In incompressible flow, only relative pressure matters.  Unless there is a pressure BC present,
+      !// one cell's pressure has to be set to produce a unique pressure solution
+      !     pEqn.setReference(pRefCell, pRefValue);
+
+      ! Reference pressure correction - p'
+      if (myid .eq. iPrefProcess) then
+        ppref = p(pRefCell)
+        call MPI_BCAST(ppref,1,MPI_DOUBLE_PRECISION,iPrefProcess,MPI_COMM_WORLD,IERR)
+      endif
+
+      ! Reference pressure at process that owns that cell
+      if (myid .eq. iPrefProcess) then
+        a( ioffset(pRefCell):ioffset(pRefCell+1)-1 ) = 0.0_dp
+        a( diag(pRefCell) ) = 1.0_dp
+        su(pRefCell) =  ppref
+      endif 
+
+      !
+      ! Solve pressure equation system
+      !
+      call iccg(pp,ip)
+
+      ! ! We have pure Neumann problem - take out the average of the field as the additive constant
+      ! pavg = sum(pp(1:numCells)/dble(gloCells))
+      ! ! Find global average
+      ! call global_sum( pavg )
+      ! !pavg = pavg / dble(nproc) 
+      ! ! Under-relaxation
+      ! p(1:numCells) = (1.0_dp-urf(ip))*p(1:numCells) + urf(ip)*(pp(1:numCells)-pavg)
+
+      ! Under-relaxation, if we use pressure reference value instead of pavg
+      p(1:numCells) = (1.0_dp-urf(ip))*p(1:numCells) + urf(ip)*( pp(1:numCells) - ppref )
+
+      ! Pressure gradient
+      do istage=1,nipgrad
+
+        ! Pressure at boundaries.
+        call bpres(p,istage)
+
+        ! Calculate pressure gradient field.
+        call grad(p,dPdxi)
+
+      end do      
+
+      ! If simulation uses least-squares gradients call this to get conservative pressure correction gradients.
+      if ( lstsq_qr .or. lstsq_dm .or. lstsq_qr ) call grad(p,dPdxi,'gauss_corrected','no-limit')
+    
+
+      ! Now that we have new pressure - copy it to pp also.
+      pp = p                                                                                        
+
+      !                                                                                 
       ! Laplacian source term modification due to non-orthogonality.
-      !            
+      !           
       if(ipcorr.ne.npcor) then                                            
-
-        ! Pressure gradient
-        do istage=1,nipgrad
-
-          ! Pressure at boundaries.
-          call bpres(p,istage)
-
-          ! Calculate pressure gradient field.
-          call grad(p,dPdxi,'gauss_corrected','no-limit')
-
-        end do  
 
         ! Add nonorthogonal terms from laplacian discretization to RHS of pressure eqn.
         do i=1,numInnerFaces
@@ -358,47 +380,10 @@ subroutine PISO_multiple_correction
 
         end do
 
-      endif 
-
-      !!  "If you have a pressure equations with boundaries that do not fix pressure level, you have to fix a reference pressure." H.Jasak cfd-online forum
-      !// In incompressible flow, only relative pressure matters.  Unless there is a pressure BC present,
-      !// one cell's pressure has to be set to produce a unique pressure solution
-      !     pEqn.setReference(pRefCell, pRefValue);
-      !//
-
-      ! Reference pressure at process that owns that cell
-      if (myid .eq. iPrefProcess) then
-        a( ioffset(pRefCell):ioffset(pRefCell+1)-1 ) = 0.0_dp
-        a( diag(pRefCell) ) = 1.0_dp
-        ! Reference pressure
-        su(pRefCell) =  p(pRefCell)
-      endif 
-
       !
-      ! Solve pressure equation system
-      !
-      call iccg(p,ip)
-
-
-      ! We have pure Neumann problem - take out the average of the field as the additive constant
-      pavg = sum(p(1:numCells)/dble(numCells))
-
-      ! Find global average
-      call global_sum( pavg )
-      pavg = pavg / dble(nproc) 
-
-      ! Substract global average from field values
-      p(1:numCells) = p(1:numCells) - pavg
-
-                                                                                            
-
-
-
-    !// On the last non-orthogonality correction, correct the flux using the most up-to-date pressure
-    !// The .flux method includes contributions from all implicit terms of the pEqn (the Laplacian)
-    !                    phi -= pEqn.flux();                                                                       
-      ! We have hit the last iteration of nonorthogonality correction:                         
-      if(ipcorr.eq.npcor) then
+      ! We have hit the last iteration of nonorthogonality correction:         
+      !                      
+      else ! or if(ipcorr.eq.npcor) then
 
         !
         ! Correct mass fluxes at inner cv-faces only (only inner flux)
@@ -446,52 +431,34 @@ subroutine PISO_multiple_correction
         ! Additional mass flux correction due to non-orthogonality.
         !  
 
-        ! Pressure gradient
-        do istage=1,nipgrad
+        if (npcor > 1) then ! i.e. only if we have set multiple nonorthogonality corrections
+          !
+          ! Inner faces
+          !
+          do i=1,numInnerFaces
+            call fluxmc(ijp, ijn, xf(i), yf(i), zf(i), arx(i), ary(i), arz(i), facint(i), fmcor)
+            flmass(i) = flmass(i)-fmcor 
+          enddo                                                              
 
-          ! Pressure at boundaries.
-          call bpres(p,istage)
+          !
+          ! Loop over faces on processor boundary
+          !
+          ipro = 0
+          do ib=1,numBoundaries    
+            if ( bctype(ib) == 'process' ) then
+              do i=1,nfaces(ib)
+                iface = startFace(ib) + i
+                ipro = ipro+1
+                call fluxmc(ijp, ijn, xf(iface), yf(iface), zf(iface), arx(iface), ary(iface), arz(iface), fpro(ipro), fmcor)
+                flmass(iface) = flmass(iface)-fmcor 
+              enddo
+            endif 
+          end do
 
-          ! Calculate pressure gradient field.
-          call grad(p,dPdxi,'gauss_corrected','nolimit')
-
-        end do  
-
-        do i=1,numInnerFaces
-
-          call fluxmc(ijp, ijn, xf(i), yf(i), zf(i), arx(i), ary(i), arz(i), facint(i), fmcor)
-
-          flmass(i) = flmass(i)-fmcor 
-
-        enddo                                                              
-
-        !
-        ! Loop over faces on processor boundary
-        !
-        ipro = 0
-
-        do ib=1,numBoundaries
-          
-          if ( bctype(ib) == 'process' ) then
-
-            do i=1,nfaces(ib)
-
-              iface = startFace(ib) + i
-              ipro = ipro+1
-
-              call fluxmc(ijp, ijn, xf(iface), yf(iface), zf(iface), arx(iface), ary(iface), arz(iface), fpro(ipro), fmcor)
-
-              flmass(iface) = flmass(iface)-fmcor 
-
-            enddo
-
-          endif 
-
-        end do
-
+        endif
 
         ! Write continuity error report:
-        include 'continuityErrors.h'
+        call continuityErrors
 
       endif
 
@@ -501,8 +468,6 @@ subroutine PISO_multiple_correction
     !// Add pressure gradient to interior velocity and BC's.  Note that this pressure is not just a small
     !// correction to a previous pressure, but is the entire pressure field.  Contrast this to the use of p'
     !// in Ferziger & Peric, Eqn. 7.37.
-    !// NOTE: This is whole pressure, opposite to what is done in SIMPLE: p(inp)+urf(ip)*(pp(inp)-ppref) !
-
 
     !
     ! Correct velocities
@@ -513,7 +478,7 @@ subroutine PISO_multiple_correction
       w(inp) = w(inp) - apw(inp)*dPdxi(3,inp)*vol(inp)
     enddo 
 
-    ! call updateVelocityAtBoundary
+    call updateVelocityAtBoundary
 
   !== END: PISO Corrector loop =========================================
   enddo

@@ -17,7 +17,8 @@ subroutine updateVelocityAtBoundary
 !     Local variables
 !
   integer :: i,ijp,ijb,ib,iface
-  real(dp) :: Unmag,flowo,fac
+  real(dp) :: Unmag,flowo
+  real(dp) :: fac
 
   ! Update velocity components along outlet boundaries
   ! and correct mass flux to satisfy global mass conservation

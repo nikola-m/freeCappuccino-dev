@@ -193,7 +193,7 @@ subroutine calcsc(Fi,dFidxi,ifi)
     !=====================================
     ! UNSTEADY TERM
     !=====================================
-    if( bdf ) then
+    if( bdf .or. cn ) then
       apotime = den(inp)*vol(inp)/timestep
       su(inp) = su(inp) + apotime*teo(inp)
       sp(inp) = sp(inp) + apotime
@@ -271,7 +271,7 @@ subroutine calcsc(Fi,dFidxi,ifi)
     !=====================================
     ! UNSTEADY TERM
     !=====================================
-    if( bdf ) then
+    if( bdf .or. cn ) then
       apotime = den(inp)*vol(inp)/timestep
       su(inp) = su(inp) + apotime*edo(inp)
       sp(inp) = sp(inp) + apotime

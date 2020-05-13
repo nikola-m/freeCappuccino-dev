@@ -41,9 +41,9 @@ subroutine calc_strain_and_vorticity
 
     ! Find antisymmetric part of velocity gradient tensor
     ! [om_ij]: |om_ij|=sqrt[2 om_ij om_ij] 
-    w12=0.5*(dudy - dvdx)
-    w13=0.5*(dudz - dwdx)
-    w23=0.5*(dvdz - dwdy)
+    w12=(dudy - dvdx)
+    w13=(dudz - dwdx)
+    w23=(dvdz - dwdy)
 
 
     ! Find strain rate s = sqrt (2*sij*sij)

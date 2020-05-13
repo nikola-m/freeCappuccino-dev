@@ -4,10 +4,26 @@ module interpolation
 ! Various approaches are implemented
 !
   use types
-  use parameters
   use geometry, only: numTotal,numCells,xc,yc,zc
 
   implicit none
+
+  ! Choosing discretization scheme applied for all variables at the moment.
+  logical :: lcds = .false.
+  logical :: lcdsc = .false.
+  logical :: lluds = .false.
+  logical :: lsmart = .false.
+  logical :: lavl = .false.
+  logical :: lmuscl = .false.
+  logical :: lumist = .false.
+  logical :: lkoren = .false.
+  logical :: lcharm = .false.
+  logical :: lospre = .false.
+  logical :: lcds_flnt = .false.
+  logical :: l2nd_flnt = .false.
+  logical :: lmuscl_flnt = .false.
+
+  logical :: flux_limiter = .false.
 
   public
 
@@ -49,7 +65,7 @@ function face_value(ijp,ijn,xf,yf,zf,lambda,u,dUdxi) result(ue)
     ue = face_value_muscl(ijp, ijn, xf, yf, zf, u, dUdxi)
 
   elseif (flux_limiter) then
-    ue = face_value_2nd_upwind_flux_limiter(ijp, ijn, lambda, u, dUdxi)
+    ue = face_value_2nd_upwind_flux_limiter(ijp, ijn, xf, yf, zf, u, dUdxi)
 
   else
     ue = face_value_muscl(ijp, ijn, xf, yf, zf, u, dUdxi)
@@ -59,6 +75,50 @@ function face_value(ijp,ijn,xf,yf,zf,lambda,u,dUdxi) result(ue)
 
 end function
 
+!***********************************************************************
+!
+function face_value_w_option(ijp,ijn,xf,yf,zf,lambda,u,dUdxi,scheme) result(ue)
+!
+!***********************************************************************
+!
+  implicit none
+
+  ! Result
+  real(dp) :: ue
+
+  ! Input
+  integer :: ijp, ijn
+  real(dp) :: xf, yf, zf,lambda
+  real(dp), dimension(numTotal) :: u
+  real(dp), dimension(3,numCells) :: dUdxi
+  character(len=10), intent(in) :: scheme
+
+
+  if (scheme == 'cds') then 
+    ue = face_value_cds(ijp,ijn, lambda, u)  
+
+  elseif (scheme == 'cdscorr') then 
+    ue = face_value_cds_corrected(ijp, ijn, xf, yf, zf, lambda, u, dUdxi)  
+
+  elseif (scheme == 'central') then 
+    ue = face_value_central(ijp, ijn, xf, yf, zf, u, dUdxi)
+
+  elseif (scheme == 'sou') then 
+    ue = face_value_2nd_upwind(ijp, xf, yf, zf, u, dUdxi)
+
+  elseif (scheme == 'muscl') then
+    ue = face_value_muscl(ijp, ijn, xf, yf, zf, u, dUdxi)
+
+  elseif (scheme == 'flxlim') then
+    ue = face_value_2nd_upwind_flux_limiter(ijp, ijn, xf, yf, zf, u, dUdxi)
+
+  else
+    ue = face_value_muscl(ijp, ijn, xf, yf, zf, u, dUdxi)
+ 
+
+  endif 
+
+end function
 
 !***********************************************************************
 !
@@ -163,38 +223,12 @@ end function
   real(dp), dimension(3,numCells) :: gradfi
 
   ! Locals
-  real(dp) ::  phi_p, phi_n
-  real(dp) :: xcp,ycp,zcp
-  real(dp) :: xcn,ycn,zcn
-  real(dp) :: gradfi_p_x,gradfi_p_y,gradfi_p_z
-  real(dp) :: gradfi_n_x,gradfi_n_y,gradfi_n_z
   real(dp) :: gradfidr
 
-  ! Values at cell center's of neighbouring cells:
-  phi_p = fi(inp)
+  gradfidr=gradfi(1,inp)*(xf-xc(inp))+gradfi(2,inp)*(yf-yc(inp))+gradfi(3,inp)*(zf-zc(inp)) &
+          +gradfi(1,inn)*(xf-xc(inn))+gradfi(2,inn)*(yf-yc(inn))+gradfi(3,inn)*(zf-zc(inn))
 
-  phi_n = fi(inn)
-
-  xcp = xc(inp)
-  ycp = yc(inp)
-  zcp = zc(inp)
-
-  xcn = xc(inn)
-  ycn = yc(inn)
-  zcn = zc(inn)
-
-  gradfi_p_x = gradfi(1,inp)
-  gradfi_p_y = gradfi(2,inp)
-  gradfi_p_z = gradfi(3,inp)
-
-  gradfi_n_x = gradfi(1,inn)
-  gradfi_n_y = gradfi(2,inn)
-  gradfi_n_z = gradfi(3,inn)
-   
-  gradfidr=gradfi_p_x*(xf-xcp)+gradfi_p_y*(yf-ycp)+gradfi_p_z*(zf-zcp) &
-          +gradfi_n_x*(xf-xcn)+gradfi_n_y*(yf-ycn)+gradfi_n_z*(zf-zcn)
-
-  face_value = 0.5_dp*( phi_p + phi_n + gradfidr)
+  face_value = 0.5_dp*( fi(inp) + fi(inn) + gradfidr)
 
   end function
 
@@ -225,26 +259,11 @@ end function
   real(dp), dimension(3,numCells) :: gradfi
 
   ! Locals
-  real(dp) ::  phi_p
-  real(dp) :: xcp,ycp,zcp
-  real(dp) :: gradfi_p_x,gradfi_p_y,gradfi_p_z
   real(dp) :: gradfidr
 
-  ! Values at cell center's of neighbouring cells:
-  phi_p = fi(inp)
+  gradfidr = gradfi(1,inp)*(xf-xc(inp))+gradfi(2,inp)*(yf-yc(inp))+gradfi(3,inp)*(zf-zc(inp))
 
-  xcp = xc(inp)
-  ycp = yc(inp)
-  zcp = zc(inp)
-
-  gradfi_p_x = gradfi(1,inp)
-  gradfi_p_y = gradfi(2,inp)
-  gradfi_p_z = gradfi(3,inp)
-
-
-  gradfidr = gradfi_p_x*(xf-xcp)+gradfi_p_y*(yf-ycp)+gradfi_p_z*(zf-zcp)
-
-  face_value = phi_p + gradfidr
+  face_value = fi(inp) + gradfidr
 
   end function
 
@@ -274,46 +293,20 @@ end function
   real(dp), dimension(3,numCells) :: gradfi
 
   !     Locals
-  real(dp) ::  phi_p, phi_n
-  real(dp) :: xcp,ycp,zcp
-  real(dp) :: xcn,ycn,zcn
-  real(dp) :: gradfi_p_x,gradfi_p_y,gradfi_p_z
-  real(dp) :: gradfi_n_x,gradfi_n_y,gradfi_n_z
   real(dp) :: gradfidr_2nd_upwind,gradfidr_central,face_value_2nd_upwind,face_value_central
   real(dp) :: theta
 
   ! theta = 1/8
   theta = 0.125_dp
 
-  !.....Values at cell center's of neighbouring cells:
-  phi_p = fi(inp)
 
-  phi_n = fi(inn)
+  gradfidr_2nd_upwind=gradfi(1,inp)*(xf-xc(inp))+gradfi(2,inp)*(yf-yc(inp))+gradfi(3,inp)*(zf-zc(inp)) 
 
-  xcp = xc(inp)
-  ycp = yc(inp)
-  zcp = zc(inp)
+  gradfidr_central=gradfi(1,inp)*(xf-xc(inp))+gradfi(2,inp)*(yf-yc(inp))+gradfi(3,inp)*(zf-zc(inp)) &
+                  +gradfi(1,inn)*(xf-xc(inn))+gradfi(2,inn)*(yf-yc(inn))+gradfi(3,inn)*(zf-zc(inn))
 
-  xcn = xc(inn)
-  ycn = yc(inn)
-  zcn = zc(inn)
-
-  gradfi_p_x = gradfi(1,inp)
-  gradfi_p_y = gradfi(2,inp)
-  gradfi_p_z = gradfi(3,inp)
-
-  gradfi_n_x = gradfi(1,inn)
-  gradfi_n_y = gradfi(2,inn)
-  gradfi_n_z = gradfi(3,inn)
-
-
-  ! gradfixdr = (sum(gradphi_nb(i,:)*r_nb2f(i,:)), i=1,n)
-  gradfidr_2nd_upwind=gradfi_p_x*(xf-xcp)+gradfi_p_y*(yf-ycp)+gradfi_p_z*(zf-zcp) 
-  gradfidr_central=gradfi_p_x*(xf-xcp)+gradfi_p_y*(yf-ycp)+gradfi_p_z*(zf-zcp) &
-                  +gradfi_n_x*(xf-xcn)+gradfi_n_y*(yf-ycn)+gradfi_n_z*(zf-zcn)
-
-  face_value_2nd_upwind = ( phi_p + gradfidr_2nd_upwind )
-  face_value_central = 0.5_dp*( phi_p + phi_n + gradfidr_central)
+  face_value_2nd_upwind = ( fi(inp) + gradfidr_2nd_upwind )
+  face_value_central = 0.5_dp*( fi(inp) + fi(inn) + gradfidr_central)
 
   face_value = theta*face_value_central + (1.0_dp-theta)*face_value_2nd_upwind
   
@@ -322,7 +315,7 @@ end function
 
 !***********************************************************************
 !
-  function face_value_2nd_upwind_flux_limiter(ijp, ijn, lambda, u, dUdxi) result(face_value)
+  function face_value_2nd_upwind_flux_limiter(ijp, ijn, xf, yf, zf, u, dUdxi) result(face_value)
 !
 !***********************************************************************
 !
@@ -342,20 +335,19 @@ end function
 
   ! Input
   integer :: ijn, ijp
-  real(dp) :: lambda
+  real(dp) :: xf, yf, zf
   real(dp), dimension(numTotal) :: u
   real(dp), dimension(3,numCells) :: dUdxi
 
   ! Locals
-  real(dp) :: r,psi,xpn,ypn,zpn,fxp
+  real(dp) :: r,psi,xpn,ypn,zpn
 
-  ! Face interpolation factor
-  fxp = 1.0_dp-lambda
 
   ! Distance vector between cell centers
   xpn = xc(ijn)-xc(ijp)
   ypn = yc(ijn)-yc(ijp)
   zpn = zc(ijn)-zc(ijp)
+
 
   ! Gradient ratio expression taken from Darwish-Moukalled 'TVD schemes for unstructured grids' paper.
   r = (2*dUdxi(1,ijp)*xpn + 2*dUdxi(2,ijp)*ypn + 2*dUdxi(3,ijp)*zpn)/(u(ijn)-u(ijp)) - 1.0_dp
@@ -388,7 +380,7 @@ end function
 
   end if
 
-  face_value = u(ijp) + fxp*psi*(u(ijn)-u(ijp))
+  face_value = u(ijp) + psi*( dUdxi(1,ijp)*(xf-xc(ijp))+dUdxi(2,ijp)*(yf-yc(ijp))+dUdxi(3,ijp)*(zf-zc(ijp)) )
 
   end function
 

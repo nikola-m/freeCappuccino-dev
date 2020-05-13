@@ -40,7 +40,8 @@ LINEAR_SOLVER_FILES=\
     iccg.f90 \
     bicgstab.f90 \
     dpcg.f90 \
-    jacobi.f90
+    jacobi.f90 \
+    mgmres.f90
 
 TURBULENCE_FILES=\
     temperature.f90 \
@@ -61,23 +62,28 @@ CAFFA_FILES=\
     bpres.f90 \
     fieldManipulation.f90 \
     faceflux_velocity.f90 \
-    facefluxmass.f90 \
+    faceflux_mass.f90 \
     calcheatflux.f90 \
-    calcp-multiple_correction_SIMPLE.f90 \
+    calcp_simple.f90 \
+    calcp_piso.f90\
     calcstress.f90 \
     calc_strain_and_vorticity.f90 \
     calcuvw.f90 \
     calc_statistics.f90 \
+    CourantNo.f90 \
     updateVelocityAtBoundary.f90 \
     correct_turbulence.f90 \
     correct_turbulence_inlet.f90 \
+    continuityErrors.f90\
+    constant_mass_flow_forcing.f90 \
+    recirculate_flow.f90 \
     fvm_laplacian.f90 \
     init.f90 \
-    PISO_multiple_correction.f90 \
     readfiles.f90 \
     read_input.f90 \
     random_seed.f90 \
     time_shift.f90 \
+    vortexIdentification.f90\
     writefiles.f90 \
     write_restart_files.f90 \
     writehistory.f90 \

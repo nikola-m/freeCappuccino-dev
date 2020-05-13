@@ -100,7 +100,8 @@ subroutine facefluxsc(ijp, ijn, xf, yf, zf, arx, ary, arz, &
 
 
   ! Difusion coefficient for linear system
-  de = game*are/dpn
+  ! de = game*are/dpn
+  de = game * (arx*arx+ary*ary+arz*arz)/(xpn*arx+ypn*ary+zpn*arz)
 
   ! Convection fluxes - uds
   fm = flmass
@@ -246,7 +247,8 @@ subroutine facefluxsc_nonconst_prtr(ijp, ijn, xf, yf, zf, arx, ary, arz, &
 
 
   ! Difusion coefficient for linear system
-  de = game*are/dpn
+  ! de = game*are/dpn
+  de = game * (arx*arx+ary*ary+arz*arz)/(xpn*arx+ypn*ary+zpn*arz)
 
   ! Convection fluxes - uds
   fm = flmass
@@ -458,45 +460,9 @@ subroutine facefluxsc_boundary(ijp, ijn, xf, yf, zf, arx, ary, arz, &
   cap = -de - max(fm,zero)
   can = -de + min(fm,zero)
 
-  ! if(lcds) then
-  !   !---------------------------------------------
-  !   ! CENTRAL DIFFERENCING SCHEME (CDS) 
-  !   !---------------------------------------------
-  !   ! Interpolate variable FI defined at CV centers to face using corrected CDS:
-  !   !   |________Ue'___________|_______________Ucorr_____________________|
-  !   fii=fi(ijp)*fxp+fi(ijn)*fxn!+dfixi*(xf-xi)+dfiyi*(yf-yi)+dfizi*(zf-zi)
-
-  !   ! Explicit second order convection 
-  !   fcfie=fm*fii
-  ! else
-  !   !---------------------------------------------
-  !   ! Darwish-Moukalled TVD schemes for unstructured grids, IJHMT, 2003. 
-  !   !---------------------------------------------
-  !   ! Find r's - the gradient ratio. This is universal for all schemes.
-  !   ! If flow goes from P to E
-  !   r1 = (2*dFidxi(1,ijp)*xpn + 2*dFidxi(2,ijp)*ypn + 2*dFidxi(3,ijp)*zpn)/(FI(ijn)-FI(ijp)) - 1.0_dp  
-  !   ! If flow goes from E to P
-  !   r2 = (2*dFidxi(1,ijn)*xpn + 2*dFidxi(2,ijn)*ypn + 2*dFidxi(3,ijn)*zpn)/(FI(ijp)-FI(ijn)) - 1.0_dp 
-  !   ! Find Psi for [ MUSCL ] :
-  !   psiw = max(0., min(2.*r1, 0.5*r1+0.5, 2.))
-  !   psie = max(0., min(2.*r2, 0.5*r2+0.5, 2.))
-  !   ! High order flux at cell face
-  !   fcfie =  ce*(fi(ijn) + fxn*psie*(fi(ijp)-fi(ijn)))+ &
-  !            cp*(fi(ijp) + fxp*psiw*(fi(ijn)-fi(ijp)))
-  ! endif
-
-  ! ! Explicit first order convection
-  ! fcfii = ce*fi(ijn)+cp*fi(ijp)
-
-  ! Deffered correction for convection = gama_blending*(high-low)
-  !ffic = gam*(fcfie-fcfii)
-
-  !-------------------------------------------------------
   ! Explicit part of fluxes
-  !-------------------------------------------------------
-  ! suadd = -ffic+fdfie-fdfii 
   suadd = fdfie-fdfii 
-  !-------------------------------------------------------
+
 
 end subroutine
 

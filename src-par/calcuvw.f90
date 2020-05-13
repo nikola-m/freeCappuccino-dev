@@ -62,11 +62,11 @@ subroutine calcuvw
 
     ! If you want to use midpoint timestepping method to improve piso to 2nd order,
     ! extrapolate using Adams-Abshfort method extrapolation to time interval midpoint, t^n+1/2
-    flmass = 1.5_dp*flmasso - 0.5_dp*flmassoo
-    p = 1.5_dp*po - 0.5_dp*poo
-    u = 1.5_dp*uo - 0.5_dp*uoo
-    v = 1.5_dp*vo - 0.5_dp*voo
-    w = 1.5_dp*wo - 0.5_dp*woo
+    ! flmass = 1.5_dp*flmasso - 0.5_dp*flmassoo
+    ! p = 1.5_dp*po - 0.5_dp*poo
+    ! u = 1.5_dp*uo - 0.5_dp*uoo
+    ! v = 1.5_dp*vo - 0.5_dp*voo
+    ! w = 1.5_dp*wo - 0.5_dp*woo
 
   ! For consistent 2nd order PISO algorithm.
   ! Estimate mass flux, velocity components and pressure for the current timestep 
@@ -92,13 +92,13 @@ subroutine calcuvw
 
 
   ! Velocity gradients: 
+  call updateVelocityAtBoundary
   call grad(U,dUdxi)
   call grad(V,dVdxi)
   call grad(W,dWdxi)
 
   ! It can also be called with components of vector field
   ! call grad(U,V,W,dUdxi,dVdxi,dWdxi)
-
 
 
 
@@ -131,7 +131,7 @@ subroutine calcuvw
     !=======================================================================
     if ( ltransient) then
 
-      if( bdf ) then
+      if( bdf .or. cn ) then
       !
       ! Backward differentiation formula of 1st order.
       !
@@ -597,7 +597,6 @@ subroutine calcuvw
   enddo
 
   ! Solve fvm equations
-  ! call jacobi(u,iu) 
   call bicgstab(u,iu)
 
 !
@@ -687,7 +686,6 @@ subroutine calcuvw
   enddo
 
   ! Solve fvm equations
-  ! call jacobi(v,iv)
   call bicgstab(v,iv)
 
 !
@@ -777,7 +775,6 @@ subroutine calcuvw
   enddo
 
   ! Solve fvm equations
-  ! call jacobi(w,iw)
   call bicgstab(w,iw)
 
   ! MPI exchange:

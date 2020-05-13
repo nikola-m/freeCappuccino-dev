@@ -86,15 +86,12 @@ subroutine allocate_arrays
   allocate( p( numTotal ), stat=ierr) 
     if(ierr /= 0)write(*,*)"allocation error: p"
 
+  allocate(pp(numTotal),stat=ierr) 
+    if(ierr /= 0)write(*,*)"allocation error: pp"
+
   allocate( dPdxi( 3,numTotal ), stat=ierr) 
     if(ierr /= 0)write(*,*)"allocation error: dPdxi"
 
-  if ( simple ) then
-
-    allocate(pp(numTotal),stat=ierr) 
-      if(ierr /= 0)write(*,*)"allocation error: pp"
-
-  endif
 
   if ( piso ) then
     
@@ -193,6 +190,11 @@ subroutine allocate_arrays
     allocate( dCondxi( 3,numTotal ), stat=ierr) 
       if(ierr /= 0)write(*,*)"allocation error: dCondxi"
 
+    if (ltransient) then
+      allocate( con_aver( numTotal ), stat=ierr) 
+        if(ierr /= 0)write(*,*)"allocation error: tt_aver" 
+    endif
+
   endif
 
   ! Temperature variance and dissipation of temperature variance
@@ -276,6 +278,7 @@ subroutine allocate_arrays
   endif
 
 
+  ! Wall things
   allocate(  visw(nwal), stat=ierr) 
     if(ierr /= 0)write(*,*)"allocation error: visw"
 
@@ -284,6 +287,11 @@ subroutine allocate_arrays
 
   allocate(  tau(nwal), stat=ierr) 
     if(ierr /= 0)write(*,*)"allocation error: tau"
+
+  if (ltransient) then
+    allocate(  wss_aver(nwal), stat=ierr) 
+      if(ierr /= 0)write(*,*)"allocation error: wss_aver"
+  endif
 
   ! Turbulence production
   allocate( gen( numCells ), stat=ierr) 

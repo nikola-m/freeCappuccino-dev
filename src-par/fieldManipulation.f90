@@ -29,25 +29,20 @@
     real(dp), dimension(numTotal), intent(in) :: U
 
 !...Locals
-    integer :: inp
     real(dp) :: sumvol
 !
 !***********************************************************************
 !  
-    sumvol = 0.0_dp
-    wAvgU = 0.0_dp 
 
-      do inp=1,numCells
-          wAvgU = wAvgU + (Vol(inp)*U(inp))
-          sumvol = sumvol + vol(inp)
-      enddo
+    wAvgU = sum( Vol(1:numCells)*U(1:numCells) )
+    sumvol = sum( Vol(1:numCells) )
     
     call global_sum( wAvgU )
     call global_sum( sumvol )
 
     wAvgU = wAvgU / sumvol
 
-    end function
+  end function
 
 
 
@@ -900,6 +895,8 @@
             Phi(INP) = perturb*Phi(inp)
 
       enddo
+
+      if (myid == 0) write(*,'(a,i0,a)') '  **Added random noise of +/-',percent,' percent.'
 
       end subroutine
 

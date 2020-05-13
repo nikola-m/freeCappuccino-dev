@@ -299,34 +299,35 @@ subroutine facefluxmass_piso(ijp, ijn, xf, yf, zf, arx, ary, arz, lambda, cap, c
 
   ! Local variables
   real(dp) :: fxn, fxp
-  real(dp) :: are,dpn
-  real(dp) :: xpn,ypn,zpn,dene,smdpn
+  ! real(dp) :: are,dpn
+  real(dp) :: xpn,ypn,zpn,dene
   real(dp) :: ui,vi,wi
-
+  real(dp) :: Kj
 
   ! > Geometry:
 
   ! Face interpolation factor
-  fxn=lambda 
-  fxp=1.0_dp-lambda
+  fxn = lambda 
+  fxp = 1.0_dp-lambda
 
   ! Distance vector between cell centers
-  xpn=xc(ijn)-xc(ijp)
-  ypn=yc(ijn)-yc(ijp)
-  zpn=zc(ijn)-zc(ijp)
+  xpn = xc(ijn)-xc(ijp)
+  ypn = yc(ijn)-yc(ijp)
+  zpn = zc(ijn)-zc(ijp)
 
   ! Distance from P to neighbor N
-  dpn=sqrt(xpn**2+ypn**2+zpn**2) 
+  ! dpn = sqrt(xpn**2+ypn**2+zpn**2) 
 
   ! cell face area
-  are=sqrt(arx**2+ary**2+arz**2)
+  ! are = sqrt(arx**2+ary**2+arz**2)
 
   ! density at the cell face
-  dene=den(ijp)*fxp+den(ijn)*fxn
+  dene = den(ijp)*fxp+den(ijn)*fxn
 
   ! COEFFICIENTS OF PRESSURE EQUATION
-  smdpn = are/dpn
-  cap = -dene*(fxp*vol(ijp)*apu(ijp)+fxn*vol(ijn)*apu(ijn))*are/dpn
+  Kj = vol(ijp)*apu(ijp)*fxp + vol(ijn)*apu(ijn)*fxn
+  ! cap = - dene*Kj*are/dpn
+  cap = -dene*Kj*(arx*arx+ary*ary+arz*arz)/(xpn*arx+ypn*ary+zpn*arz)
   can = cap
 
 

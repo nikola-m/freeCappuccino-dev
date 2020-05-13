@@ -107,7 +107,7 @@ implicit none
       !***   which determines how will boundary face values be treated during the code run!
       !
 
-      do ib=1,numBoundaries - size(neighbProcNo) ! values at process boundary are not set here
+      do ib=1,numBoundaries
 
       read(input_unit,*) name   ! repeat bcname(ib)
         if(myid .eq. 0) write(*,'(2x,a)') name
@@ -254,7 +254,7 @@ implicit none
       !***   which determines how will boundary face values be treated during the code run!
       !
 
-      do ib=1,numBoundaries-size(neighbProcNo) ! values at process boundary are not set here
+      do ib=1,numBoundaries
 
       read(input_unit,*) name   ! repeat bcname(ib)
         if(myid .eq. 0) write(*,'(2x,a)') name

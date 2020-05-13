@@ -35,6 +35,9 @@ subroutine calcp_simple
   a = 0.0_dp
   su = 0.0_dp
 
+
+  if( const_mflux ) call constant_mass_flow_forcing
+
   ! Tentative (!) velocity gradients used for velocity interpolation: 
   call grad(U,dUdxi)
   call grad(V,dVdxi)
@@ -149,6 +152,7 @@ subroutine calcp_simple
 
     ! If simulation uses least-squares gradients call this to get conservative pressure correction gradients.
     if ( lstsq_qr .or. lstsq_dm .or. lstsq_qr ) call grad(pp,dPdxi,'gauss_corrected','nolimit')
+
 
     ! Reference pressure correction - p'
     ppref = pp(pRefCell)

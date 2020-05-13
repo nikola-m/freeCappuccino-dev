@@ -15,20 +15,18 @@ program cappuccino
   use geometry
   use variables
   use title_mod
-  use fieldManipulation
-  use sparse_matrix
   use temperature
   use concentration
-  use utils, only: show_logo
+  use fieldManipulation
+  use sparse_matrix
+  use utils
   use mpi
 
   implicit none
 
-  integer :: iter, i, ijp, ijn, inp, ib, iface
+  integer :: iter
   integer :: itimes, itimee
-  real(dp):: magUbarStar, rUAw, gragPplus, flowDirection
   real(dp):: source
-  real(dp):: suma,dt
   real :: start, finish
 !                                                                       
 !******************************************************************************
@@ -48,7 +46,6 @@ program cappuccino
     this = 0
   endif
 
-  ! write(*,'(2(a,i2))') ' np = ', nproc, ' myid = ', myid
 !----------------------------------------------------------------------
 
 
@@ -56,7 +53,6 @@ program cappuccino
   call get_command_argument(1,input_file)
   call get_command_argument(2,monitor_file)
   call get_command_argument(3,restart_file)
-  call get_command_argument(4,out_folder_path)
 
 !-----------------------------------------------
 !  Initialization, grid definition 
@@ -72,7 +68,7 @@ program cappuccino
     call show_logo
 
     write(*,'(a)') ' '
-    write(*,'(a,i2)') ' Parallel run. Number of processes, np = ', nproc
+    write(*,'(a,i2)') '  Parallel run. Number of processes, np = ', nproc
     write(*,'(a)') ' '
 
   endif
@@ -85,13 +81,14 @@ program cappuccino
 
   ! Create sparse matrix data structure (CSR format)
   call create_CSR_matrix
-  
+ 
   ! Allocate working arrays
   call allocate_arrays
 
   ! Initialisation of fields
   call init
-
+  
+  call add_random_noise_to_field(U,20)
 !
 !===============================================
 !     T i m e   l o o p : 
@@ -103,7 +100,6 @@ program cappuccino
     write(6,'(a)') ' '
   endif
 
-  
   itimes = itime+1
   itimee = itime+numstep
 
@@ -116,7 +112,9 @@ program cappuccino
     if(itime.eq.itimes) call bcin
 
     ! Courant number report:
-    include 'CourantNo.h'
+    call CourantNo
+
+    ! if ( mod(itime,10).eq.0 ) call add_random_noise_to_field( U, 20 )
 
 ! 
 !===============================================
@@ -133,8 +131,8 @@ program cappuccino
       call calcuvw 
 
       ! Pressure-velocity coupling. Two options: SIMPLE and PISO
-      if(SIMPLE)   call CALCP
-      if(PISO)     call PISO_multiple_correction
+      if(SIMPLE)   call calcp_simple
+      if(PISO)     call calcp_piso
 
       ! Turbulence
       if(lturb)    call correct_turbulence()
@@ -150,7 +148,7 @@ program cappuccino
       if (myid .eq. 0) then
         call cpu_time(finish)
         write(timechar,'(f9.3)') finish-start
-        write(6,'(3a)') '  ExecutionTime = ',adjustl(timechar),' s'
+        write(6,'(3a)') '  ExecutionTime = ',trim(timechar),' s'
         write(6,*)
       endif
 
@@ -167,7 +165,7 @@ program cappuccino
       endif
 
       ! If residuals fall to level below tolerance level - simulation is finished.
-      if(.not.ltransient  .and. source.lt.sormax ) then
+      if( .not.ltransient  .and. source.lt.sormax ) then
         call write_restart_files
         call writefiles        
         exit time_loop
@@ -178,20 +176,21 @@ program cappuccino
         ! Has converged within timestep or has reached maximum no. of SIMPLE iterations per timetstep:
         if(source.lt.sormax.or.iter.ge.maxit) then 
 
+          ! Correct driving force for a constant mass flow rate simulation:
           if(const_mflux) then
-            ! Correct driving force for a constant mass flow rate.
-            include 'constant_mass_flow_forcing.f90'
-          endif
-
-          ! Write field values after nzapis iterations or at the end of time-dependent simulation:
-          if( mod(itime,nzapis).eq.0 .and. itime.ne.numstep ) then
-            call write_restart_files
-            call writefiles
+            call constant_mass_flow_forcing
+            call recirculate_flow
           endif
 
           ! Write values at monitoring points and recalculate time-average values for statistics:
           call writehistory 
           call calc_statistics 
+
+          ! Write field values after nzapis iterations or at the end of time-dependent simulation:
+          if( mod(itime,nzapis).eq.0 .or. itime.eq.numstep ) then
+            call write_restart_files
+            call writefiles
+          endif
 
           cycle time_loop
        

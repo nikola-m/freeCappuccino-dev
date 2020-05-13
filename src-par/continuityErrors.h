@@ -53,9 +53,6 @@
 
   enddo
 
-  ! The way it is done in OpenFOAM:
-  ! sumLocalContErr = timestep*volumeWeightedAverage( abs(res) )
-  ! globalContErr = timestep*volumeWeightedAverage( res )
 
   sumLocalContErr = sum( abs( res ) ) 
   
@@ -67,7 +64,7 @@
 
   cumulativeContErr = cumulativeContErr + globalContErr
 
-
+  write(*,*) 'After comm:',sumLocalContErr,globalContErr
   if ( myid .eq. 0 ) write(6,'(3(a,es10.3))') "  time step continuity errors : sum local = ", sumLocalContErr, &
  &                                            ", global = ", globalContErr, &
  &                                            ", cumulative = ", cumulativeContErr

@@ -30,7 +30,7 @@ subroutine init
   ! 
   ! Local variables 
   !
-  character( len = 5) :: nproc_char
+  ! character(len = 5) :: nproc_char
   integer :: i, ijp, ijn, ijb, ib, iface, ipro
   ! integer :: output_unit
   integer :: nsw_backup
@@ -42,7 +42,7 @@ subroutine init
 !
 
   ! nproc_char <- myid zapisan levo u vidu stringa.
-  call i4_to_s_left ( myid, nproc_char )
+  ! call i4_to_s_left ( myid, nproc_char )
 
 !
 ! Various initialisations
@@ -108,35 +108,29 @@ subroutine init
 
   call initialize_vector_field(u,v,w,dUdxi,'U')
 
-  ! Initialize previous time step value to current value.
-  uo = u
-  vo = v
-  wo = w
-
-  uoo = u
-  voo = v
-  woo = w
-
-  if (bdf3) then
-    uooo = u
-    vooo = v
-    wooo = w
-  endif
+  call exchange( u )
+  call exchange( v )
+  call exchange( w )
 
   ! Field initialisation scalars
 
   ! 
   ! > TE Turbulent kinetic energy.
   !   
-  call initialize_scalar_field(te,dTEdxi,'k')
-
+  if (lcal(ite)) then
+    call initialize_scalar_field(te,dTEdxi,'k')
+    call exchange( te )
+  endif
   ! 
   ! > ED Specific turbulent kinetic energy dissipation rate, also turbulence frequency - omega
   !  
-  if(solveOmega) then   
-    call initialize_scalar_field(ed,dEDdxi,'omega')
-  else
-    call initialize_scalar_field(ed,dEDdxi,'epsilon')
+  if (lcal(ied)) then
+    if(solveOmega) then   
+      call initialize_scalar_field(ed,dEDdxi,'omega')
+    else
+      call initialize_scalar_field(ed,dEDdxi,'epsilon')
+    endif
+    call exchange( ed )
   endif
 
 
@@ -156,31 +150,6 @@ subroutine init
   
   ! Concentration
   if(lcal(icon)) con=conin
-
-  ! ! Reynolds stress tensor components
-  ! if (lturb) then
-  !   uu = 0.0_dp
-  !   vv = 0.0_dp
-  !   ww = 0.0_dp
-  !   uv = 0.0_dp
-  !   uw = 0.0_dp
-  !   vw = 0.0_dp
-  ! endif
-
-  ! ! Turbulent heat fluxes
-  ! if(lcal(ien).and.lbuoy) then
-  !   utt = 0.0_dp
-  !   vtt = 0.0_dp
-  !   wtt = 0.0_dp
-  ! endif
-
-  ! ! Reynolds stress anisotropy
-  ! if(lturb.and.lasm) bij = 0.0_dp
-
-  ! ! Pressure and pressure correction
-  ! p = 0.0_dp
-  ! pp = p
-
 
   !
   ! > Initialize mass flow
@@ -202,14 +171,9 @@ subroutine init
 
   enddo
 
-   
   !
   ! Mass flow at boundaries of inner domain and buffer cells
   !
-  call exchange( u )
-  call exchange( v )
-  call exchange( w )
-
 
   ! Initialize mass flux at faces on process boundary
 
@@ -239,7 +203,6 @@ subroutine init
     endif
   enddo
 
-
 !
 ! Read Restart File And Set Field Values
 !
@@ -253,9 +216,7 @@ subroutine init
     call create_lsq_grad_matrix(U,dUdxi)
   endif
 
-  call grad(U,dUdxi)
-  call grad(V,dVdxi)
-  call grad(W,dWdxi)
+
 
   !
   ! Distance to the nearest wall (needed for some turbulence models).
@@ -284,12 +245,12 @@ subroutine init
   nsw_backup = nsw(ip)
 
   sor(ip) = 1e-10
-  nsw(ip) = 500
+  nsw(ip) = 1000
 
   ! Solve system
   ! call jacobi(p,ip)
-  ! call dpcg(p,ip) 
-  call iccg(p,ip) 
+  call dpcg(p,ip) 
+  ! call iccg(p,ip) 
   ! call bicgstab(p,ip) 
   ! call solve_csr(numCells,nnz,ioffset,ja,a,su,p)
 
@@ -297,25 +258,17 @@ subroutine init
 
   call exchange ( p ) 
 
-  ipro = 0
-
   do ib=1,numBoundaries
-
-    if ( bctype(ib) /= 'wall' .and. bctype(ib) /= 'proces' ) then
-    ! All other boundary faces besides wall which has to be zero, and process, which is set above
-
+    if ( bctype(ib) .ne. 'wall' .and. bctype(ib) .ne. 'process' ) then
+      ! All other boundary faces besides wall which has to be zero, and process, which is set trough exchange
       do i=1,nfaces(ib)
-
         iface = startFace(ib) + i
         ijp = owner(iface)
         ijb = iBndValueStart(ib) + i
-
         p(ijb) = p(ijp)
-
       enddo
-
     endif
-  enddo
+  enddo 
 
   sor(ip) = sor_backup
   nsw(ip) = nsw_backup
@@ -327,16 +280,12 @@ subroutine init
   wallDistance = -sqrt(  dPdxi(1,1:numCells)**2+dPdxi(2,1:numCells)**2+dPdxi(3,1:numCells)**2  ) + &
                   sqrt(  dPdxi(1,1:numCells)**2+dPdxi(2,1:numCells)**2+dPdxi(3,1:numCells)**2 + 2*p(1:numCells)  )
 
-  ! do i = 1,numCells
-  ! write(*,*) wallDistance(i)
-  ! enddo
 
   ! Clear arrays
   su = 0.0_dp
   sv = 0.0_dp 
-  p = 0.0_dp
+  p = pp
   dPdxi = 0.0_dp
-
 
   ! ! Write wall distance field.
   ! !+-----------------------------------------------------------------------------+
@@ -354,6 +303,7 @@ subroutine init
 
   ! close( output_unit )
   ! !+-----------------------------------------------------------------------------+
+
 
 
 end subroutine

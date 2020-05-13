@@ -6,8 +6,9 @@ subroutine continuityErrors
   use types
   use parameters, only: sumLocalContErr, globalContErr, cumulativeContErr
   use geometry, only: numInnerFaces, owner, neighbour, numBoundaries, bctype, nfaces, startFace
-  use sparse_matrix, only: res
+  use sparse_matrix, only: res,apu
   use variables, only: flmass
+  use fieldManipulation, only: volumeWeightedAverage
 
   implicit none
 
@@ -54,11 +55,11 @@ subroutine continuityErrors
   enddo
 
 
-  ! sumLocalContErr = volumeWeightedAverage( abs(res) )
+  sumLocalContErr = volumeWeightedAverage( abs(res*apu) )
 
   ! globalContErr   = volumeWeightedAverage( res )
 
-  sumLocalContErr = sum( abs( res ) ) 
+  ! sumLocalContErr = sum( abs( res ) ) 
   
   globalContErr = sum( res )
 
@@ -66,7 +67,7 @@ subroutine continuityErrors
 
   res = 0.0_dp
 
-  write(6,'(3(a,es10.3))') "  time step continuity errors : sum local = ", sumLocalContErr, &
+  write(6,'(3(a,es10.3))') "  time step continuity errors : avg local = ", sumLocalContErr, &
  &                          ", global = ", globalContErr, &
  &                          ", cumulative = ", cumulativeContErr
 

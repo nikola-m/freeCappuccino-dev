@@ -61,7 +61,7 @@ subroutine calcp_piso
   use gradients
   use hcoef
   use fieldmanipulation
-  use faceflux_mass, only: facefluxmass_piso,fluxmc
+  use faceflux_mass
 
   implicit none
 !
@@ -74,6 +74,8 @@ subroutine calcp_piso
 
   ! Before entering the corection loop backup a_nb coefficient arrays:
   h = a  
+
+  if( const_mflux ) call constant_mass_flow_forcing
 
   !== PISO Corrector loop =============================================
   do icorr=1,ncorr
@@ -121,6 +123,7 @@ subroutine calcp_piso
 
 
     ! Tentative (!) velocity gradients used for velocity interpolation: 
+    call updateVelocityAtBoundary
     call grad(U,dUdxi)
     call grad(V,dVdxi)
     call grad(W,dWdxi) 
@@ -129,7 +132,6 @@ subroutine calcp_piso
     ! Initialize coefficient array and source:
     a = 0.0_dp
     su = 0.0_dp 
-
 
     ! > Assemble off diagonal entries of system matrix and find mass flux,
     !   accumulate diagonal entries of sysem matrix, and rhs vector stored in su array.
@@ -141,7 +143,7 @@ subroutine calcp_piso
       ijn = neighbour(i)
 
       call facefluxmass_piso( ijp, ijn, xf(i), yf(i), zf(i), arx(i), ary(i), arz(i), facint(i), &
-                              cap, can, flmass(i), flmasso(i), flmassoo(i),flmassooo(i) )
+                              cap, can, flmass(i) )!, flmasso(i), flmassoo(i),flmassooo(i) )
 
       ! > Off-diagonal elements:
 
@@ -233,28 +235,34 @@ subroutine calcp_piso
       !
       ! Solve pressure equation system
       !
-      call iccg(p,ip)
+      call iccg(pp,ip)
 
       ! We have pure Neumann problem - take out the average of the field as the additive constant
-      pavg = sum(p(1:numCells))/dble(numCells)
-      p(1:numCells) = p(1:numCells) - pavg
+      pavg = sum(pp(1:numCells))/dble(numCells)
+      ! p(1:numCells) = p(1:numCells) - pavg
 
+      ! Under-relaxation
+      p(1:numCells) = (1.0_dp-urf(ip))*p(1:numCells) + urf(ip)*(pp(1:numCells)-pavg)
+
+      ! Pressure gradient
+      do istage=1,nipgrad
+
+        ! Pressure corr. at boundaries (for correct calculation of pp gradient)
+        call bpres(p,istage)
+
+        ! Calculate pressure-correction gradient and store it in pressure gradient field.
+        call grad(p,dPdxi)
+
+      end do
+
+      ! If simulation uses least-squares gradients call this to get conservative pressure correction gradients.
+      if ( lstsq_qr .or. lstsq_dm .or. lstsq_qr ) call grad(p,dPdxi,'gauss_corrected','nolimit')
 
       !                                                                                  
       ! Laplacian source term modification due to non-orthogonality.
       !            
       if(ipcorr.ne.npcor) then                                            
 
-        ! Pressure gradient
-        do istage=1,nipgrad
-
-          ! Pressure at boundaries.
-          call bpres(p,istage)
-
-          ! Calculate pressure gradient field.
-          call grad(p,dPdxi,'gauss_corrected','no-limit')
-
-        end do  
 
         ! Add nonorthogonal terms from laplacian discretization to RHS of pressure eqn.
         do i=1,numInnerFaces
@@ -267,16 +275,12 @@ subroutine calcp_piso
           su(ijp) = su(ijp)-fmcor
           su(ijn) = su(ijn)+fmcor 
 
-        enddo                                                              
+        enddo                                                                                                        
 
-
-
-      !// On the last non-orthogonality correction, correct the flux using the most up-to-date pressure
-      !// The .flux method includes contributions from all implicit terms of the pEqn (the Laplacian)
-      !                    phi -= pEqn.flux();                                                 
-                                                                                               
-      ! We have hit the last iteration of nonorthogonality correction:                         
-      else ! or in other words if(ipcorr.eq.npcor) then
+      !                                                                                        
+      ! We have hit the last iteration of nonorthogonality correction: 
+      !                     
+      else ! or in other words if(ipcorr.eq.npcor) then   
 
         !
         ! Correct mass fluxes at inner cv-faces only (only inner flux)
@@ -299,16 +303,16 @@ subroutine calcp_piso
         ! Additional mass flux correction due to non-orthogonality.
         !  
 
-        ! Pressure gradient
-        do istage=1,nipgrad
+        ! ! Pressure gradient
+        ! do istage=1,nipgrad
 
-          ! Pressure at boundaries.
-          call bpres(p,istage)
+        !   ! Pressure at boundaries.
+        !   call bpres(p,istage)
 
-          ! Calculate pressure gradient field.
-          call grad(p,dPdxi,'gauss_corrected','nolimit')
+        !   ! Calculate pressure gradient field.
+        !   call grad(p,dPdxi,'gauss_corrected','no-limit')        
 
-        end do  
+        ! end do  
 
         ! do i=1,numInnerFaces
 
@@ -327,7 +331,6 @@ subroutine calcp_piso
     !~~~~ END: Non orthogonal corrections loop ~~~~~~~~~~~~~~~~~~~~~~~~~
     enddo
 
-stop
 
     !// Add pressure gradient to interior velocity and BC's.  Note that this pressure is not just a small
     !// correction to a previous pressure, but is the entire pressure field.  Contrast this to the use of p'
@@ -338,9 +341,9 @@ stop
     ! Correct velocities
     !      
     do inp=1,numCells
-        u(inp) = u(inp) - apu(inp)*dPdxi(1,inp)*vol(inp)
-        v(inp) = v(inp) - apv(inp)*dPdxi(2,inp)*vol(inp)
-        w(inp) = w(inp) - apw(inp)*dPdxi(3,inp)*vol(inp)
+      u(inp) = u(inp) - apu(inp)*dPdxi(1,inp)*vol(inp)
+      v(inp) = v(inp) - apv(inp)*dPdxi(2,inp)*vol(inp)
+      w(inp) = w(inp) - apw(inp)*dPdxi(3,inp)*vol(inp)
     enddo 
 
     ! Explicit correction of boundary conditions 

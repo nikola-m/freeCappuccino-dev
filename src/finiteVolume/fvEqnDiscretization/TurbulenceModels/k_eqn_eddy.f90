@@ -207,7 +207,7 @@ subroutine calcsc(Fi,dFidxi,ifi)
 
 
       ! UNSTEADY TERM
-      if( bdf ) then
+      if( bdf .or. cn ) then
         apotime = den(inp)*vol(inp)/timestep
         su(inp) = su(inp) + apotime*teo(inp)
         sp(inp) = sp(inp) + apotime
@@ -328,6 +328,7 @@ subroutine calcsc(Fi,dFidxi,ifi)
         su(ijp )= su(ijp)-gen(ijp)*vol(ijp) ! take out standard production from wall ajdecent cell.
         viss=viscos
         if(ypl(i).gt.ctrans) viss=visw(iwall)
+        ! viss = max(viscos,visw(iWall))
 
         ! Face area 
         are = sqrt(arx(iface)**2+ary(iface)**2+arz(iface)**2)
@@ -346,7 +347,7 @@ subroutine calcsc(Fi,dFidxi,ifi)
         ztp = W(ijp)-Vnp*nzf
 
         ! Its magnitude
-        Vtp = xtp*xtp+ytp*ytp+ztp*ztp
+        Vtp = sqrt(xtp*xtp+ytp*ytp+ztp*ztp)
 
         ! Tangent direction - unit vector
         xtp = xtp/vtp
@@ -561,7 +562,7 @@ subroutine modify_mu_eff()
         ztp = W(ijp)-Vnp*nzf
 
         ! Its magnitude
-        Vtp = xtp*xtp+ytp*ytp+ztp*ztp
+        Vtp = sqrt(xtp*xtp+ytp*ytp+ztp*ztp)
 
         ! Tangent direction
         xtp = xtp/vtp
@@ -576,7 +577,7 @@ subroutine modify_mu_eff()
         ypl(iWall) = den(ijb)*Utau*dnw(iWall)/viscos
 
         ! ! Ima i ova varijanta u cisto turb. granicni sloj varijanti sa prvom celijom u log sloju
-        ! ypl(i) = den(ijb)*cmu25*sqrt(te(ijp))*dnw(i)/viscos
+        !ypl(i) = den(ijb)*cmu25*sqrt(te(ijp))*dnw(i)/viscos
         ! ! ...ovo je tehnicki receno ystar iliti y* a ne y+
 
         viscw = zero

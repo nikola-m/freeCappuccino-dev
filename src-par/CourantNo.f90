@@ -1,15 +1,27 @@
+subroutine CourantNo
 !
-! Calculate and output the mean and maximum Courant Numbers.
+! Purpose: 
+!   Calculate and output the mean and maximum Courant Numbers.
 !
+  use types
+  use parameters, only: CoNum,meanCoNum, CoNumFixValue, CoNumFix, timestep, ltransient, itime, time, myid
+  use geometry, only: numCells, numInnerFaces, owner, neighbour, numBoundaries, bctype, nfaces, startFace, Vol
+  use sparse_matrix, only: res
+  use variables, only: flmass
 
- if (ltransient) then
- CoNum = 0.0_dp
- meanCoNum = 0.0_dp
+  implicit none
 
- res = 0.0_dp
+  integer :: i, ijp, ijn, inp, ib, iface
+  real(dp):: suma,dt
+
+if (ltransient) then
+  CoNum = 0.0_dp
+  meanCoNum = 0.0_dp
+
+  res = 0.0_dp
 
   !
-  ! Suface sum of magnitude (i.e. absolute value) of mass flux phi, over inner faces only (which includes o- c- faces)
+  ! Suface sum of magnitude (i.e. absolute value) of mass flux phi, over inner faces only
   !
 
   ! Inner faces                                               
@@ -19,12 +31,6 @@
     res(ijp) = res(ijp)+abs(flmass(i))
     res(ijn) = res(ijn)+abs(flmass(i))                                                                                                               
   enddo     
-
-  ! Faces on processor boundaries
-  !do i=1,npro
-  !  ijp = owner( iProcFacesStart + i )
-  !  res(ijp) = res(ijp)+abs(fmpro(i))
-  !end do
 
   ! Boundary faces
   do ib=1,numBoundaries
@@ -55,6 +61,7 @@
 
   enddo
 
+
   ! Accumulate by looping trough cells
   suma = 0.0_dp
 
@@ -75,16 +82,13 @@
   call global_sum(suma)
 
   CoNum = 0.5*CoNum*timestep
+  meanCoNum = 0.5*meanCoNum/suma*timestep
 
   ! Find global maximum Courant number in the whole field.
   call global_max(CoNum)
 
-
-  ! Now use it to calculate mean Courant number
-  meanCoNum = 0.5*meanCoNum/suma*timestep
-
   !// If we keep the value of Courant Number fixed
-  if( CoNumFix .and. itime.ne.itimes ) then
+  if( CoNumFix ) then
       dt = timestep
       timestep = CoNumFixValue/CoNum * timestep
 
@@ -94,14 +98,15 @@
 
   time = time + timestep
 
-if(myid .eq. 0) then
- write(6,*)
- write(6,'(a,i0,a,es10.3,a,es10.3)') "  Time step no. : ",ITIME," dt : ",timestep," Time = ",time
- write(6,*)
+  if(myid .eq. 0) then
+    write(6,'(a)') ' '
+    write(6,'(a,i0,2(a,es10.3))') "  Time step no. : ",itime," dt : ",timestep," Time = ",time
+    write(6,'(a)') ' '
+    write(6,'(2(a,es10.3))') "  Courant Number mean: ", meanCoNum," max: ", CoNum
+    write(6,'(a)') ' '
+  endif
 
- write(6,'(2(a,es10.3))') "  Courant Number mean: ", meanCoNum," max: ", CoNum
 endif
 
+end subroutine
 
-endif
-!// ************************************************************************* //

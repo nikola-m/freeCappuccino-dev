@@ -6,7 +6,7 @@ subroutine calc_statistics
 !
   use types
   use parameters
-  use geometry, only: numCells
+  use geometry, only: numCells,nwal
   use variables
   use statistics
 
@@ -30,7 +30,9 @@ subroutine calc_statistics
     u_aver(inp) = u_aver(inp) * n_1n  + u(inp) * nr 
     v_aver(inp) = v_aver(inp) * n_1n  + v(inp) * nr 
     w_aver(inp) = w_aver(inp) * n_1n  + w(inp) * nr  
-    ! con_aver(inp) = con_aver(inp) * n_1n + con(inp) * nr 
+
+    if (lcal(ien)) t_aver(inp) = t_aver(inp) * n_1n + t(inp) * nr 
+    if(lcal(icon)) con_aver(inp) = con_aver(inp) * n_1n + con(inp) * nr 
 
 
     if(lturb) then
@@ -49,15 +51,17 @@ subroutine calc_statistics
     endif
 
 !  Other...
-!    concon_aver(inp) = concon_aver(inp)+ &
-!                 (con(inp)-con_nsample)**2 
-!    ucon_aver(inp) = ucon_aver(inp)+ &
-!                 ((u(inp)-u_aver(inp))*(con(inp)-con_nsample))
-!    vcon_aver(inp) = vcon_aver(inp)+ &
-!                 ((v(inp)-v_aver(inp))*(con(inp)-con_nsample))
-!    wcon_aver(inp) = wcon_aver(inp)+ &
-!                 ((w(inp)-w_aver(inp))*(con(inp)-con_nsample))
+!    concon_aver(inp) = concon_aver(inp)+(con(inp)-con_nsample)**2 
+!    ucon_aver(inp) = ucon_aver(inp)+((u(inp)-u_aver(inp))*(con(inp)-con_nsample))
+!    vcon_aver(inp) = vcon_aver(inp)+((v(inp)-v_aver(inp))*(con(inp)-con_nsample))
+!    wcon_aver(inp) = wcon_aver(inp)+((w(inp)-w_aver(inp))*(con(inp)-con_nsample))
   
   end do    
+
+  ! Time averaged Wall Shear Stress at wall bundaries
+  wss_aver(1:nwal) = wss_aver(1:nwal) * n_1n  + tau(1:nwal) * nr
+
+
+
 
 end subroutine

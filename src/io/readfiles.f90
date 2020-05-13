@@ -34,12 +34,13 @@ subroutine readfiles
     read(restart_unit) ed
     read(restart_unit) t
     read(restart_unit) vis
-    read(restart_unit) uu
-    read(restart_unit) vv
-    read(restart_unit) ww
-    read(restart_unit) uv
-    read(restart_unit) uw
-    read(restart_unit) vw
+    read(restart_unit) visw    
+    ! read(restart_unit) uu
+    ! read(restart_unit) vv
+    ! read(restart_unit) ww
+    ! read(restart_unit) uv
+    ! read(restart_unit) uw
+    ! read(restart_unit) vw
     read(restart_unit) uo
     read(restart_unit) vo
     read(restart_unit) wo
@@ -72,7 +73,7 @@ subroutine readfiles
 
     call get_unit ( statistics_file )
 
-    open(unit=statistics_file,file=trim(out_folder_path)//'/statistics')   ! <- u_aver, v_aver,... are here, statistics restart file 2
+    open(unit=statistics_file,file='statistics')
 
     rewind statistics_file
 

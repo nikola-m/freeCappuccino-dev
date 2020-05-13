@@ -2,119 +2,11 @@ module output
 use types
 use parameters
 use geometry
-use tensor_fields
 use utils, only: get_unit, i4_to_s_left
-
-! 
-! > Derived operators
-!
-interface operator(.visualize.)
-   module procedure write_volScalarField_field
-   module procedure write_volVectorField_field
-end interface
 
 public 
 
 contains
-
-
- pure integer function paraview_ntype(NTYPE)
-!
-! Element type in Paraview corresponding to Cappuccino type of element given by NTYPE.
-!
- implicit none
- integer, intent(in) :: NTYPE
-
- if(NTYPE.eq.1) then ! -> Cappuccino line
-   paraview_ntype = 3 
- elseif(NTYPE.eq.2) then ! -> Cappuccino Tri
-   paraview_ntype = 5 
- elseif(NTYPE.eq.3) then ! -> Cappuccino Quad
-   paraview_ntype = 9 
- elseif(NTYPE.eq.4) then ! -> Cappuccino Tet
-   paraview_ntype = 10   
- elseif(NTYPE.eq.5) then ! -> Cappuccino Hex
-   paraview_ntype = 12 
- elseif(NTYPE.eq.6) then ! -> Cappuccino Prism
-   paraview_ntype = 13 
- elseif(NTYPE.eq.7) then ! -> Cappuccino Pyramid
-   paraview_ntype = 14 
- else
-   paraview_ntype = 0
- endif
-
- end function
-
- pure integer function noel(NTYPE)
-!
-! Number of nodes in element of NTYPE type of element
-!
- implicit none
- integer, intent(in) :: NTYPE
-
-
- if(NTYPE.eq.12) then ! -> Paraview Hex
-   noel = 8  
- elseif(NTYPE.eq.13) then ! -> Paraview Prism
-   noel = 6 
- elseif(NTYPE.eq.14) then ! -> Paraview Pyramid
-   noel = 5
- elseif(NTYPE.eq.10) then ! -> Paraview Tet
-   noel = 4
- elseif(NTYPE.eq.9) then ! -> Paraview Quad
-   noel = 4
- elseif(NTYPE.eq.5) then ! -> Paraview Tri
-   noel = 3
- else
-   noel = 0
- endif
-
- end function
-
-
-
-function write_volScalarField_field(phi) result(ierr)
-!
-! Wrapper around subroutine vtu_write for VolScalarField
-!
-  implicit none
-  type(volScalarField), intent(in) :: phi
-  integer :: ierr
-
-  integer :: output_unit
-
-  call get_unit( output_unit )
-
-  open(unit = output_unit, file = trim(phi%field_name)//'_field_data.vtu', status = 'replace', iostat = ierr)
-
-  call vtu_write_scalar_field ( output_unit, trim(phi%field_name)//'_field_data', phi%mag )
-
-  close (  unit = output_unit )
-
-end function
-
-
-function write_volVectorField_field(v) result(ierr)
-!
-! Wrapper around subroutine vtu_write for VolScalarField
-!
-  implicit none
-  type(volVectorField), intent(in) :: v
-  integer :: ierr
-
-  integer :: output_unit
-
-  call get_unit( output_unit )
-
-  open(unit = output_unit, file = trim(v%field_name)//'_field_data.vtu', status = 'replace', iostat = ierr)
-
-  call vtu_write_vector_field ( output_unit, trim(v%field_name)//'_field_data', v%x, v%y, v%z )
-
-  close (  unit = output_unit )
-
-end function
-
-
 
 subroutine vtu_write_XML_header ( output_unit )
 !
@@ -1051,5 +943,58 @@ subroutine vtu_write_mesh ( output_unit )
 
 end subroutine vtu_write_mesh
 
+
+ pure integer function paraview_ntype(NTYPE)
+!
+! Element type in Paraview corresponding to Cappuccino type of element given by NTYPE.
+!
+ implicit none
+ integer, intent(in) :: NTYPE
+
+ if(NTYPE.eq.1) then ! -> Cappuccino line
+   paraview_ntype = 3 
+ elseif(NTYPE.eq.2) then ! -> Cappuccino Tri
+   paraview_ntype = 5 
+ elseif(NTYPE.eq.3) then ! -> Cappuccino Quad
+   paraview_ntype = 9 
+ elseif(NTYPE.eq.4) then ! -> Cappuccino Tet
+   paraview_ntype = 10   
+ elseif(NTYPE.eq.5) then ! -> Cappuccino Hex
+   paraview_ntype = 12 
+ elseif(NTYPE.eq.6) then ! -> Cappuccino Prism
+   paraview_ntype = 13 
+ elseif(NTYPE.eq.7) then ! -> Cappuccino Pyramid
+   paraview_ntype = 14 
+ else
+   paraview_ntype = 0
+ endif
+
+ end function
+
+ pure integer function noel(NTYPE)
+!
+! Number of nodes in element of NTYPE type of element
+!
+ implicit none
+ integer, intent(in) :: NTYPE
+
+
+ if(NTYPE.eq.12) then ! -> Paraview Hex
+   noel = 8  
+ elseif(NTYPE.eq.13) then ! -> Paraview Prism
+   noel = 6 
+ elseif(NTYPE.eq.14) then ! -> Paraview Pyramid
+   noel = 5
+ elseif(NTYPE.eq.10) then ! -> Paraview Tet
+   noel = 4
+ elseif(NTYPE.eq.9) then ! -> Paraview Quad
+   noel = 4
+ elseif(NTYPE.eq.5) then ! -> Paraview Tri
+   noel = 3
+ else
+   noel = 0
+ endif
+
+ end function
 
 end module

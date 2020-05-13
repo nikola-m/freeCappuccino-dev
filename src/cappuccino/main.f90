@@ -19,6 +19,7 @@ program cappuccino
   use sparse_matrix
   use temperature
   use concentration
+  use mhd
   use utils, only: show_logo
 
   implicit none
@@ -38,7 +39,6 @@ program cappuccino
   call get_command_argument(1,input_file)
   call get_command_argument(2,monitor_file)
   call get_command_argument(3,restart_file)
-  call get_command_argument(4,out_folder_path)
 
   ! Open simulation log file
   open(unit=6,file=monitor_file)
@@ -104,11 +104,13 @@ program cappuccino
       if(lturb)    call correct_turbulence()
 
       !Scalars: Temperature , temperature variance, and concentration eqs.
-      if(lcal(ien))   call calculate_temperature_field()
+      if(lcal(ien))   call calculate_temperature_field
 
-      ! if(lcal(ivart)) call calculate_temperature_variance_field()
+      ! if(lcal(ivart)) call calculate_temperature_variance_field
       
-      if(lcal(icon))  call calculate_concentration_field()
+      if(lcal(icon))  call calculate_concentration_field
+
+      if(lcal(iep))  call calculate_electric_potential
 
 
       call cpu_time(finish)
@@ -141,17 +143,19 @@ program cappuccino
           if( source.lt.sormax .or. iter.ge.maxit ) then 
 
             ! Correct driving force for a constant mass flow rate simulation:
-            if(const_mflux) call constant_mass_flow_forcing
+            if(const_mflux) then
+              call constant_mass_flow_forcing
+            endif
+
+            ! Write values at monitoring points and recalculate time-average values for statistics:
+            call writehistory
+            call calc_statistics 
 
             ! Write field values after nzapis iterations or at the end of time-dependent simulation:
             if( mod(itime,nzapis).eq.0  .or. itime.eq.numstep ) then
               call write_restart_files
               call writefiles
             endif
-
-            ! Write values at monitoring points and recalculate time-average values for statistics:
-            call writehistory
-            call calc_statistics 
 
             cycle time_loop
          

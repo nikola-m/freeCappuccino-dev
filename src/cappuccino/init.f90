@@ -24,6 +24,7 @@ subroutine init
   ! use LIS_linear_solver_library
   use field_initialization
   use output
+  use mhd
 
   implicit none
 
@@ -113,22 +114,7 @@ subroutine init
 ! 1.2)  Field Initialisation
   call initialize_vector_field(u,v,w,dUdxi,'U')
 
-  ! ! Initialize previous time step value to current value.
-  ! uo = u
-  ! vo = v
-  ! wo = w
-
-  ! uoo = u
-  ! voo = v
-  ! woo = w
-
-  ! if (bdf3) then
-  !   uooo = u
-  !   vooo = v
-  !   wooo = w
-  ! endif
-
-  ! Field initialisation scalars
+  if (levm) then
   ! 
   ! > TE Turbulent kinetic energy.
   !   
@@ -143,19 +129,24 @@ subroutine init
     call initialize_scalar_field(ed,dEDdxi,'epsilon')
   endif
 
-  !-------------------------------------------------------    
-  ! Field initialisation over inner cells + boundary faces
-  !-------------------------------------------------------
+  endif
+
+  ! 
+  ! > Temperature
+  !
+  if( lcal(ien) )   call initialize_scalar_field(t,dTdxi,'T')
+
+  ! 
+  ! Magnetic field
+  ! 
+  if ( lcal(iep) ) call initialize_vector_field(bmagx,bmagy,bmagz,dEpotdxi,'B')
 
   ! Density
   den = densit
 
   ! Effective viscosity
   vis = viscos
-  visw = viscos
-
-  ! Temperature
-  if(lcal(ien)) t = tin
+  visw = viscos  
 
   ! Temperature variance
   if(lcal(ivart)) vart = vartin
@@ -163,31 +154,6 @@ subroutine init
   ! Concentration
   if(lcal(icon)) con = conin
 
-  ! ! Reynolds stress tensor components
-  ! if (lturb) then
-  !   uu = 0.0_dp
-  !   vv = 0.0_dp
-  !   ww = 0.0_dp
-  !   uv = 0.0_dp
-  !   uw = 0.0_dp
-  !   vw = 0.0_dp
-  ! endif
-
-  ! ! Turbulent heat fluxes
-  ! if(lcal(ien).and.lbuoy) then
-  !   utt = 0.0_dp
-  !   vtt = 0.0_dp
-  !   wtt = 0.0_dp
-  ! endif
-
-  ! ! Reynolds stress anisotropy
-  ! if(lturb.and.lasm) bij = 0.0_dp
-
-  ! Pressure and pressure correction
-  ! p = 0.0_dp
-  ! if ( simple ) pp = p
-  ! if ( piso .and. (bdf2.or.bdf3) )   po = p
-  ! if ( piso .and. bdf3 )   poo = p
 
   ! Initialize mass flow
   do i=1,numInnerFaces
@@ -204,11 +170,6 @@ subroutine init
     flmass(i) = den(ijp)*(arx(i)*ui+ary(i)*vi+arz(i)*wi)
 
   enddo
-
-  if (piso) then
-    flmasso = flmass
-    if (bdf3) flmassoo = flmass
-  endif
 
 !
 ! Read Restart File And Set Field Values
@@ -230,21 +191,7 @@ subroutine init
   call grad(V,dVdxi)
   call grad(W,dWdxi)
 
-! 
-! Initialization of residual for all variables
-!
-  ! do i=1,nphi
-  !   rnor(i) = 1.0_dp
-  !   resor(i)= 0.0_dp
-  ! enddo
 
-  ! rnor(iu)  = 1.0_dp/(flomom+small)
-  ! rnor(iv)  = rnor(iu)
-  ! rnor(iw)  = rnor(iu)
-
-  ! rnor(ip)  = 1.0_dp/(flomas+small)
-  ! rnor(ite) = 1.0_dp/(flowte+small)
-  ! rnor(ied) = 1.0_dp/(flowed+small)
 
 !
 ! Distance to the nearest wall (needed for some turbulence models) for all cells via Poisson equation.
@@ -317,11 +264,7 @@ subroutine init
   su = 0.0_dp
   sv = 0.0_dp 
   dPdxi = 0.0_dp
+  pp = p
 
-  if (piso) then 
-    deallocate( pp )
-  else ! simple
-    pp = p
-  endif
 
 end subroutine

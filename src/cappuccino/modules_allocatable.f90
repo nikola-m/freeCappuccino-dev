@@ -10,7 +10,7 @@ end module types
 module parameters  
   use types
 
-  integer, parameter :: nphi=10 ! Max. no. of variables to solve
+  integer, parameter :: nphi=11 ! Max. no. of variables to solve
   integer, parameter :: iu=1    ! Variable identifiers
   integer, parameter :: iv=2
   integer, parameter :: iw=3
@@ -21,9 +21,10 @@ module parameters
   integer, parameter :: ivis=8
   integer, parameter :: ivart=9
   integer, parameter :: icon=10
+  integer, parameter :: iep=11
 
-  real(dp), parameter :: one = 1.0d0
-  real(dp), parameter :: zero = 0.0d0
+  real(dp), parameter :: one = 1.0_dp
+  real(dp), parameter :: zero = 0.0_dp
   real(dp), parameter :: small = 1e-20
   real(dp), parameter :: great = 1e+20
   real(dp), parameter :: pi = 3.1415926535897932384626433832795_dp
@@ -81,30 +82,13 @@ module parameters
   real(dp) :: CoNum,meanCoNum ! Courant number.  
   ! character(len=9) :: timechar! A char string to write current timestep
 
-  ! Choosing discretization scheme cds, luds, smart,muscl, gamma, etc.
-  ! logical :: lcds,lluds,lsmart,lavl,lmuscl,lumist...,lcds_flnt,l2nd_flnt,l2ndlim_flnt,lmuscl_flnt
-  logical :: lcds = .false.
-  logical :: lcdsc = .false.
-  logical :: lluds = .false.
-  logical :: lsmart = .false.
-  logical :: lavl = .false.
-  logical :: lmuscl = .false.
-  logical :: lumist = .false.
-  logical :: lkoren = .false.
-  logical :: lcharm = .false.
-  logical :: lospre = .false.
-  logical :: lcds_flnt = .false.
-  logical :: l2nd_flnt = .false.
-  logical :: lmuscl_flnt = .false.
-
-  logical :: flux_limiter = .false.
     
   ! Logicals, mostly read from simulation-input file:
   logical :: lturb,lread,lwrite,ltest             ! turbulent simulation, read restart file, write restart file, print residual of the linear solver,.,..      
   logical :: ltransient                           ! LTRANSIENT is TRUE for transient (non-stationary) simulations              
   logical :: levm,lasm,lles,lsgdh,lggdh,lafm      ! eddy-viscosity, algebraic stress model or LES, simple gradient or generalized gradient hypothesis, algerbaic flux model
   logical :: bdf,bdf2,bdf3,cn                     ! control for the time-stepping algorithm
-  logical :: simple,piso,pimple                   ! control for the velocity-pressure coupling algorithm
+  logical :: simple,piso                          ! control for the velocity-pressure coupling algorithm
   logical :: const_mflux                          ! control for constant flow rate 
   logical :: solveOmega, solveEpsilon, SolveTKE   ! Selfexplanatory, used in 'init'
 
@@ -123,31 +107,11 @@ module parameters
   real(dp) :: sumLocalContErr, globalContErr, cumulativeContErr   ! Continuity errors
 
 
-! -varijabla za polje velicine numTotal + za vremenski korak iza phio i jos jedan iza phioo ako je time stepping shema bdf2
-! -Niz koji ce drzate usrednjeno polje ovog polja za nestacionarne simulacije, samo ukoliko je turbulentno strujanje.
-! -chvarSolver ili pojednostavi na chvar - to je string koji identifikuje sta ispisuje linearni solver u reportu i jos vaznije, koji fajl u 0/ folderu uzima da cita za init
-! -ako se racuna jednacinom, normalizovani residual rnor ili obicni ne normalizovani resor
-! -podrelaskacioni faktor urf
-
-! -max broj iteracija za linearni solver - nsw
-! -min rez za linearni solver sor
-! -parametar koji definise koji linearni solver
-! -koja sema za konvekciju
-! -koja sema za difuziju
-! -gds velicina za deferred correction
-! Funkcije:
-! -funkcija za alokaciju ili to moze u mainu...
-! -func za init gde se inicijalnizuje polje i gde se podesava tip BC i inicijalne vrednosti boundary fejsova
-! -func sa diskretizovanom jedn. koja se zove calc pa nesto, recimo calcScalar
-! -func za flukseve koju poziva calcScalar
-! -fun za eksplicitnu korekciju granicnih uslova posle solve, ali to mozda moze globalno?
-
   ! Those with nphi are related to each field that we calculate U,V,W,P,T,TKE,ED...
   logical,  dimension(nphi) :: lcal      ! Logical do we calculate that particular field
   integer,  dimension(nphi) :: nsw       ! Number of allowed iterations in linear solver for each variable
   real(dp), dimension(nphi) :: sor       ! Tolerance level for residual in linear solver for each variable
   real(dp), dimension(nphi) :: resor     ! Residual
-  real(dp), dimension(nphi) :: rnor      ! Residual normalisation factor
   real(dp), dimension(nphi) :: prtinv    ! Inverse Prandtl numbers, (see diffusion term discretisation)
   real(dp), dimension(nphi) :: urf       ! Underrelaxation factor
   real(dp), dimension(nphi) :: urfr      ! Recipr. value of urf: 1/urf
@@ -155,16 +119,6 @@ module parameters
   real(dp), dimension(nphi) :: gds       ! Gamma blending factor [0,1] for deffered correction for convection terms: uds + gds*(uhigh-uds), 0-UDS, 1-Higher order diff.scheme
 
 end module parameters
-
-
-module hcoef
-!%%%%%%%%%%%%%
-  use types  
-    ! Arrays used in piso algorithm 
-    real(dp), dimension(:), allocatable :: h,rU,rV,rW
-end module hcoef
-
-
 
 module variables
 !%%%%%%%%%%%%%%
@@ -186,7 +140,7 @@ module variables
     real(dp), dimension(:), allocatable :: con                ! Concentration
     real(dp), dimension(:), allocatable :: uu,vv,ww,uv,uw,vw  ! Reynolds stress tensor components
     real(dp), dimension(:,:), allocatable :: bij              ! Reynolds stress anisotropy tensor
-    real(dp), dimension(:), allocatable :: fmi, fmo           ! Mass fluxes trough boundary faces
+    ! real(dp), dimension(:), allocatable :: fmi, fmo           ! Mass fluxes trough boundary faces
     real(dp), dimension(:), allocatable :: visw,ypl,tau       ! Effective visc. for boundary face, the y+ non-dimensional distance from wall, tau - wall shear stress
   
     ! values from n-1 timestep
@@ -228,17 +182,21 @@ module variables
 
 end module variables
 
+
 module title_mod
 !%%%%%%%%%%%%
+!
+! Used for output to monitor file.
+!
+use parameters, only: nphi
 
   character(len=70) :: title
-  ! character(19) :: datetime   ! A date-time character to identify unique postprocessing folder
-  character(len=4), dimension(10) ::  chvar = (/'  U ', '  V ', '  W ', '  P ', ' TE ', ' ED ', '  T ', ' VIS', 'VART', ' CON' /)
-  character(len=7), dimension(10) ::  chvarSolver = &
-  (/'U      ', 'V      ', 'W      ', 'p      ', 'k      ', 'epsilon', 'Temp   ', 'Visc   ', 'VarTemp', 'Conc   ' /)
-  character(len=100):: input_file,inlet_file,grid_file,monitor_file,restart_file,out_folder_path
+  character(len=4), dimension(nphi) ::  chvar = &
+  (/'  U ', '  V ', '  W ', '  P ',' TE ', ' ED ', '  T ', ' VIS', 'VART', ' CON', 'EPOT' /)
+  character(len=7), dimension(nphi) ::  chvarSolver = &
+  (/'U      ','V      ','W      ','p      ','k      ','epsilon','Temp   ','Visc   ','VarTemp','Conc   ','Epot   ' /)
+  character(len=100):: input_file,inlet_file,grid_file,monitor_file,restart_file
 end module title_mod
-
 
 
 module statistics
@@ -258,3 +216,11 @@ module statistics
     real(dp), dimension(:), allocatable :: tt_aver
                                              
 end module statistics
+
+
+module hcoef
+!%%%%%%%%%%%%%
+  use types  
+    ! Arrays used in piso algorithm 
+    real(dp), dimension(:), allocatable :: h,rU,rV,rW
+end module hcoef

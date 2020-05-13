@@ -11,26 +11,27 @@ subroutine read_input_file
   use parameters
   use gradients, only: lstsq, lstsq_qr, lstsq_dm, gauss, limiter
   use title_mod
+  use utils
+  use mpi
 
   implicit none
-
-  include 'mpif.h'
 
   integer :: i,imon
   character(len=2) :: trpn
   character(len=25) :: convective_scheme
+  character(len=5) :: nproc_char
 !
 !***********************************************************************
 !
 
-  ! Root processor opens files
+! Root processor opens files
   if (myid .eq. 0) then
 
   open(unit=5,file=input_file)
   rewind 5
 
   read(5,'(a70)') title 
-  read(5,*) lread,lwrite,ltest
+  read(5,*) lread,lwrite,ltest,lreadstat
   read(5,*) (lcal(i),i=1,nphi)
   read(5,*) monCell,pRefCell,MPoints
   read(5,*) slarge,sormax
@@ -39,7 +40,7 @@ subroutine read_input_file
   read(5,*) lbuoy,gravx,gravy,gravz,boussinesq
   read(5,*) roughWall,EROUGH,ZZERO
   read(5,*) facnap,facflx
-  read(5,*) ltransient,bdf,bdf2,cn
+  read(5,*) ltransient,bdf,bdf2,bdf3,cn
   read(5,*) levm,lasm,lles,ldes
   read(5,*) lsgdh,lggdh,lafm
   read(5,*) TurbModel
@@ -53,17 +54,17 @@ subroutine read_input_file
   read(5,*) numstep,timestep,nzapis,maxit
   read(5,*) lstsq, lstsq_qr, lstsq_dm, gauss
   read(5,*) npcor, nigrad
-  read(5,*) simple,piso,pimple,ncorr
+  read(5,*) simple,piso,ncorr
   read(5,*) const_mflux
   read(5,*) CoNumFix, CoNumFixValue
 
   close (5)
 
-!.Create an input file reading log:
+  ! Create an input file reading log:
   write(6,'(a)') '  Input file log: '
   write(6,'(a)') '---cut here-----------------------------------------------------------------------------'
   write(6,'(a70)') title
-  write(6,'(3(l1,1x),5x,a)') lread,lwrite,ltest,'read3,writ3,ltest'
+  write(6,'(4(l1,1x),5x,a)') lread,lwrite,ltest,lreadstat,'lread,lwrit,ltest,lreadstat'
   write(6,'(10(l1,1x),5x,a)') (lcal(i),i=1,nphi),'(lcal(i),i=1,nphi),ip=4,ite=5,ied=6,ien=7,ivis=8,ivart=9,icon=10'
   write(6,'(3(i3,1x),5x,a)') monCell,pRefCell,MPoints,'monCell,pRefCell,MPoints'
   write(6,'(2(es11.4,1x),5x,a)') slarge,sormax,'slarge,sormax'
@@ -72,7 +73,7 @@ subroutine read_input_file
   write(6,'(l1,1x,3f6.2,1x,l1,1x,a)') lbuoy,gravx,gravy,gravz,boussinesq,'lbuoy,gravx,gravy,gravz,boussinesq'
   write(6,'(L1,1x,f5.2,1x,es11.4,1x,a)') roughWall,erough,zzero,'roughWall,erough,zzero'
   write(6,'(2(f4.2,1x),a)') facnap,facflx,'facnap,facflx'
-  write(6,'(l1,1x,l1,1x,f4.2,1x,l1,1x,a)') ltransient,bdf,btime,cn,'ltransient,bdf,btime,cn'
+  write(6,'(5(l1,1x),a)') ltransient,bdf,bdf2,bdf3,cn,'ltransient,bdf,bdf2,bdf3,cn'
   write(6,'(4(l1,1x),a)') levm,lasm,lles,ldes,'levm,lasm,lles,ldes'
   write(6,'(3(l1,1x),a)') lsgdh,lggdh,lafm,'lsgdh,lggdh,lafm'
   write(6,'(i2,1x,a)') TurbModel, 'Turbulence Model'
@@ -86,13 +87,12 @@ subroutine read_input_file
   write(6,'(i5,1x,es9.2,1x,i5,1x,i4,1x,a)') numstep,timestep,nzapis,maxit,'numstep,timestep,nzapis,maxit'
   write(6,'(4(L1,1x),a)') lstsq, lstsq_qr, lstsq_dm, gauss,'lstsq, lstsq_qr, lstsq_dm, gauss'
   write(6,'(i1,1x,i1,1x,a)') npcor, nigrad,'npcor, nigrad'
-  write(6,'(3(l1,1x),i1,1x,a)') simple,piso,pimple,ncorr,'simple,piso,pimple,ncorr'
+  write(6,'(2(l1,1x),i1,1x,a)') simple,piso,ncorr,'simple,piso,ncorr'
   write(6,'(1(L1,1x),5x,a)') const_mflux,'const_mflux'
   write(6,'(L1,es11.4,5x,a)') CoNumFix, CoNumFixValue,'CoNumFix, CoNumFixValue'
   write(6,'(a)') '---cut here-----------------------------------------------------------------------------'
 
-  endif
-
+  endif ! if(myid==0): end
 
 ! Broadcast input data to other processes
   call MPI_BCAST(title,70,MPI_CHARACTER,0,MPI_COMM_WORLD,IERR)
@@ -100,6 +100,7 @@ subroutine read_input_file
   call MPI_BCAST(lread,1,MPI_LOGICAL,0,MPI_COMM_WORLD,IERR)
   call MPI_BCAST(lwrite,1,MPI_LOGICAL,0,MPI_COMM_WORLD,IERR)
   call MPI_BCAST(ltest,1,MPI_LOGICAL,0,MPI_COMM_WORLD,IERR)
+  call MPI_BCAST(lreadstat,1,MPI_LOGICAL,0,MPI_COMM_WORLD,IERR)
 
   call MPI_BCAST(lcal,NPHI,MPI_LOGICAL,0,MPI_COMM_WORLD,IERR)
 
@@ -107,7 +108,7 @@ subroutine read_input_file
   call MPI_BCAST(pRefCell,1,MPI_INTEGER,0,MPI_COMM_WORLD,IERR)
   call MPI_BCAST(MPOINTS,1,MPI_INTEGER,0,MPI_COMM_WORLD,IERR)
 
-  ! Treba naci kom procesu pripadaju monitoring tacke - pogledaj getpidlm.f kod Sase.
+  ! Treba naci kom procesu pripadaju monitoring tacke...
 
   call MPI_BCAST(slarge,1,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,IERR)
   call MPI_BCAST(sormax,1,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,IERR)
@@ -135,6 +136,7 @@ subroutine read_input_file
   call MPI_BCAST(ltransient,1,MPI_LOGICAL,0,MPI_COMM_WORLD,IERR)
   call MPI_BCAST(bdf,1,MPI_LOGICAL,0,MPI_COMM_WORLD,IERR)
   call MPI_BCAST(bdf2,1,MPI_LOGICAL,0,MPI_COMM_WORLD,IERR)  
+  call MPI_BCAST(bdf3,1,MPI_LOGICAL,0,MPI_COMM_WORLD,IERR)   
   call MPI_BCAST(cn,1,MPI_LOGICAL,0,MPI_COMM_WORLD,IERR)
 
   call MPI_BCAST(levm,1,MPI_LOGICAL,0,MPI_COMM_WORLD,IERR)
@@ -157,7 +159,6 @@ subroutine read_input_file
   call MPI_BCAST(vartin,1,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,IERR)
   call MPI_BCAST(conin,1,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,IERR)
 
-
   call MPI_BCAST(convective_scheme,1,MPI_INTEGER,0,MPI_COMM_WORLD,IERR)
   call MPI_BCAST(limiter,20,MPI_CHARACTER,0,MPI_COMM_WORLD,IERR)
 
@@ -171,7 +172,6 @@ subroutine read_input_file
   call MPI_BCAST(nzapis,1,MPI_INTEGER,0,MPI_COMM_WORLD,IERR)
   call MPI_BCAST(maxit,1,MPI_INTEGER,0,MPI_COMM_WORLD,IERR)
 
-
   call MPI_BCAST(lstsq,1,MPI_LOGICAL,0,MPI_COMM_WORLD,IERR)
   call MPI_BCAST(lstsq_qr,1,MPI_LOGICAL,0,MPI_COMM_WORLD,IERR)
   call MPI_BCAST(lstsq_dm,1,MPI_LOGICAL,0,MPI_COMM_WORLD,IERR)
@@ -182,7 +182,6 @@ subroutine read_input_file
 
   call MPI_BCAST(simple,1,MPI_LOGICAL,0,MPI_COMM_WORLD,IERR)
   call MPI_BCAST(piso,1,MPI_LOGICAL,0,MPI_COMM_WORLD,IERR)
-  call MPI_BCAST(pimple,1,MPI_LOGICAL,0,MPI_COMM_WORLD,IERR)
   call MPI_BCAST(ncorr,1,MPI_INTEGER,0,MPI_COMM_WORLD,IERR)
 
   call MPI_BCAST(const_mflux,1,MPI_LOGICAL,0,MPI_COMM_WORLD,IERR)
@@ -192,12 +191,12 @@ subroutine read_input_file
 
   ! Izgubi mu se pojam koji je process rank pa moram ovo da pozovem:
   call MPI_COMM_RANK( MPI_COMM_WORLD, myid, ierr  ) 
-
-if (myid .eq. 0) then
-  write(6,*)' '
-  write(6,*)'  Finished reading and broadcasting input data.'
-  write(6,*)' '
-endif
+  
+  if (myid .eq. 0) then
+    write(6,'(a)')' '
+    write(6,'(a)')'  **Finished reading and broadcasting input data.**'
+    write(6,'(a)')' '
+  endif  
 
 
   !
@@ -208,39 +207,40 @@ endif
   !
   ! Convective scheme:
   !
-  if(adjustl(convective_scheme) == 'central') then
-    lcds = .true.
-  elseif(adjustl(convective_scheme) == 'cds-corrected') then
-    lcdsc = .true.
-  elseif(adjustl(convective_scheme) == 'linear') then
-    lluds = .true.
-  elseif(adjustl(convective_scheme) == 'smart') then
-    lsmart = .true.
-  elseif(adjustl(convective_scheme) == 'avl-smart') then
-    lavl = .true.
-  elseif(adjustl(convective_scheme) == 'muscl') then
-    lmuscl = .true.
-  elseif(adjustl(convective_scheme) == 'umist') then
-    lumist = .true.
-  elseif(adjustl(convective_scheme) == 'koren') then
-    lkoren = .true.
-  elseif(adjustl(convective_scheme) == 'charm') then
-    lcharm = .true.
-  elseif(adjustl(convective_scheme) == 'ospre') then
-    lospre = .true.
-  elseif(adjustl(convective_scheme) == 'central-f') then
-    lcds_flnt = .true.
-  elseif(adjustl(convective_scheme) == 'linear-f') then
-    l2nd_flnt = .true.
-  elseif(adjustl(convective_scheme) == 'muscl-f') then
-    lmuscl_flnt = .true.
-  else
-    if (myid .eq. 0) then
-      write(*,'(a)') '  Convective scheme not chosen, assigning default muscl scheme'
-    endif
-    convective_scheme = 'muscl'
-  endif
-  
+  select case(convective_scheme)
+
+    case ('central')
+      lcds = .true.
+    case ('cds-corrected')
+      lcdsc = .true.
+    case ('linear')
+      lluds = .true.
+    case ('smart')
+      lsmart = .true.
+    case ('avl-smart')
+      lavl = .true.
+    case ('muscl')
+      lmuscl = .true.
+    case ('umist')
+      lumist = .true.
+    case ('koren')
+      lkoren = .true.
+    case ('charm')
+      lcharm = .true.
+    case ('ospre')
+      lospre = .true.
+    case ('central-f')
+      lcds_flnt = .true.
+    case ('linear-f')
+      l2nd_flnt = .true.
+    case('muscl-f')
+      lmuscl_flnt = .true.
+    case default
+      if (myid .eq. 0) write(*,'(a)') '  Using default convective scheme - 2nd order upwind.'
+      l2nd_flnt = .true.
+
+  end select
+
   ! Set value for flux_limiter logical
   if(lluds.or.lsmart.or.lavl.or.lmuscl.or.lumist.or.lkoren.or.lcharm.or.lospre) then
     flux_limiter = .true.
@@ -253,47 +253,47 @@ endif
     write(*,'(2a)') '  Convective scheme: ', adjustl(convective_scheme)
     write(*,'(a)') ' '
   
-  !
-  ! Gradient limiter:
-  !
+    !
+    ! Gradient limiter:
+    !
     if(adjustl(limiter) == 'Barth-Jespersen') then
 
-      write(*,*) ' Gradient limiter: Barth-Jespersen'
+      write(*,'(a)') '  Gradient limiter: Barth-Jespersen'
 
     elseif(adjustl(limiter) == 'Venkatakrishnan') then
 
-      write(*,*) ' Gradient limiter: Venkatakrishnan'
+      write(*,'(a)') '  Gradient limiter: Venkatakrishnan'
 
     elseif(adjustl(limiter) == 'mVenkatakrishnan') then
 
-      write(*,*) ' Gradient limiter: Wang modified Venkatakrishnan'
+      write(*,'(a)') '  Gradient limiter: Wang modified Venkatakrishnan'
 
     elseif(adjustl(limiter) == 'MDL') then
 
-      write(*,*) ' Gradient limiter: Multidimensional'
+      write(*,'(a)') '  Gradient limiter: Multidimensional'
 
-    else!if(adjustl(limiter) == 'no-limit') then
+    else !if(adjustl(limiter) == 'no-limit') then
 
-      write(*,*) ' Gradient limiter: no-limit'
+      write(*,'(a)') '  Gradient limiter: no-limit'
       
     endif
 
     write(*,'(a)') ' '
 
-  !
-  ! Time stepping algorithm:
-  !
+    !
+    ! Time stepping algorithm:
+    !
     if( bdf ) then
-
-      write(*,*) ' Time stepping method: Euler Implicit'
+      write(*,'(a)') '  Time stepping method: Euler Implicit'
 
     elseif(bdf2) then
+        write(*,'(a)') '  Backward-Differentiation of 2nd order - BDF2'
 
-        write(*,*) ' Time stepping method: Three Level Implicit Time Integration (BDF2)'
+    elseif(bdf2) then
+        write(*,'(a)') '  Backward-Differentiation of 3nd order - BDF3'
 
     elseif( cn ) then
-
-         write(*,*) ' Time stepping method: Crank-Nicolson'   
+         write(*,'(a)') '  Time stepping method: Crank-Nicolson'   
 
     endif
 
@@ -303,21 +303,27 @@ endif
   !
   ! Open files for data at monitoring points 
   !
-  if(ltransient) then
-    open(unit=89,file=trim(out_folder_path)//'/transient_monitoring_points')
+
+  if( ltransient ) then
+
+    ! nproc_char <- myid zapisan levo u vidu stringa.
+    call i4_to_s_left ( myid, nproc_char )
+    open(unit=89,file='processor'//trim(nproc_char)//'/monitoring_points')
     rewind 89
-    do imon=1,mpoints
-      write(trpn,'(i2)') imon
-      open(91+imon,file=trim(out_folder_path)//"/transient_monitor_point_"//trpn, access='append')
-      if(.not.lread) rewind(91+imon)
+
+    read(89,*) mpoints
+
+    do i=1,mpoints
+
+      read(89,*) imon
+
+      write(trpn,'(i0)') imon
+      open(91+imon,file="transient_monitor_point_"//adjustl(trim(trpn)), access='append')
+      if(.not.lreadstat) rewind(91+imon)
+
     end do
+
   end if
 
-  !
-  ! Pressure reference cell
-  !
 
-  iPrefProcess = 0
-  pRefCell = 1
-  
 end subroutine

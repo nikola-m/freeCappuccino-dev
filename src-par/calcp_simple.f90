@@ -1,6 +1,6 @@
  !***********************************************************************
 !
-subroutine calcp
+subroutine calcp_simple
 !***********************************************************************
 !
 ! Assemble and solve pressure correction equation in SIMPLE algorithm
@@ -17,7 +17,7 @@ subroutine calcp
   use gradients
   use fieldManipulation
   use faceflux_mass
-  ! use mpi
+  use mpi
 
   implicit none
 
@@ -27,12 +27,14 @@ subroutine calcp
 
   integer :: i, k, inp, iface, if, ijp, ijn, ib, ipro, istage
   real(dp) :: sum, suma, ppref, cap, can, fmcor
-  real(dp) :: psum
+  ! real(dp) :: psum
 
 
   a = 0.0_dp
   apr = 0.0_dp
   su = 0.0_dp
+
+  ! if( const_mflux ) call constant_mass_flow_forcing
 
   ! Tentative (!) velocity gradients used for velocity interpolation: 
   call grad(U,dUdxi)
@@ -171,6 +173,7 @@ subroutine calcp
     call iccg(pp,ip)
     ! call dpcg(pp,ip)
     ! call jacobi(pp,ip)
+    ! call pmgmres_ilu ( numCells, nnz, ioffset, ja, a, diag, pp, ip, su, nsw(ip), 4, 1e-3, sor(ip) )
        
     ! SECOND STEP *** CORRECTOR STAGE
    
@@ -184,18 +187,18 @@ subroutine calcp
   
     end do
 
-    ! If simulation uses least-squares gradinets call this to get conservative pressure correction gradients.
+    ! If simulation uses least-squares gradients call this to get conservative pressure correction gradients.
     if ( lstsq_qr .or. lstsq_dm .or. lstsq_qr ) call grad(pp,dPdxi,'gauss_corrected','no-limit')
     
-    ! ! Reference pressure correction - p'
-    ! if (myid .eq. iPrefProcess) then
-    !   ppref = pp(pRefCell)
-    !   call MPI_BCAST(ppref,1,MPI_DOUBLE_PRECISION,iPrefProcess,MPI_COMM_WORLD,IERR)
-    ! endif
+    ! Reference pressure correction - p'
+    if (myid .eq. iPrefProcess) then
+      ppref = pp(pRefCell)
+      call MPI_BCAST(ppref,1,MPI_DOUBLE_PRECISION,iPrefProcess,MPI_COMM_WORLD,IERR)
+    endif
 
-    psum = sum( pp(1:numCells) ) 
-    call global_sum( psum )
-    ppref = psum / gloCells
+    ! psum = sum( pp(1:numCells) ) 
+    ! call global_sum( psum )
+    ! ppref = psum / dble(gloCells)
 
     !
     ! Correct mass fluxes at inner cv-faces only (only inner flux)
@@ -318,6 +321,6 @@ subroutine calcp
   call exchange( p )
 
   ! Write continuity error report:
-  include 'continuityErrors.h'
+  call continuityErrors
  
 end subroutine

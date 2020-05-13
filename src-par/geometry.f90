@@ -25,7 +25,7 @@ integer :: numTotal                           ! number of volume field values + 
 ! To define boundary regions
 integer :: numBoundaries
 integer, dimension(:), allocatable :: nfaces,startFace,iBndValueStart
-character(len=15), dimension(:), allocatable :: bcname, bctype
+character(len=30), dimension(:), allocatable :: bcname, bctype
 
 integer :: npro                               ! No. of boundary faces on 'process' boundary - connected to another computational domain
 integer :: ninl                               ! No. of inlet boundary faces
@@ -42,7 +42,7 @@ real(dp), parameter :: tiny = 1e-30
 integer :: points_file, faces_file, owner_file, neighbour_file, boundary_file, process_file
 
 ! Global number of nodes, cells, faces, inner faces, and boundary faces when summed from all domains
-integer :: gloNodes,gloCells, gloFaces, gloIFaces, gloBFaces
+integer :: gloNodes,gloCells, gloFaces, gloIFaces, gloBFaces, gloNpro
 
 
 ! Mesh geometry
@@ -104,14 +104,15 @@ subroutine read_mesh
   integer :: ib,iwall,isym,ipro
   integer :: iface
   integer :: inp,inn,ijp
+  integer :: numCnct
 
   character(len=1) :: ch
   character(len=20) :: char_string,char_string2
   character(len=80) :: line_string
-  character( len = 5) :: nproc_char
+  character(len=5) :: nproc_char
 
-  integer, dimension(nomax) :: node  ! It will store global node numbers of cell vertexes
-  integer :: nnodes                  ! no. of nodes in face
+  integer, dimension(:,:), allocatable :: node  ! It will store global node numbers of face vertices
+  integer, dimension(:), allocatable :: nnodes  ! no. of nodes in face
 
   real(dp), parameter :: half = 0.5_dp
   real(dp), parameter :: third = 1./3._dp
@@ -208,7 +209,10 @@ subroutine read_mesh
   ninl = 0
   npro = 0
 
-  neighbProcOffset(1) = 1
+  ! Where is the data which will be sent to neighbouring process (a "connection")
+  ! is described by offsets in single buffer data array
+  numCnct = 1
+  neighbProcOffset( numCnct ) = 1
 
 
   do i=1,numBoundaries
@@ -230,14 +234,13 @@ subroutine read_mesh
 
     elseif( bctype(i) == 'process') then
       npro = npro + nfaces(i)
-      neighbProcOffset(i+1) = neighbProcOffset(i) + nfaces(i)
-
+      neighbProcOffset( numCnct+1 ) = neighbProcOffset( numCnct ) + nfaces(i) 
+      numCnct = numCnct + 1
     endif
   enddo  
 
   ! This denotes position of the last plus one. 
-  neighbProcOffset( numConnections+1 ) = npro + 1
-
+  ! neighbProcOffset( numConnections+1 ) = npro + 1
 
 !******************************************************************************
 ! > Find out numNodes, numFaces, numInnerFaces, etc.
@@ -454,6 +457,9 @@ subroutine read_mesh
   gloBFaces = numBoundaryFaces
   call global_isum( gloBFaces )  
 
+  gloNpro = npro
+  call global_isum( gloNpro )
+
   if ( myid .eq. 0) then
 
   write ( *, '(a)' ) ' '
@@ -482,17 +488,17 @@ subroutine read_mesh
   write ( *, '(a)' ) ' '
   write ( *, '(a,i8)' ) '  Number of cell-faces on boundary, numBoundaryFaces = ', gloBFaces
   
-  write ( *, '(a)' ) ' '
-  write ( *, '(a)' ) '  Boundary information (bcname, bctype, nFaces, startFace):'
-  write ( *, '(a)' ) ' '
+  ! write ( *, '(a)' ) ' '
+  ! write ( *, '(a)' ) '  Boundary information (bcname, bctype, nFaces, startFace):'
+  ! write ( *, '(a)' ) ' '
   
-  do i=1,numBoundaries
-    write(*,'(2x,a,1x,a,1x,2(i0,1x))') bcname(i), bctype(i), nfaces(i) ,startFace(i) ! Now it reads four things btw
-  enddo  
+  ! do i=1,numBoundaries
+  !   write(*,'(2x,a,1x,a,1x,2(i0,1x))') bcname(i), bctype(i), nfaces(i) ,startFace(i) ! Now it reads four things btw
+  ! enddo  
 
   if( npro.gt.0 ) then
     write ( *, '(a)' ) ' '
-    write ( *, '(a,i8)' ) '  Number of processor boundary faces  = ', npro
+    write ( *, '(a,i8)' ) '  Number of processor boundary faces  = ', gloNpro
   endif
 
   write ( *, '(a)' ) ' '
@@ -588,13 +594,22 @@ endif
   end do
 
 
-
   ! The 'neighbour' file
   do i=1,numInnerFaces
     read(neighbour_file,*) neighbour(i)
     neighbour(i) = neighbour(i) + 1 ! fortran starts from 1
   end do
 
+
+  ! Allocate tmp array of number of nodes for each face - nnodes, and node array
+  allocate( nnodes(numFaces) )
+  allocate( node(4,numFaces) )
+
+  ! The 'faces' file
+  do iface=1,numFaces
+    ! Read line in 'faces' file
+    call read_line_faces_file_polyMesh(faces_file,nnodes(iface),node(1:4,iface),4)    
+  enddo 
 
   !
   ! > Array of buffer cell indices for MPI exchange
@@ -632,26 +647,26 @@ endif
 
     inp = owner(iface)
 
-    ! Initialize array of node indexes that construct the face
-    node = 0
+    ! ! Initialize array of node indexes that construct the face
+    ! node = 0
 
-    ! Read line in 'faces' file
-    call read_line_faces_file_polyMesh(faces_file,nnodes,node,nomax)
+    ! ! Read line in 'faces' file
+    ! call read_line_faces_file_polyMesh(faces_file,nnodes,node,nomax)
 
     ! Initialize total area of polygon.
     areasum = 0.0_dp
 
     ! We decompose a polygon to a series of triangles, all having first node in common.
-    do i=1,nnodes-2 
+    do i=1, nnodes(iface)-2 
       ! Vectors to vertices
       ! 2-1
-      px = x(node(i+1))-x(node(1))
-      py = y(node(i+1))-y(node(1))
-      pz = z(node(i+1))-z(node(1))
+      px = x( node(i+1,iface) )-x( node(1,iface) )
+      py = y( node(i+1,iface) )-y( node(1,iface) )
+      pz = z( node(i+1,iface) )-z( node(1,iface) )
       ! 3-1
-      qx = x(node(i+2))-x(node(1))
-      qy = y(node(i+2))-y(node(1))
-      qz = z(node(i+2))-z(node(1))
+      qx = x( node(i+2,iface) )-x( node(1,iface) )
+      qy = y( node(i+2,iface) )-y( node(1,iface) )
+      qz = z( node(i+2,iface) )-z( node(1,iface) )
 
 
       call triangle_area_vector( px,py,pz, qx,qy,qz, nx,ny,nz )
@@ -665,9 +680,9 @@ endif
       arz(iface) = arz(iface) + nz
 
       ! Face center for a triangle
-      cx = third*( x(node(i+2)) + x(node(i+1)) + x(node(1)) )
-      cy = third*( y(node(i+2)) + y(node(i+1)) + y(node(1)) )
-      cz = third*( z(node(i+2)) + z(node(i+1)) + z(node(1)) ) 
+      cx = third*( x( node(i+2,iface) ) + x( node(i+1,iface) ) + x( node(1,iface) ) )
+      cy = third*( y( node(i+2,iface) ) + y( node(i+1,iface) ) + y( node(1,iface) ) )
+      cz = third*( z( node(i+2,iface) ) + z( node(i+1,iface) ) + z( node(1,iface) ) ) 
 
       !
       ! > Cell-face centroid components - accumulation stage
@@ -758,67 +773,48 @@ endif
   call exchange( Vol )
 
 
-  ! Rewind 'faces' file for one more sweep
-  rewind( faces_file )
-  ch = ' '
-  do
-    read(faces_file,*) ch
-    if (ch == "(") then
-      exit
-    endif
-  end do 
-
-
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! > Interpolation factor
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-  do iface=1,numFaces
+  do iface=1,numInnerFaces
 
     !
     ! > Interpolation factor > inner faces
     !
 
-    if(iface <= numInnerFaces) then
+    inp = owner(iface)
+    inn = neighbour(iface)
 
-      inp = owner(iface)
-      inn = neighbour(iface)
+    xpn = xc(inn)-xc(inp)
+    ypn = yc(inn)-yc(inp)
+    zpn = zc(inn)-zc(inp)
 
-      node = 0
+    dpn = sqrt( xpn**2 + ypn**2 + zpn**2 ) 
 
-      ! Read line in 'faces' file
-      call read_line_faces_file_polyMesh(faces_file,nnodes,node,nomax)
+    !
+    ! > > Intersection point j' of line connecting centers with cell face, we are taking only three points assuming that other are co-planar
+    !
+    call find_intersection_point(&
+                                 ! plane defined by three face vertices:
+                                 x( node(1,iface) ), y( node(1,iface) ), z( node(1,iface) ),&
+                                 x( node(2,iface) ), y( node(2,iface) ), z( node(2,iface) ), &
+                                 x( node(3,iface) ), y( node(3,iface) ), z( node(3,iface) ), &
+                                 ! line defined by cell center and neighbour center:
+                                 xc(inp),yc(inp),zc(inp), &
+                                 xc(inn),yc(inn),zc(inn), &
+                                 ! intersection point (output):
+                                 xjp,yjp,zjp &
+                                )
+    xpn = xjp - xc(inp)
+    ypn = yjp - yc(inp)
+    zpn = zjp - zc(inp)
 
-      xpn = xc(inn)-xc(inp)
-      ypn = yc(inn)-yc(inp)
-      zpn = zc(inn)-zc(inp)
+    djn = sqrt( xpn**2 + ypn**2 + zpn**2 )
 
-      dpn = sqrt( xpn**2 + ypn**2 + zpn**2 ) 
+    ! Interpolation factor |P Pj'|/|P Pj| where P is cell center, Pj neighbour cell center and j' intersection point.
+    facint(iface) = djn / dpn 
 
-      !
-      ! > > Intersection point j' of line connecting centers with cell face, we are taking only three points assuming that other are co-planar
-      !
-      call find_intersection_point(&
-                                   ! plane defined by three face vertices:
-                                   x(node(1)),y(node(1)),z(node(1)),&
-                                   x(node(2)),y(node(2)),z(node(2)), &
-                                   x(node(3)),y(node(3)),z(node(3)), &
-                                   ! line defined by cell center and neighbour center:
-                                   xc(inp),yc(inp),zc(inp), &
-                                   xc(inn),yc(inn),zc(inn), &
-                                   ! intersection point (output):
-                                   xjp,yjp,zjp &
-                                  )
-      xpn = xjp - xc(inp)
-      ypn = yjp - yc(inp)
-      zpn = zjp - zc(inp)
-
-      djn = sqrt( xpn**2 + ypn**2 + zpn**2 )
-
-      ! Interpolation factor |P Pj'|/|P Pj| where P is cell center, Pj neighbour cell center and j' intersection point.
-      facint(iface) = djn / dpn 
-
-    endif
     
   enddo
 
@@ -841,12 +837,6 @@ endif
 
         iPro = iPro + 1
 
-        node = 0
-
-        ! Read line in 'faces' file
-        call read_line_faces_file_polyMesh(faces_file,nnodes,node,nomax)
-
-
         xpn = xc(inn)-xc(inp)
         ypn = yc(inn)-yc(inp)
         zpn = zc(inn)-zc(inp)
@@ -856,9 +846,9 @@ endif
         ! > > Intersection point j' of line connecting centers with cell face, we are taking only three points assuming that other are co-planar
         call find_intersection_point( &
                                      ! plane defined by three face vertices:
-                                     x(node(1)),y(node(1)),z(node(1)),&
-                                     x(node(2)),y(node(2)),z(node(2)), &
-                                     x(node(3)),y(node(3)),z(node(3)), &
+                                     x( node(1,iface) ), y( node(1,iface) ), z( node(1,iface) ),&
+                                     x( node(2,iface) ), y( node(2,iface) ), z( node(2,iface) ), &
+                                     x( node(3,iface) ), y( node(3,iface) ), z( node(3,iface) ), &
                                      ! line defined by cell center and neighbour center:
                                      xc(inp),yc(inp),zc(inp), &
                                      xc(inn),yc(inn),zc(inn), &
@@ -872,23 +862,19 @@ endif
         djn = sqrt( xpn**2 + ypn**2 + zpn**2 )
 
         ! Interpolation factor |P Pj'|/|P Pj| where P is cell center, Pj neighbour cell center and j' intersection point.
-        fpro(iPro) = djn/dpn
-
-      enddo
-
-    else
-    ! Not a proces boundary
-
-      do i=1,nfaces(ib)
-
-        ! Read line in 'faces' file
-        call read_line_faces_file_polyMesh(faces_file,nnodes,node,nomax)
+        fpro(iPro) = djn / dpn
 
       enddo
 
     endif
 
-  enddo ! interpolation factor loop
+  enddo
+
+
+  ! Thank you
+  deallocate(nnodes)
+  deallocate(node)
+
 
   ! Loop over wall boundaries to calculate normal distance from cell center of the first cell layer - dnw, and
   ! loop over symmetry boundaries to calculate normal distance from cell center of the first cell layer - dns.
@@ -952,56 +938,99 @@ endif
 
   enddo
 
+
+
+  ! !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  ! ! > Auxilliary points P' and N' 
+  ! ! (see Ferziger and Peric book, especially 
+  ! ! the segments where treatment of nonorthogonality 
+  ! ! is presented.)
+  ! !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+  ! allocate( xpp(numInnerFaces) )
+  ! allocate( ypp(numInnerFaces) )
+  ! allocate( zpp(numInnerFaces) )
+  ! allocate( xep(numInnerFaces) )
+  ! allocate( yep(numInnerFaces) )
+  ! allocate( zep(numInnerFaces) )
+
+  ! do i=1,numInnerFaces
+
+  !   ijp = owner(i)
+  !   ijn = neighbour(i)
+
+  !   ! cell face area
+  !   are = sqrt(arx(i)**2+ary(i)**2+arz(i)**2)
+
+  !   ! Unit vectors of the normal
+  !   nxx = arx(i)/are
+  !   nyy = ary(i)/are
+  !   nzz = arz(i)/are
+
+  !   xpp(i) = xf(i)-(xf(i)-xc(ijp))*nxx
+  !   ypp(i) = yf(i)-(yf(i)-yc(ijp))*nyy
+  !   zpp(i) = zf(i)-(zf(i)-zc(ijp))*nzz
+
+  !   xep(i) = xf(i)-(xf(i)-xc(ijn))*nxx
+  !   yep(i) = yf(i)-(yf(i)-yc(ijn))*nyy
+  !   zep(i) = zf(i)-(zf(i)-zc(ijn))*nzz
+    
+  ! enddo
+
+
 !******************************************************************************
 ! > Report on geometrical quantities > I will leave this for debug purposes.
 !..............................................................................
 
-  ! if (myid .eq. 0 ) then
+  if (myid .eq. 0 ) then
 
-  ! write ( *, '(a)' ) ' '
-  ! write ( *, '(a)' ) '  Cell data: '
+  write ( *, '(a)' ) ' '
+  write ( *, '(a)' ) '  Cell data: '
 
-  ! call r8vec_print_some ( numCells, vol, 1, 10, &
-  !     '  First 10 elements of cell volumes array:' )
+  call r8vec_print_some ( numCells, vol, 1, 10, &
+      '  First 10 elements of cell volumes array:' )
 
-  ! call r8vec_print_some ( numCells, xc, 1, 10, &
-  !     '  First 10 elements of cell x-centers array:' )
+  call r8vec_print_some ( numCells, xc, 1, 10, &
+      '  First 10 elements of cell x-centers array:' )
 
-  ! call r8vec_print_some ( numCells, yc, 1, 10, &
-  !     '  First 10 elements of cell y-centers array:' )
+  call r8vec_print_some ( numCells, yc, 1, 10, &
+      '  First 10 elements of cell y-centers array:' )
 
-  ! call r8vec_print_some ( numCells, zc, 1, 10, &
-  !     '  First 10 elements of cell z-centers array:' )
+  call r8vec_print_some ( numCells, zc, 1, 10, &
+      '  First 10 elements of cell z-centers array:' )
 
-  ! write ( *, '(a)' ) ' '
-  ! write ( *, '(a)' ) '  Face data: '
+  write ( *, '(a)' ) ' '
+  write ( *, '(a)' ) '  Face data: '
 
-  ! call i4vec_print2 ( 10, owner, neighbour, '  First 10 lines of owner and neighbour arrays:' )
+  call i4vec_print2 ( 10, owner, neighbour, '  First 10 lines of owner and neighbour arrays:' )
 
-  ! call r8vec_print_some ( numFaces, arx, 1, 10, &
-  !     '  First 10 elements of Arx array:' )
+  call r8vec_print_some ( numFaces, arx, 1, 10, &
+      '  First 10 elements of Arx array:' )
 
-  ! call r8vec_print_some ( numFaces, ary, 1, 10, &
-  !     '  First 10 elements of Ary array:' )
+  call r8vec_print_some ( numFaces, ary, 1, 10, &
+      '  First 10 elements of Ary array:' )
 
-  ! call r8vec_print_some ( numFaces, arz, 1, 10, &
-  !     '  First 10 elements of Arz array:' )
+  call r8vec_print_some ( numFaces, arz, 1, 10, &
+      '  First 10 elements of Arz array:' )
 
-  !   call r8vec_print_some ( numFaces, xf, 1, 10, &
-  !     '  First 10 elements of xf array:' )
+    call r8vec_print_some ( numFaces, xf, 1, 10, &
+      '  First 10 elements of xf array:' )
 
-  ! call r8vec_print_some ( numFaces, yf, 1, 10, &
-  !     '  First 10 elements of yf array:' )
+  call r8vec_print_some ( numFaces, yf, 1, 10, &
+      '  First 10 elements of yf array:' )
 
-  ! call r8vec_print_some ( numFaces, zf, 1, 10, &
-  !     '  First 10 elements of zf array:' )
+  call r8vec_print_some ( numFaces, zf, 1, 10, &
+      '  First 10 elements of zf array:' )
 
-  ! call r8vec_print_some ( numInnerFaces, facint, 1, 10, &
-  !     '  First 10 elements of interpolation factor (facint) array:' )
+  call r8vec_print_some ( numInnerFaces, facint, 1, 10, &
+      '  First 10 elements of interpolation factor (facint) array:' )
 
-  ! endif
+  endif
 
-
+  ! Thank you
+  deallocate (x)
+  deallocate (y)
+  deallocate (z)
 !
 !  > CLOSE polyMesh format file: 'points', 'faces', 'owner', 'neighbour', 'boundary', 'process'.
 !

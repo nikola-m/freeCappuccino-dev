@@ -97,29 +97,30 @@ subroutine iccg(fi,ifi)
     end do
   enddo
 
-  call exchange(d)
 
-  ! Contribution from cells at processor boundary.
-  ipro = 0
 
-  do ib=1,numBoundaries
+  ! ! Contribution from cells at processor boundary.
+  ! ipro = 0
+  ! call exchange(d)
+  
+  ! do ib=1,numBoundaries
 
-    if ( bctype(ib) == 'process' ) then
+  !   if ( bctype(ib) == 'process' ) then
 
-      do i=1,nfaces(ib)
+  !     do i=1,nfaces(ib)
         
-        iface = startFace(ib) + i
-        k = owner(iface)
-        ijn = iBndValueStart(ib) + i
-        ipro = ipro + 1
+  !       iface = startFace(ib) + i
+  !       k = owner(iface)
+  !       ijn = iBndValueStart(ib) + i
+  !       ipro = ipro + 1
 
-        d( k ) = d( k ) - apr( ipro )*d( ijn )*apr( ipro )
+  !       d( k ) = d( k ) - apr( ipro )*d( ijn )*apr( ipro )
 
-      enddo
+  !     enddo
 
-    endif
+  !   endif
 
-  enddo
+  ! enddo
 
   do i=1,numCells
     d(i) =  1.0_dp / (d(i) + small)
@@ -174,7 +175,7 @@ subroutine iccg(fi,ifi)
 !
   pk(1:numCells) = zk + bet*pk(1:numCells)
 
-  call exchange( pk )
+
 
 !
 ! Calculate scalar product (pk.a pk) and alpha (overwrite zk)
@@ -188,26 +189,28 @@ subroutine iccg(fi,ifi)
     enddo
   enddo
 
-  ! Processor boundaries
-  ipro = 0
+  ! ! Processor boundaries
+  ! ipro = 0
 
-  do ib=1,numBoundaries
+  !  call exchange( pk )
 
-    if ( bctype(ib) == 'process' ) then
+  ! do ib=1,numBoundaries
 
-      do i=1,nfaces(ib)
-        iface = startFace(ib) + i
-        k = owner(iface)
-        ijn = iBndValueStart(ib) + i
-        ipro = ipro + 1
+  !   if ( bctype(ib) == 'process' ) then
 
-        zk( k ) = zk( k ) + apr( ipro ) * pk( ijn )
+  !     do i=1,nfaces(ib)
+  !       iface = startFace(ib) + i
+  !       k = owner(iface)
+  !       ijn = iBndValueStart(ib) + i
+  !       ipro = ipro + 1
 
-      enddo
+  !       zk( k ) = zk( k ) + apr( ipro ) * pk( ijn )
 
-    endif
+  !     enddo
 
-  enddo
+  !   endif
+
+  ! enddo
 
   ! Inner product
   pkapk=sum(pk*zk)
@@ -223,7 +226,7 @@ subroutine iccg(fi,ifi)
   res = res - alf*zk
 
 
-  ! L^1-norm of residual
+  ! L1-norm of residual
   resl = sum(abs(res))
   
   call global_sum(resl)

@@ -55,7 +55,7 @@ subroutine bcin
           ! so minus signs here is to turn net mass influx - flomas, into positive value.
           flomas = flomas - flmass(iface) 
           flomom = flomom + abs(flmass(iface))*sqrt(u(ini)**2+v(ini)**2+w(ini)**2)
-          flowen = flowen + abs(flmass(iface)*t(ini))
+          ! flowen = flowen + abs(flmass(iface)*t(ini))
           flowte = flowte + abs(flmass(iface)*te(ini))
           flowed = flowed + abs(flmass(iface)*ed(ini))
           
@@ -120,6 +120,9 @@ subroutine bcin
     write ( *, '(a)' ) '  Inlet boundary condition information:'
     write ( *, '(a,e12.6)' ) '  Mass inflow: ', flomas
     write ( *, '(a,e12.6)' ) '  Momentum inflow: ', flomom
+    ! write ( *, '(a,e12.6)' ) '  Temperature inflow: ', flowen  
+    write ( *, '(a,e12.6)' ) '  TKE inflow: ', flowte      
+    write ( *, '(a,e12.6)' ) '  Dissipation inflow: ', flowed
     write ( *, '(a)' ) ' '
 
   else

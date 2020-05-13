@@ -83,7 +83,7 @@ subroutine create_lsq_grad_matrix(phi,dPhidxi)
 implicit none
 
   real(dp), dimension(numTotal), intent(in) :: phi
-  real(dp), dimension(3,numCells), intent(inout) :: dPhidxi
+  real(dp), dimension(3,numTotal), intent(inout) :: dPhidxi
 
 
   call allocate_lsq_grad_matrix
@@ -134,14 +134,14 @@ implicit none
     call grad_lsq_qr(phi,dPhidxi,2,dmatqr)
 
   elseif (lstsq_dm) then 
-
+    
     call grad_lsq_dm(phi,dPhidxi,2,dmat)
 
-  elseif ( (lstsq_qr .and. gauss) .or. (lstsq .and. gauss) ) then
-
+  elseif ( (lstsq_dm .and. gauss) .or. (lstsq .and. gauss) ) then
     ! Using the lstsq or lstsq_qr switch the Least-squares gradients are already calculated above
     ! Using these we perform more precise interpolation of our variable to faces and get 
     ! conservative gradients using Gauss rule.
+    ! call grad_lsq_dm(phi,dPhidxi,2,dmat)
     call grad_gauss_corrected(phi,dPhidxi(1,:),dPhidxi(2,:),dPhidxi(3,:)) 
 
   else 
@@ -215,7 +215,7 @@ subroutine grad_vector_field(U,V,W,dUdxi,dVdxi,dWdxi)
     call grad_lsq_dm(U,dUdxi,2,dmat)
     call grad_lsq_dm(V,dVdxi,2,dmat)
     call grad_lsq_dm(W,dWdxi,2,dmat)
-  elseif ( (lstsq_qr .and. gauss) .or. (lstsq .and. gauss) ) then
+  elseif ( gauss ) then
     call grad_gauss_corrected(U,dUdxi(1,:),dUdxi(2,:),dUdxi(3,:))
     call grad_gauss_corrected(V,dVdxi(1,:),dVdxi(2,:),dVdxi(3,:))
     call grad_gauss_corrected(W,dWdxi(1,:),dWdxi(2,:),dWdxi(3,:))
@@ -225,6 +225,11 @@ subroutine grad_vector_field(U,V,W,dUdxi,dVdxi,dWdxi)
     call grad_gauss(W,dWdxi(1,:),dWdxi(2,:),dWdxi(3,:))
   endif
 
+  ! if ( (lstsq_qr .and. gauss) .or. (lstsq .and. gauss) ) then
+  !   call grad_gauss_corrected(U,dUdxi(1,:),dUdxi(2,:),dUdxi(3,:))
+  !   call grad_gauss_corrected(V,dVdxi(1,:),dVdxi(2,:),dVdxi(3,:))
+  !   call grad_gauss_corrected(W,dWdxi(1,:),dWdxi(2,:),dWdxi(3,:))
+  ! endif
 
   ! MPI exchange:
   call exchange( dUdxi(1,:) )
@@ -514,12 +519,12 @@ subroutine slope_limiter_Barth_Jespersen(phi, dPhidxi)
 
   implicit none
 
-  !     Input
+  ! Input
   real(dp),dimension(numTotal) :: phi
   real(dp),dimension(3,numTotal) :: dPhidxi
 
 
-  !     Locals
+  ! Locals
   integer :: inp,ijp,ijn,k
   integer :: istart,iend
   real(dp) :: phi_p
@@ -835,13 +840,13 @@ subroutine grad_lsq(fi,dFidxi,istage,dmat)
 
   integer, intent(in) :: istage
   real(dp),dimension(numTotal), intent(in)   :: fi
-  real(dp),dimension(3,numCells), intent(inout) :: dFidxi
+  real(dp),dimension(3,numTotal), intent(inout) :: dFidxi
   real(dp),dimension(9,numCells), intent(inout) :: dmat
 
   !
   ! Locals
   !
-  integer :: i,ijp,ijn,ijnp,inp,ib,iface,ipro
+  integer :: i,ijp,ijn,inp,ib,iface
 
   real(dp), dimension(numCells) :: b1,b2,b3 
   real(dp) :: Dx,Dy,Dz
@@ -886,12 +891,8 @@ subroutine grad_lsq(fi,dFidxi,istage,dmat)
  
 
   ! Boundary faces:
-
-  iPro = 0
-
   do ib=1,numBoundaries
 
- 
     if ( bctype(ib) == 'process') then
     ! Faces on processor boundaries
 
@@ -899,9 +900,7 @@ subroutine grad_lsq(fi,dFidxi,istage,dmat)
 
         iface = startFace(ib) + i
         ijp = owner(iface)
-
-        iPro = iPro + 1
-        ijn = numCells + iPro
+        ijn = iBndValueStart(ib) + i
 
         Dx = xc(ijn)-xc(ijp)
         Dy = yc(ijn)-yc(ijp)
@@ -1010,8 +1009,6 @@ subroutine grad_lsq(fi,dFidxi,istage,dmat)
 
   ! Boundary faces:
 
-  iPro = 0
-
   do ib=1,numBoundaries
 
  
@@ -1023,12 +1020,10 @@ subroutine grad_lsq(fi,dFidxi,istage,dmat)
         iface = startFace(ib) + i
         ijp = owner(iface)
         ijn = iBndValueStart(ib) + i
-        iPro = iPro + 1
-        ijnp = numCells + iPro
 
-        Dx = ( xc(ijnp)-xc(ijp) ) * ( Fi(ijn)-Fi(ijp) )
-        Dy = ( yc(ijnp)-yc(ijp) ) * ( Fi(ijn)-Fi(ijp) )
-        Dz = ( zc(ijnp)-zc(ijp) ) * ( Fi(ijn)-Fi(ijp) )
+        Dx = ( xc(ijn)-xc(ijp) ) * ( Fi(ijn)-Fi(ijp) )
+        Dy = ( yc(ijn)-yc(ijp) ) * ( Fi(ijn)-Fi(ijp) )
+        Dz = ( zc(ijn)-zc(ijp) ) * ( Fi(ijn)-Fi(ijp) )
 
         b1(ijp) = b1(ijp) + Dx
         b2(ijp) = b2(ijp) + Dy
@@ -1119,13 +1114,13 @@ subroutine grad_lsq_qr(fi,dfidxi,istage,d)
 
   integer, intent(in) :: istage
   real(dp), dimension(numTotal), intent(in)   :: fi
-  real(dp), dimension(n,numCells), intent(inout) :: dFidxi
+  real(dp), dimension(n,numTotal), intent(inout) :: dFidxi
   real(dp), dimension(n,m,numCells), intent(inout) :: D
 
   !
   !    Locals
   !
-  integer ::  i,l,k,ijp,ijn,ib,inp,iface,ipro
+  integer ::  i,l,k,ijp,ijn,ib,inp,iface
 
   integer, dimension(numCells) :: neighbour_index  
 
@@ -1178,8 +1173,6 @@ subroutine grad_lsq_qr(fi,dfidxi,istage,d)
 
   ! Boundary faces:
 
-  iPro = 0
-
   do ib=1,numBoundaries
 
  
@@ -1190,9 +1183,7 @@ subroutine grad_lsq_qr(fi,dfidxi,istage,d)
 
         iface = startFace(ib) + i
         ijp = owner(iface)
-
-        iPro = iPro + 1
-        ijn = numCells + iPro
+        ijn = iBndValueStart(ib) + i
 
         neighbour_index(ijp) = neighbour_index(ijp) + 1
         l = neighbour_index(ijp)
@@ -1403,13 +1394,13 @@ subroutine grad_lsq_dm(fi,dFidxi,istage,dmat)
 
   integer, intent(in) :: istage
   real(dp),dimension(numTotal), intent(in)   :: fi
-  real(dp),dimension(3,numCells), intent(inout) :: dFidxi
+  real(dp),dimension(3,numTotal), intent(inout) :: dFidxi
   real(dp),dimension(9,numCells), intent(inout) :: dmat
 
   !
   ! Locals
   !
-  integer :: i,ijp,ijn,ijnp,inp,ib,iface,ipro
+  integer :: i,ijp,ijn,inp,ib,iface
 
   real(dp) :: w
   real(dp) :: Dx,Dy,Dz
@@ -1462,8 +1453,6 @@ subroutine grad_lsq_dm(fi,dFidxi,istage,dmat)
 
   ! Boundary faces:
 
-  iPro = 0
-
   do ib=1,numBoundaries
 
  
@@ -1474,9 +1463,7 @@ subroutine grad_lsq_dm(fi,dFidxi,istage,dmat)
 
         iface = startFace(ib) + i
         ijp = owner(iface)
-
-        iPro = iPro + 1
-        ijn = numCells + iPro
+        ijn = iBndValueStart(ib) + i
 
         w = 1./((xc(ijn)-xc(ijp))**2+(yc(ijn)-yc(ijp))**2+(zc(ijn)-zc(ijp))**2)
 
@@ -1591,8 +1578,6 @@ subroutine grad_lsq_dm(fi,dFidxi,istage,dmat)
 
   ! Boundary faces:
 
-  iPro = 0
-
   do ib=1,numBoundaries
 
  
@@ -1604,14 +1589,12 @@ subroutine grad_lsq_dm(fi,dFidxi,istage,dmat)
         iface = startFace(ib) + i
         ijp = owner(iface)
         ijn = iBndValueStart(ib) + i
-        iPro = iPro + 1
-        ijnp = numCells + iPro
 
-        w = 1./((xc(ijnp)-xc(ijp))**2+(yc(ijnp)-yc(ijp))**2+(zc(ijnp)-zc(ijp))**2)
+        w = 1./((xc(ijn)-xc(ijp))**2+(yc(ijn)-yc(ijp))**2+(zc(ijn)-zc(ijp))**2)
 
-        Dx = w * ( xc(ijnp)-xc(ijp) ) * ( Fi(ijn)-Fi(ijp) )
-        Dy = w * ( yc(ijnp)-yc(ijp) ) * ( Fi(ijn)-Fi(ijp) )
-        Dz = w * ( zc(ijnp)-zc(ijp) ) * ( Fi(ijn)-Fi(ijp) )
+        Dx = w * ( xc(ijn)-xc(ijp) ) * ( Fi(ijn)-Fi(ijp) )
+        Dy = w * ( yc(ijn)-yc(ijp) ) * ( Fi(ijn)-Fi(ijp) )
+        Dz = w * ( zc(ijn)-zc(ijp) ) * ( Fi(ijn)-Fi(ijp) )
 
         b1(ijp) = b1(ijp) + Dx
         b2(ijp) = b2(ijp) + Dy
@@ -1693,12 +1676,12 @@ subroutine grad_gauss(u,dudx,dudy,dudz)
 
   ! Arguments
   real(dp), dimension(numTotal), intent(in) :: u
-  real(dp), dimension(numCells), intent(inout) :: dudx,dudy,dudz
+  real(dp), dimension(numTotal), intent(inout) :: dudx,dudy,dudz
 
   ! Local
-  integer :: i,ijp,ijn,ijnp,ib,lc,iface,ipro
+  integer :: i,ijp,ijn,ib,lc,iface,ipro
   real(dp) :: volr
-  real(dp), dimension(numCells) :: dfxo,dfyo,dfzo
+  real(dp), dimension(numTotal) :: dfxo,dfyo,dfzo
 
   ! Initialize gradient
   dfxo = 0.0_dp
@@ -1740,9 +1723,8 @@ subroutine grad_gauss(u,dudx,dudy,dudz)
         ijp = owner(iface)
         ijn = iBndValueStart(ib) + i
         iPro = iPro + 1
-        ijnp = numCells + iPro
 
-        call gradcopar( ijp, ijn, ijnp, xf(iface), yf(iface), zf(iface), arx(iface), ary(iface), arz(iface), fpro(ipro), &
+        call gradco( ijp, ijn, xf(iface), yf(iface), zf(iface), arx(iface), ary(iface), arz(iface), fpro(ipro), &
                      u, dfxo, dfyo, dfzo, dudx, dudy, dudz )
 
       enddo
@@ -1815,12 +1797,12 @@ subroutine grad_gauss_corrected(u,dudx,dudy,dudz)
 
   ! Arguments
   real(dp), dimension(numTotal), intent(in) :: u
-  real(dp), dimension(numCells), intent(inout) :: dudx,dudy,dudz
+  real(dp), dimension(numTotal), intent(inout) :: dudx,dudy,dudz
 
   ! Local
-  integer :: i,ijp,ijn,ijnp,ib,iface,ipro
+  integer :: i,ijp,ijn,ib,if,ipro
   real(dp) :: volr
-  real(dp), dimension(numCells) :: dfxo,dfyo,dfzo
+  real(dp), dimension(numTotal) :: dfxo,dfyo,dfzo
 
   ! Initialize gradient with lsq gradient
   dfxo = dudx
@@ -1854,13 +1836,12 @@ subroutine grad_gauss_corrected(u,dudx,dudy,dudz)
 
       do i=1,nfaces(ib)
 
-        iface = startFace(ib) + i
-        ijp = owner(iface)
+        if = startFace(ib) + i
+        ijp = owner(if)
         ijn = iBndValueStart(ib) + i
         iPro = iPro + 1
-        ijnp = numCells + iPro
 
-        call gradcopar( ijp, ijn, ijnp, xf(iface), yf(iface), zf(iface), arx(iface), ary(iface), arz(iface), fpro(ipro), &
+        call gradco( ijp, ijn, xf(if), yf(if), zf(if), arx(if), ary(if), arz(if), fpro(ipro), &
                      u, dfxo, dfyo, dfzo, dudx, dudy, dudz )
 
       enddo
@@ -1870,11 +1851,11 @@ subroutine grad_gauss_corrected(u,dudx,dudy,dudz)
 
       do i=1,nfaces(ib)
 
-        iface = startFace(ib) + i
-        ijp = owner(iface)
+        if = startFace(ib) + i
+        ijp = owner(if)
         ijn = iBndValueStart(ib) + i
 
-        call gradbc(arx(iface), ary(iface), arz(iface), u(ijn), dudx(ijp), dudy(ijp), dudz(ijp))
+        call gradbc(arx(if), ary(if), arz(if), u(ijn), dudx(ijp), dudy(ijp), dudz(ijp))
 
       enddo
 
@@ -1914,8 +1895,8 @@ subroutine gradco( ijp,ijn, &
   real(dp), intent(in) :: sx,sy,sz
   real(dp), intent(in) :: fif
   real(dp), dimension(numTotal), intent(in) :: fi
-  real(dp), dimension(numCells), intent(in) :: dfxo,dfyo,dfzo
-  real(dp), dimension(numCells), intent(inout)  :: dfx,dfy,dfz
+  real(dp), dimension(numTotal), intent(in) :: dfxo,dfyo,dfzo
+  real(dp), dimension(numTotal), intent(inout)  :: dfx,dfy,dfz
 
 
   real(dp) :: xi,yi,zi,dfxi,dfyi,dfzi
@@ -1932,71 +1913,6 @@ subroutine gradco( ijp,ijn, &
     xi = xc(ijp)*fxp+xc(ijn)*fxn
     yi = yc(ijp)*fxp+yc(ijn)*fxn
     zi = zc(ijp)*fxp+zc(ijn)*fxn
-
-    dfxi = dfxo(ijp)*fxp+dfxo(ijn)*fxn
-    dfyi = dfyo(ijp)*fxp+dfyo(ijn)*fxn
-    dfzi = dfzo(ijp)*fxp+dfzo(ijn)*fxn
-
-    ! Value of the variable at cell-face center
-    fie = fi(ijp)*fxp+fi(ijn)*fxn + dfxi*(xfc-xi)+dfyi*(yfc-yi)+dfzi*(zfc-zi)
-
-
-    ! (interpolated mid-face value)x(area)
-    dfxe = fie*sx
-    dfye = fie*sy
-    dfze = fie*sz
-
-    ! Accumulate contribution at cell center and neighbour
-    dfx(ijp) = dfx(ijp)+dfxe
-    dfy(ijp) = dfy(ijp)+dfye
-    dfz(ijp) = dfz(ijp)+dfze
-     
-    dfx(ijn) = dfx(ijn)-dfxe
-    dfy(ijn) = dfy(ijn)-dfye
-    dfz(ijn) = dfz(ijn)-dfze
-
-
-end subroutine
-
-
-subroutine gradcopar( ijp,ijn, ijnp, &
-                      xfc,yfc,zfc,sx,sy,sz,fif, &
-                      fi,dfxo,dfyo,dfzo,dfx,dfy,dfz )
-!=======================================================================
-!     This routine calculates contribution to the gradient
-!     vector of a scalar FI at the CV center, arising from
-!     an inner cell face (cell-face value of FI times the 
-!     corresponding component of the surface vector).
-!=======================================================================
-  use types
-  use parameters
-  use geometry
-
-  implicit none
-
-  integer,    intent(in) :: ijp,ijn,ijnp
-  real(dp), intent(in) :: xfc,yfc,zfc
-  real(dp), intent(in) :: sx,sy,sz
-  real(dp), intent(in) :: fif
-  real(dp), dimension(numTotal), intent(in) :: fi
-  real(dp), dimension(numCells), intent(in) :: dfxo,dfyo,dfzo
-  real(dp), dimension(numCells), intent(inout)  :: dfx,dfy,dfz
-
-
-  real(dp) :: xi,yi,zi,dfxi,dfyi,dfzi
-  real(dp) :: fie,dfxe,dfye,dfze
-  real(dp) :: fxn,fxp
-
-    !
-    ! Coordinates of point on the line connecting center and neighbor,
-    ! old gradient vector components interpolated for this location.
-
-    fxn = fif 
-    fxp = 1.0d0-fxn
-
-    xi = xc(ijp)*fxp+xc(ijnp)*fxn
-    yi = yc(ijp)*fxp+yc(ijnp)*fxn
-    zi = zc(ijp)*fxp+zc(ijnp)*fxn
 
     dfxi = dfxo(ijp)*fxp+dfxo(ijn)*fxn
     dfyi = dfyo(ijp)*fxp+dfyo(ijn)*fxn

@@ -9,7 +9,7 @@ subroutine calcstress
 !
   use types
   use parameters
-  use geometry, only: numCells, vol
+  use geometry, only: numCells
   use variables
 
   implicit none 
@@ -17,7 +17,6 @@ subroutine calcstress
 !***********************************************************************
 !
   integer :: inp
-  real(dp) :: volr                    ! 1/cellvolume
   real(dp) :: vist                    ! turbulent viscosity
   real(dp) :: dudx, dudy, dudz, &     ! dudxi - the velocity gradient
               dvdx, dvdy, dvdz, &     ! dvdxi - the velocity gradient
@@ -29,8 +28,6 @@ subroutine calcstress
   facnapm = 1.0d0-facnap
 
   do inp=1,numCells
-
-    volr=1.0_dp/vol(inp)
 
     vist=(vis(inp)-viscos)/densit
 

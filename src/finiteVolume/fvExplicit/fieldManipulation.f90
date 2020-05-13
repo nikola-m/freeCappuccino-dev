@@ -3,11 +3,15 @@
 !***********************************************************************
 !
   use types
-  use parameters
   use gradients
+  use interpolation, only: face_value_w_option
 
   implicit none
 
+  ! The inerpolations that we do for e.g. divergence is hardcoded here
+  ! I think it is the best thing to choose the best working thing.
+  ! Recommended are: 'central', 'cds', 'cdscorr'
+  character(len=10), parameter :: scheme = 'cdscorr' 
 
   interface explDiv
     module procedure explDiv
@@ -57,10 +61,17 @@
   subroutine calcPressDiv 
 !
 !***********************************************************************
-!  
-!  Calculates -Div(p)                                      
-!  ExplDiv(u) = sum_{i=1}^{i=nf} (u)_f*sf or
-!  Interpolation to cell face centers done by cds corrected scheme.
+! 
+!  -(nabla p) is a vector field: -( (nabla p)x . i + (nabla p)y . j + (nabla p)z . k )
+!  Instead of computing the Grad(p) vector field in center and integrate volumetricaly
+!  simply multiplying it by Vol(ijp), we write it in divergence form.
+!  Interpolate to face {-(nabla p),i . e_i}_f * S_f
+!  where ',i' is a partial derivative with respect to i, i={x,y,z},
+!  '.' is a scalar product of vectors,
+!  and {}_f is interpolation to face center.
+!  And get {-(nabla p),i}_f * (S_f. e_i) = {-(nabla p),i}_f * S_fi
+!  Source(u_i) = sum_over_cell_faces {-(nabla p),i}_f * S_fi
+!  Interpolation to cell face centers done by central scheme.
 !
 !***********************************************************************
 !
@@ -75,6 +86,7 @@
 
 
 !...Local
+    integer, parameter :: nipgrad = 2 
     integer :: i,ijp,ijn,ijb,iface,istage
     real(dp) :: dfxe,dfye,dfze
 
@@ -122,16 +134,10 @@
 
 !***********************************************************************
 !
-  function explDiv(u) result(div)
+  function explDiv(u,v,w) result(div)
 !
 !***********************************************************************
 !  
-!  Calculates explicit divergence of scalar field phi - Div(phi)                                       
-!  explDiv(u) = sum_{i=1}^{i=nf} (u)_f*sf or
-!  Interpolation to cell face centers done by cds corrected scheme.
-!
-!***********************************************************************
-!
   use geometry
 
   implicit none
@@ -143,15 +149,18 @@
     real(dp), dimension(numCells) :: div
 
 !...Input
-    real(dp), dimension(numTotal) :: u
+    real(dp), dimension(numTotal) :: u,v,w
 
 !...Local
     integer :: i,ijp,ijn,ijb,iface
     real(dp) :: dfxe
-    real(dp), dimension(3,numCells) :: dUdxi
+    real(dp), dimension(3,numTotal) :: dUdxi,dvdxi,dWdxi
 
     ! Calculate cell-centered gradient
+    !call updateBoundary(u,'boundary_region_name', zeroGrad/value/nGrad)
     call grad(u,dUdxi)
+    call grad(v,dVdxi)
+    call grad(w,dWdxi)
 
     ! Calculate terms integrated over surfaces
 
@@ -160,7 +169,7 @@
       ijp = owner(i)
       ijn = neighbour(i)
       call faceDivInner(ijp, ijn, xf(i), yf(i), zf(i), arx(i), ary(i), arz(i), facint(i), &
-                        u, dUdxi,dfxe)
+                        u,v,w, dUdxi,dvdxi,dWdxi, dfxe)
 
       ! Accumulate contribution at cell center and neighbour.
       div(ijp) = div(ijp)+dfxe
@@ -173,7 +182,11 @@
       iface = numInnerFaces + i
       ijp = owner(iface)
       ijb = numCells + i
-      call faceDivBoundary(arx(iface), ary(iface), arz(iface), u(ijb), dfxe)
+      call faceDivBoundary(arx(iface), ary(iface), arz(iface), u(ijb),v(ijb),w(ijb), dfxe)
+      ! I'm putting minus here, because the face normal is allways facing out
+      ! and if we get positive alignement with that vector we will have a positive contribution 
+      ! to divergence, but the thing is in fact opposite since divergence 
+      ! grows if something goes into the volume      
       div(ijp) = div(ijp) + dfxe
     enddo
 
@@ -184,17 +197,10 @@
 
 !***********************************************************************
 !
-  function explDivMdot(flmass,u) result(div)
+  function explDivMdot(flmass,u,v,w) result(div)
 !
 !***********************************************************************
 !  
-!  Calculates explicit divergence of scalar field mdot*phi - Div(mdot,phi)                                       
-!  explDiv(u) = sum_{i=1}^{i=nf} mdot*(u)_f*sf or
-!  Interpolation to cell face centers done by cds corrected scheme.
-!  flmass - is surface field, no need for intepolation.
-!
-!***********************************************************************
-!
   use geometry
 
   implicit none
@@ -207,15 +213,18 @@
 
 !...Input
     real(dp), dimension(numTotal) :: flmass
-    real(dp), dimension(numTotal) :: u
+    real(dp), dimension(numTotal) :: u,v,w
 
 !...Local
     integer :: i,ijp,ijn,ijb,iface
     real(dp) :: dfxe
-    real(dp), dimension(3,numCells) :: dUdxi
+    real(dp), dimension(3,numTotal) ::  dUdxi,dvdxi,dWdxi
 
     ! Calculate cell-centered gradient
+    !call updateBoundary(u,'boundary_region_name', zeroGrad/value/nGrad)
     call grad(u,dUdxi)
+    call grad(v,dVdxi)
+    call grad(w,dWdxi)
 
     ! Calculate terms integrated over surfaces
 
@@ -224,7 +233,7 @@
       ijp = owner(i)
       ijn = neighbour(i)
       call faceDivInner(ijp, ijn, xf(i), yf(i), zf(i), arx(i), ary(i), arz(i), facint(i), &
-                        u, dUdxi,dfxe)
+                        u,v,w,  dUdxi,dvdxi,dWdxi ,dfxe)
 
       ! Accumulate contribution at cell center and neighbour.
       div(ijp) = div(ijp) + flmass(i) * dfxe
@@ -238,7 +247,11 @@
       iface = numInnerFaces + i
       ijp = owner(iface)
       ijb = numCells + i
-      call faceDivBoundary(arx(iface), ary(iface), arz(iface), u(ijb), dfxe)
+      call faceDivBoundary(arx(iface), ary(iface), arz(iface), u(ijb),v(ijb),w(ijb), dfxe)
+      ! I'm putting minus here, because the face normal is allways facing out
+      ! and if we get positive alignement with that vector we will have a positive contribution 
+      ! to divergence, but the thing is in fact opposite since divergence 
+      ! grows if something goes into the volume
       div(ijp) = div(ijp) + flmass(iface) * dfxe
     enddo
 
@@ -255,50 +268,31 @@
                               fi,df,dfxe,dfye,dfze)
 !
 !***********************************************************************
-! 
-!     This routine calculates contribution to the explicit Divergence
-!     of a scalar FI (pressure) arising from an inner cell face.
 !
-!***********************************************************************
-!
-    use types
-    use parameters
-    use geometry
+    use geometry, only: numTotal
 
     implicit none
 
-    integer,    intent(in) :: ijp,ijn
+    integer,  intent(in) :: ijp,ijn
     real(dp), intent(in) :: xfc,yfc,zfc
     real(dp), intent(in) :: sx,sy,sz
     real(dp), intent(in) :: fif
     real(dp), dimension(numTotal), intent(in) :: fi
-    real(dp), dimension(3,numCells), intent(in) :: df
+    real(dp), dimension(3,numTotal), intent(in) :: df
+    real(dp), intent(out) :: dfxe,dfye,dfze
 
-
-    real(dp) :: xi,yi,zi,dfxi,dfyi,dfzi
-    real(dp) :: fie,dfxe,dfye,dfze
-    real(dp) :: fxn,fxp
+    real(dp) :: fie
 !
 !***********************************************************************
 !
-    fxn = fif 
-    fxp = 1.0d0-fxn
 
-    xi = xc(ijp)*fxp+xc(ijn)*fxn
-    yi = yc(ijp)*fxp+yc(ijn)*fxn
-    zi = zc(ijp)*fxp+zc(ijn)*fxn
+  ! Value of the variable at cell-face center
+  fie = face_value_w_option( ijp, ijn, xfc, yfc, zfc, fif, fi, df, scheme )
 
-    dfxi = df(ijp,1)*fxp+df(ijn,1)*fxn
-    dfyi = df(ijp,2)*fxp+df(ijn,2)*fxn
-    dfzi = df(ijp,3)*fxp+df(ijn,3)*fxn
-
-    ! Value of the variable at cell-face center
-    fie = fi(ijp)*fxp+fi(ijn)*fxn + dfxi*(xfc-xi)+dfyi*(yfc-yi)+dfzi*(zfc-zi)
-
-    ! (interpolated mid-face value)x(area)
-    dfxe = fie*sx
-    dfye = fie*sy
-    dfze = fie*sz
+  ! (interpolated mid-face value)x(area)
+  dfxe = fie*sx
+  dfye = fie*sy
+  dfze = fie*sz
 
   end subroutine
 
@@ -308,18 +302,11 @@
 !
   subroutine faceDivInner(ijp,ijn, &
                           xfc,yfc,zfc,sx,sy,sz,fif, &
-                          fi,df,dfxe)
+                          u,v,w,du,dv,dw,dfxe)
 !
 !***********************************************************************
 ! 
-!     This routine calculates contribution to the explicit Divergence
-!     of a scalar FI (pressure) arising from an inner cell face.
-!
-!***********************************************************************
-!
-    use types
-    use parameters
-    use geometry
+    use geometry, only: numTotal
 
     implicit none
 
@@ -327,61 +314,41 @@
     real(dp), intent(in) :: xfc,yfc,zfc
     real(dp), intent(in) :: sx,sy,sz
     real(dp), intent(in) :: fif
-    real(dp), dimension(numTotal), intent(in) :: fi
-    real(dp), dimension(3,numCells), intent(in) :: df
+    real(dp), dimension(numTotal), intent(in) :: u,v,w
+    real(dp), dimension(3,numTotal), intent(in) :: du,dv,dw
+    real(dp), intent(out) :: dfxe
 
-
-    real(dp) :: xi,yi,zi,dfxi,dfyi,dfzi
-    real(dp) :: fie,dfxe
-    real(dp) :: fxn,fxp
-    real(dp) :: are
+    real(dp) :: uf,vf,wf
 !
 !***********************************************************************
 !
-    fxn = fif 
-    fxp = 1.0d0-fxn
 
-    xi = xc(ijp)*fxp+xc(ijn)*fxn
-    yi = yc(ijp)*fxp+yc(ijn)*fxn
-    zi = zc(ijp)*fxp+zc(ijn)*fxn
+  ! Value of the variable at cell-face center
+  uf = face_value_w_option( ijp, ijn, xfc, yfc, zfc, fif, u, du, scheme )
+  vf = face_value_w_option( ijp, ijn, xfc, yfc, zfc, fif, v, dv, scheme )
+  wf = face_value_w_option( ijp, ijn, xfc, yfc, zfc, fif, w, dw, scheme )
 
-    dfxi = df(ijp,1)*fxp+df(ijn,1)*fxn
-    dfyi = df(ijp,2)*fxp+df(ijn,2)*fxn
-    dfzi = df(ijp,3)*fxp+df(ijn,3)*fxn
-
-    ! Value of the variable at cell-face center
-    fie = fi(ijp)*fxp+fi(ijn)*fxn + dfxi*(xfc-xi)+dfyi*(yfc-yi)+dfzi*(zfc-zi)
-
-    ! Face area
-    are = sqrt(sx**2+sy**2+sz**2)
-
-    ! (interpolated mid-face value)x(area)
-    dfxe = fie*are
+  ! (interpolated mid-face value)x(area)
+  dfxe = uf*sx + vf*sy + wf*sz
 
   end subroutine
 
 
 !***********************************************************************
 !
-  subroutine faceDivBoundary(sx,sy,sz,fi,dfx)
+  subroutine faceDivBoundary(sx,sy,sz,uf,vf,wf,dfx)
 !
 !***********************************************************************
 !
-!  This routine calculates the contribution of a boundary cell face to 
-!  explicit Divergence of scalar FI.
-!
-!***********************************************************************
-!
-
     implicit none
 
     real(dp), intent(in) :: sx,sy,sz
-    real(dp), intent(in) :: fi
+    real(dp), intent(in) :: uf,vf,wf
     real(dp), intent(out)  :: dfx
 !
 !***********************************************************************
 !
-    dfx = fi*sqrt(sx**2+sy**2+sz**2)
+    dfx = uf*sx + vf*sy + wf*sz
 
   end subroutine
 
@@ -391,12 +358,6 @@
 !
 !***********************************************************************
 !
-!  This routine calculates the contribution of a boundary cell face to 
-!  explicit Divergence of scalar FI.
-!
-!***********************************************************************
-!
-
     implicit none
 
     real(dp), intent(in) :: sx,sy,sz
@@ -438,30 +399,29 @@
     real(dp), dimension(numTotal) :: u
 
 !...Local
-    integer :: i,ijp,ijn,iface
-    real(dp) :: dfxe
+    integer :: i,ijp,ijn,ijb,iface
+    real(dp) :: ui
     real(dp) :: are
-    real(dp), dimension(3,numCells) :: dUdxi
+    real(dp), dimension(3,numTotal) :: dUdxi
     real(dp), dimension(numCells) :: sumsf
 
     ! Calculate cell-centered gradient
     call grad(u,dUdxi)
 
-    ! Calculate terms integrated over surfaces
 
     ! Inner face
     do i=1,numInnerFaces
       ijp = owner(i)
       ijn = neighbour(i)
-      call faceDivInner(ijp, ijn, xf(i), yf(i), zf(i), arx(i), ary(i), arz(i), facint(i), &
-                        u, dUdxi,dfxe)
-
-      ! Accumulate contribution at cell center and neighbour.
-      aver(ijp) = aver(ijp)+dfxe
-
-      aver(ijn) = aver(ijn)-dfxe
 
       are = sqrt( arx(i)**2 + ary(i)**2 + arz(i)**2 ) 
+
+      ui = face_value_w_option( ijp, ijn, xf(i), yf(i), zf(i), facint(i), u, dUdxi, scheme )
+
+      ! Accumulate contribution at cell center and neighbour.
+      aver(ijp) = aver(ijp)+ui*are
+      aver(ijn) = aver(ijn)-ui*are
+
       sumsf(ijp) = sumsf(ijp) + are
       sumsf(ijn) = sumsf(ijn) + are
 
@@ -471,9 +431,12 @@
     do i=1,numBoundaryFaces
       iface = numInnerFaces + i
       ijp = owner(iface)
+      ijb = numCells + i
 
       are = sqrt( arx(iface)**2 + ary(iface)**2 + arz(iface)**2 ) 
+      aver(ijp) = aver(ijp)+u(ijb)*are
       sumsf(ijp) = sumsf(ijp) + are
+
     enddo
 
     ! Divide by bounding faces total area
@@ -487,7 +450,7 @@
 
 !***********************************************************************
 !
-  function Interpolate(u) result(ui)
+  function field_interpolate(u) result(ui)
 !
 !***********************************************************************
 !  
@@ -511,7 +474,7 @@
 
 !...Local
     integer :: i,ijp,ijn,ijb,iface
-    real(dp), dimension(3,numCells) :: dUdxi
+    real(dp), dimension(3,numTotal) :: dUdxi
 
     ! Calculate cell-centered gradient
     call grad(u,dUdxi)
@@ -522,9 +485,10 @@
     do i=1,numInnerFaces
       ijp = owner(i)
       ijn = neighbour(i)
-      call faceInterpolateCdsCorr( ijp, ijn, xf(i), yf(i), zf(i), facint(i), u, dUdxi, ui(i) )
+      ui(i) = face_value_w_option( ijp, ijn, xf(i), yf(i), zf(i), facint(i), u, dUdxi, scheme )
     enddo
 
+    ! Update boundaries?
 
     ! Contribution from boundaries
     do i=1,numBoundaryFaces
@@ -533,8 +497,7 @@
       ui(iface) = u(ijb)
     enddo
 
-  return
-  end
+  end function
 
 
 
@@ -560,23 +523,22 @@
     real(dp), dimension(numCells) :: ssum
 
 !...Input
-    real(dp), dimension(numTotal) :: u
+    real(dp), dimension(numTotal), intent(in) :: u
 
 !...Local
     integer :: i,ijp,ijn,ijb,if
     real(dp) :: ui
-    real(dp), dimension(3,numCells) :: dUdxi
+    real(dp), dimension(3,numTotal) :: dUdxi
 
     ! Calculate cell-centered gradient
     call grad(u,dUdxi)
-
-    ! Calculate terms integrated over surfaces
 
     ! Inner face
     do i=1,numInnerFaces
       ijp = owner(i)
       ijn = neighbour(i)
-      call faceInterpolateCdsCorr( ijp, ijn, xf(i), yf(i), zf(i), facint(i), u, dUdxi, ui )
+
+      ui = face_value_w_option( ijp, ijn, xf(i), yf(i), zf(i), facint(i), u, dUdxi, scheme )
 
       ! Accumulate contribution at cell center and neighbour.
       ssum(ijp) = ssum(ijp)+ui
@@ -625,7 +587,7 @@
 !...Local
     integer :: i,ijp,ijn,ijb,if
     real(dp) :: ui
-    real(dp), dimension(3,numCells) :: dUdxi
+    real(dp), dimension(3,numTotal) :: dUdxi
 
     ! Calculate cell-centered gradient
     call grad(u,dUdxi)
@@ -636,7 +598,8 @@
     do i=1,numInnerFaces
       ijp = owner(i)
       ijn = neighbour(i)
-      call faceInterpolateCdsCorr( ijp, ijn, xf(i), yf(i), zf(i), facint(i), u, dUdxi, ui )
+
+      ui = face_value_w_option( ijp, ijn, xf(i), yf(i), zf(i), facint(i), u, dUdxi, scheme )
 
       ! Accumulate contribution at cell center and neighbour.
       ssum(ijp) = ssum(ijp)+ui
@@ -659,55 +622,6 @@
     enddo
 
   end function
-
-
-!
-!***********************************************************************
-!
-  subroutine faceInterpolateCdsCorr(ijp,ijn, &
-                                    xfc,yfc,zfc,fif, &
-                                    fi,df,fie)
-!
-!***********************************************************************
-! 
-! This routine calculates face interpolant using CDS corrected.
-!
-!***********************************************************************
-!
-    use types
-    use parameters
-    use geometry
-
-    implicit none
-
-    integer,    intent(in) :: ijp,ijn
-    real(dp), intent(in) :: xfc,yfc,zfc
-    real(dp), intent(in) :: fif
-    real(dp), dimension(numTotal), intent(in) :: fi
-    real(dp), dimension(3,numCells), intent(in) :: df
-
-
-    real(dp) :: xi,yi,zi,dfxi,dfyi,dfzi
-    real(dp) :: fie
-    real(dp) :: fxn,fxp
-!
-!***********************************************************************
-!
-    fxn = fif 
-    fxp = 1.0d0-fxn
-
-    xi = xc(ijp)*fxp+xc(ijn)*fxn
-    yi = yc(ijp)*fxp+yc(ijn)*fxn
-    zi = zc(ijp)*fxp+zc(ijn)*fxn
-
-    dfxi = df(ijp,1)*fxp+df(ijn,1)*fxn
-    dfyi = df(ijp,2)*fxp+df(ijn,2)*fxn
-    dfzi = df(ijp,3)*fxp+df(ijn,3)*fxn
-
-    ! Value of the variable at cell-face center
-    fie = fi(ijp)*fxp+fi(ijn)*fxn + dfxi*(xfc-xi)+dfyi*(yfc-yi)+dfzi*(zfc-zi)
-
-  end subroutine
 
 
 

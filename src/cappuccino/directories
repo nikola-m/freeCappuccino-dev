@@ -4,10 +4,11 @@ src/finiteVolume/fvEqnDiscretization/Velocity
 src/finiteVolume/fvEqnDiscretization/Pressure
 src/finiteVolume/fvEqnDiscretization/ScalarEqns
 src/finiteVolume/fvEqnDiscretization/TurbulenceModels
+src/finiteVolume/fvEqnDiscretization/MHD
+src/finiteVolume/interpolation
 src/finiteVolume/fvExplicit
 src/finiteVolume/fvImplicit
 src/finiteVolume/initialization
-src/finiteVolume/interpolation
 src/finiteVolume/tensorFields
 src/sparseMatrix
 src/linearSolvers

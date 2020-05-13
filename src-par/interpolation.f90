@@ -163,38 +163,12 @@ end function
   real(dp), dimension(3,numPCells) :: gradfi
 
   ! Locals
-  real(dp) ::  phi_p, phi_n
-  real(dp) :: xcp,ycp,zcp
-  real(dp) :: xcn,ycn,zcn
-  real(dp) :: gradfi_p_x,gradfi_p_y,gradfi_p_z
-  real(dp) :: gradfi_n_x,gradfi_n_y,gradfi_n_z
   real(dp) :: gradfidr
-
-  ! Values at cell center's of neighbouring cells:
-  phi_p = fi(inp)
-
-  phi_n = fi(inn)
-
-  xcp = xc(inp)
-  ycp = yc(inp)
-  zcp = zc(inp)
-
-  xcn = xc(inn)
-  ycn = yc(inn)
-  zcn = zc(inn)
-
-  gradfi_p_x = gradfi(1,inp)
-  gradfi_p_y = gradfi(2,inp)
-  gradfi_p_z = gradfi(3,inp)
-
-  gradfi_n_x = gradfi(1,inn)
-  gradfi_n_y = gradfi(2,inn)
-  gradfi_n_z = gradfi(3,inn)
    
-  gradfidr=gradfi_p_x*(xf-xcp)+gradfi_p_y*(yf-ycp)+gradfi_p_z*(zf-zcp) &
-          +gradfi_n_x*(xf-xcn)+gradfi_n_y*(yf-ycn)+gradfi_n_z*(zf-zcn)
+  gradfidr=gradfi(1,inp)*(xf-xc(inp))+gradfi(2,inp)*(yf-yc(inp))+gradfi(3,inp)*(zf-zc(inp)) &
+          +gradfi(1,inn)*(xf-xc(inn))+gradfi(2,inn)*(yf-yc(inn))+gradfi(3,inn)*(zf-zc(inn))
 
-  face_value = 0.5_dp*( phi_p + phi_n + gradfidr)
+  face_value = 0.5_dp*( fi(inp) + fi(inn) + gradfidr)
 
   end function
 

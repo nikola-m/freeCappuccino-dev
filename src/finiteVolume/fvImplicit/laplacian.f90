@@ -3,7 +3,7 @@ subroutine laplacian(mu,phi)
 !******************************************************************************
 !
 !     Fills matrix with coefficients representing implicit FVM discretization 
-!     of negative Laplacian operator: -div(mu*grad(phi)).
+!     of Laplacian operator: -div(mu*grad(phi)).
 !
 !     System of linear equations is written as:
 !     $ a_p^{(i)}*\phi_p^(i)-\sum_{j=1}^{nb} a_j^{(i)}*\phi_j^(i) = b_p{(i)}, i=1,ncells $
@@ -24,9 +24,10 @@ subroutine laplacian(mu,phi)
   ! Local variables
   !
 
-  integer :: i, ib, k, ijp, ijn, ijb, iface
+  integer :: i, k, ijp, ijn
+  integer :: ib,ijb,iface
   real(dp) :: cap, can
-  real(dp) :: are,dpw
+  real(dp) :: are,dpw,dcoef
 
 
   ! Initialize matrix array
@@ -69,7 +70,7 @@ subroutine laplacian(mu,phi)
 
   do ib=1,numBoundaries
 
-    if ( bctype(ib) == 'wall') then
+    !if ( bctype(ib) == 'wall') then
 
       do i=1,nfaces(ib)
 
@@ -77,18 +78,16 @@ subroutine laplacian(mu,phi)
         ijp = owner(iface)
         ijb = iBndValueStart(ib) + i
 
-        k = diag(ijp)
-
         are = sqrt(arx(iface)**2+ary(iface)**2+arz(iface)**2)
         dpw = sqrt( (xc(ijp)-xf(iface))**2 + (yc(ijp)-yf(iface))**2 + (zc(ijp)-zf(iface))**2 )
 
-        a(k) = a(k) - mu(ijp)*are/dpw !..or mu_wall*are/dpw;  
-        !a(k) = a(k) - mu(ijp)*srdw(i)  
-        su(ijp) = su(ijp) + a(k)*phi(ijb)
+        dcoef   = mu(ijp)*are/dpw
+        a( diag(ijp) ) = a( diag(ijp) ) - dcoef  
+        su(ijp) = su(ijp) - dcoef*phi(ijb)
 
       enddo
 
-    endif
+    !endif
     
   enddo
 

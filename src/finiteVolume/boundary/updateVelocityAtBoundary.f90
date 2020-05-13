@@ -17,7 +17,7 @@ subroutine updateVelocityAtBoundary
 !     Local variables
 !
   integer :: i,ijp,ijb,ib,iface
-  real(dp) :: Unmag,flowo,fac
+  real(dp) :: Unmag,flowo
 
   ! Update velocity components along outlet boundaries
   ! and correct mass flux to satisfy global mass conservation
@@ -38,9 +38,9 @@ subroutine updateVelocityAtBoundary
       !   V(ijb) = V(ijp)
       !   W(ijb) = W(ijp)
 
-      !   flmass(iface) = den(ijp)*( u(ijb)*arx(iface)+v(ijb)*ary(iface)+w(ijb)*arz(iface) )
+        ! flmass(iface) = den(ijp)*( u(ijb)*arx(iface)+v(ijb)*ary(iface)+w(ijb)*arz(iface) )
         
-      !   flowo = flowo + flmass(iface)
+        ! flowo = flowo + flmass(iface)
 
       ! enddo
 

@@ -4,22 +4,23 @@ subroutine bcin
   use parameters
   use geometry
   use variables
+  use mpi
 
   implicit none
 
   integer :: i,ib,ini,ino,iface
   ! integer :: input_unit
-  integer :: totalNumInlets
+  ! integer :: totalNumInlets
   real(dp) :: uav,outare
-  real(dp) :: flowen, flowte, flowed
+  ! real(dp) :: flowen, flowte, flowed
   real(dp) :: are
 
 
   flomas = 0.0_dp 
-  flomom = 0.0_dp
-  flowen = 0.0_dp
-  flowte = 0.0_dp
-  flowed = 0.0_dp
+  ! flomom = 0.0_dp
+  ! flowen = 0.0_dp
+  ! flowte = 0.0_dp
+  ! flowed = 0.0_dp
 
 
   ! In the case we want to read recirculated profiles
@@ -55,10 +56,10 @@ subroutine bcin
           ! is faced inwards. That means their scalar product will be negative,
           ! so minus signs here is to turn net mass influx - flomas, into positive value.
           flomas = flomas - flmass(iface) 
-          flomom = flomom + abs(flmass(iface))*sqrt(u(ini)**2+v(ini)**2+w(ini)**2)
+          ! flomom = flomom + abs(flmass(iface))*sqrt(u(ini)**2+v(ini)**2+w(ini)**2)
           ! if(lcal(ien)) flowen = flowen + abs(flmass(iface)*t(ini))
-          flowte = flowte + abs(flmass(iface)*te(ini))
-          flowed = flowed + abs(flmass(iface)*ed(ini))
+          ! flowte = flowte + abs(flmass(iface)*te(ini))
+          ! flowed = flowed + abs(flmass(iface)*ed(ini))
           
 
         end do
@@ -66,6 +67,9 @@ subroutine bcin
       endif 
 
     enddo
+
+    ! Correct turbulence at inlet for appropriate turbulence model
+    if(lturb) call correct_turbulence_inlet()
 
   endif  
 
@@ -89,11 +93,10 @@ subroutine bcin
 
   ! Global sum - MPI communication
   call global_sum( flomas )
-  call global_sum( flomom )
-  if(lcal(ien)) call global_sum( flowen )
-  call global_sum( flowte )
-  call global_sum( flowed )
-
+  ! call global_sum( flomom )
+  ! if(lcal(ien)) call global_sum( flowen )
+  ! call global_sum( flowte )
+  ! call global_sum( flowed )
   call global_sum( outare )
 
   ! Average velocity at outlet boundary
@@ -104,7 +107,10 @@ subroutine bcin
     write ( *, '(a)' ) '  Inlet boundary condition information:'
     write ( *, '(a)' ) ' '
     write ( *, '(a,e12.6)' ) '  Mass inflow: ', flomas
-    write ( *, '(a,e12.6)' ) '  Momentum inflow: ', flomom
+    ! write ( *, '(a,e12.6)' ) '  Momentum inflow: ', flomom
+    ! write ( *, '(a,e12.6)' ) '  Temperature inflow: ', flowen  
+    ! write ( *, '(a,e12.6)' ) '  TKE inflow: ', flowte      
+    ! write ( *, '(a,e12.6)' ) '  Dissipation inflow: ', flowed    
   endif
 
 
@@ -137,23 +143,5 @@ subroutine bcin
     enddo
 
   endif  
-
-  totalNumInlets = ninl 
-  call global_isum( totalNumInlets )
-  
-
-  if ( totalNumInlets .eq. 0 ) then
-   ! No inflow into the domain: eg. natural convection case, etc.
-
-    flomas = 1.0_dp
-    flomom = 1.0_dp
-    flowen = 1.0_dp
-    flowte = 1.0_dp
-    flowed = 1.0_dp
-
-  endif
-
-  ! Correct turbulence at inlet for appropriate turbulence model
-  if(lturb) call correct_turbulence_inlet()
 
 end subroutine
