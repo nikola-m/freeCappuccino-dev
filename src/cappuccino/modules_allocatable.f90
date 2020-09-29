@@ -22,6 +22,7 @@ module parameters
   integer, parameter :: ivart=9
   integer, parameter :: icon=10
   integer, parameter :: iep=11
+  integer, parameter :: ibmag=12
 
   real(dp), parameter :: one = 1.0_dp
   real(dp), parameter :: zero = 0.0_dp

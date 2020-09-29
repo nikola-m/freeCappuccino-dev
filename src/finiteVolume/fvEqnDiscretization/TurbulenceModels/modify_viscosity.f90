@@ -1,4 +1,4 @@
-subroutine correct_turbulence()
+subroutine modify_viscosity
   use parameters, only: TurbModel
   use variables, only: u,v,w,dUdxi,dVdxi,dWdxi
   use gradients, only: grad
@@ -28,25 +28,34 @@ subroutine correct_turbulence()
   select case (TurbModel)
 
     case (1)
-      call correct_turbulence_k_epsilon_std()
+      call modify_viscosity_k_epsilon_std()
+
     case (2)
-      call correct_turbulence_k_epsilon_rng()
+      call modify_viscosity_k_epsilon_rng()
+
     case (3) 
       LowRe = .false.
-      call correct_turbulence_k_omega_sst()
+      call modify_viscosity_k_omega_sst()
+
     case (4)
       LowRe = .true.
-      call correct_turbulence_k_omega_sst()
+      call modify_viscosity_k_omega_sst()
+
     case (5)
-      call correct_turbulence_spalart_allmaras()
+      call modify_viscosity_spalart_allmaras()
+
     case (6)
-      call correct_turbulence_k_eqn_eddy()
+      call modify_viscosity_k_eqn_eddy()
+
     case (7)
-      call correct_turbulence_k_epsilon_std_2lewt()
+      call modify_viscosity_k_epsilon_std_2lewt()
+
     case (8)
-      call correct_turbulence_k_epsilon_rlzb()
+      call modify_viscosity_k_epsilon_rlzb()
+
     case (9)
-      call correct_turbulence_k_epsilon_rlzb_2lewt()
+      call modify_viscosity_k_epsilon_rlzb_2lewt()
+
     case default
       
   end select

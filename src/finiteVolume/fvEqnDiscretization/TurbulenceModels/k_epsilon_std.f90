@@ -7,6 +7,7 @@ module k_epsilon_std
   use geometry
   use variables
   use scalar_fluxes, only: facefluxsc
+  use utils, only: print_log
 
   implicit none
 
@@ -22,19 +23,20 @@ module k_epsilon_std
   real(dp), parameter :: CMU25 = sqrt(sqrt(cmu))
   real(dp), parameter :: CMU75 = cmu25**3
 
+  logical :: init = .true.
+
 
   private 
 
 
-  public :: correct_turbulence_k_epsilon_std
-  public :: correct_turbulence_inlet_k_epsilon_std
+  public :: modify_viscosity_k_epsilon_std, modify_viscosity_inlet_k_epsilon_std
 
 contains
 
 
 !***********************************************************************
 !
-subroutine correct_turbulence_k_epsilon_std()
+subroutine modify_viscosity_k_epsilon_std
 !
 !***********************************************************************
 !
@@ -49,11 +51,20 @@ subroutine correct_turbulence_k_epsilon_std()
   use gradients
 
   implicit none
+
 !
 !***********************************************************************
 !
-  call calcsc(TE,dTEdxi,ite) ! Assemble and solve turbulence kinetic energy eq.
-  call calcsc(ED,dEDdxi,ied) ! Assemble and solve dissipation rate of tke eq.
+
+  if (init) then
+    call modify_mu_eff
+    call print_log('Done setting effective viscosity based on initial fields of k and epsilon.')
+    init = .false.
+    return
+  endif
+
+  call calcsc(TE,dTEdxi,ite) ! Assemble and solve turbulence kinetic energy eqn.
+  call calcsc(ED,dEDdxi,ied) ! Assemble and solve dissipation rate of tke eqn.
   call modify_mu_eff()
 
 end subroutine
@@ -62,7 +73,7 @@ end subroutine
 
 !***********************************************************************
 !
-subroutine correct_turbulence_inlet_k_epsilon_std()
+subroutine modify_viscosity_inlet_k_epsilon_std()
 !
 !***********************************************************************
 !

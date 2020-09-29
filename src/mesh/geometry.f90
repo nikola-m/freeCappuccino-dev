@@ -26,6 +26,7 @@ integer :: numTotal         ! number of volume field values + number of boundary
 integer :: numBoundaries
 integer, dimension(:), allocatable :: nfaces,startFace,iBndValueStart
 character(len=15), dimension(:), allocatable :: bcname, bctype
+real(dp), dimension(:,:), allocatable :: bcDFraction
 
 integer :: nwal ! Total no. of boundary faces of type 'wall'
 integer :: nsym ! Total no. of boundary faces of type 'symmetry'
@@ -179,6 +180,14 @@ subroutine read_mesh_native
   allocate ( nFaces(numBoundaries) )
   allocate ( startFace(numBoundaries) )
   allocate ( iBndValueStart(numBoundaries))
+
+  ! Control how we update fields on boundaries using Dirichlet Fraction; equals one for Dirichlet boundary
+  allocate ( bcDFraction(12,numBoundaries)) ! lets say for 12 fields and for every boundary
+
+  ! Initialize all boundaries to Neumann, therefore Dirichlet fraction is zero.
+  ! This is changed to one if we stumble upon "Dirichlet" keyword when reading initial fields in 0/ folder.
+  ! checkout field_initialization module.
+  bcDFraction = 0.0_dp 
 
   nwal = 0
   nsym = 0
@@ -511,7 +520,7 @@ subroutine read_mesh_native
       
     enddo
 
-  else 
+  else ! ( interpolation_coeff_variant == 2 )
 
     !
     ! > Interpolation factor > inner faces - Variant 2.
@@ -762,6 +771,14 @@ subroutine read_mesh
   allocate ( nFaces(numBoundaries) )
   allocate ( startFace(numBoundaries) )
   allocate ( iBndValueStart(numBoundaries))
+
+  ! Control how we update fields on boundaries using Dirichlet Fraction; equals one for Dirichlet boundary
+  allocate ( bcDFraction(12,numBoundaries)) ! lets say for 12 fields and for every boundary
+
+  ! Initialize all boundaries to Neumann, therefore Dirichlet fraction is zero.
+  ! This is changed to one if we stumble upon "Dirichlet" keyword when reading initial fields in 0/ folder.
+  ! checkout field_initialization module.
+  bcDFraction = 0.0_dp 
 
   nwal = 0
   nsym = 0

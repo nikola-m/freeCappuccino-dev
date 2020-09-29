@@ -13,12 +13,13 @@ program cappuccino
   use types
   use parameters
   use geometry
+  use sparse_matrix
   use variables
   use title_mod
   use temperature
   use concentration
   use fieldManipulation
-  use sparse_matrix
+  use periodicity
   use utils
   use mpi
 
@@ -88,7 +89,8 @@ program cappuccino
   ! Initialisation of fields
   call init
   
-  call add_random_noise_to_field(U,20)
+  !call add_random_noise_to_field(U,20)
+  call face_mapping
 !
 !===============================================
 !     T i m e   l o o p : 
@@ -114,7 +116,7 @@ program cappuccino
     ! Courant number report:
     call CourantNo
 
-    ! if ( mod(itime,10).eq.0 ) call add_random_noise_to_field( U, 20 )
+    !if ( mod(itime,10).eq.0 ) call add_random_noise_to_field( U, 10 )
 
 ! 
 !===============================================
@@ -138,7 +140,7 @@ program cappuccino
       if(lturb)    call correct_turbulence()
 
       !Scalars: Temperature , temperature variance, and concentration eqs.
-      if(lcal(ien))   call calculate_temperature_field()
+      if(lcal(ien))   call calculate_temperature_field
 
       ! if(lcal(ivart)) call calculate_temperature_variance_field()
 

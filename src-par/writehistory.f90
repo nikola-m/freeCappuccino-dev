@@ -8,8 +8,8 @@
 !
 !***********************************************************************
 !
-  use parameters, only: ltransient,time,mpoints,myid
-  use variables, only: u,v,w,te,ed
+  use parameters, only: ltransient,time,mpoints
+  use variables
 
   implicit none
 !
@@ -17,7 +17,7 @@
 !
   integer :: i,inp,imon
 
-  if(ltransient ) then
+  if(ltransient .and. mpoints>0 ) then
 
     read(89,*) mpoints
 

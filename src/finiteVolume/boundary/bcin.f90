@@ -138,6 +138,6 @@ subroutine bcin
 
 
   ! Correct turbulence at inlet for appropriate turbulence model
-  if(lturb) call correct_turbulence_inlet()
+  if(lturb) call modify_viscosity_inlet()
 
 end subroutine

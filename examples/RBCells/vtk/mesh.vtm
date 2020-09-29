@@ -1,0 +1,29 @@
+<VTKFile type="vtkMultiBlockDataSet" version="1.0" byte_order="LittleEndian" header_type="UInt64">
+  <vtkMultiBlockDataSet>
+    <DataSet index="0" name="internalMesh" file="mesh/mesh_0_0.vtu">
+    </DataSet>
+    <Block index="1" name="Patches">
+      <DataSet index="0" name="floor" file="mesh/mesh_1_0.vtp">
+      </DataSet>
+      <DataSet index="1" name="ceiling" file="mesh/mesh_2_0.vtp">
+      </DataSet>
+      <DataSet index="2" name="sideWalls" file="mesh/mesh_3_0.vtp">
+      </DataSet>
+      <DataSet index="3" name="frontAndBack" file="mesh/mesh_4_0.vtp">
+      </DataSet>
+    </Block>
+  </vtkMultiBlockDataSet>
+  <FieldData>
+    <DataArray type="Int8" Name="CasePath" NumberOfTuples="51" format="ascii" RangeMin="0" RangeMax="117">
+      47 104 111 109 101 47
+      110 105 107 111 108 97
+      47 79 112 101 110 70
+      79 65 77 47 110 105
+      107 111 108 97 45 49
+      57 49 50 47 114 117
+      110 47 66 101 110 97
+      114 100 67 101 108 108
+      115 47 0
+    </DataArray>
+  </FieldData>
+</VTKFile>

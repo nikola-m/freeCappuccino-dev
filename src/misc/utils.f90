@@ -82,6 +82,17 @@ subroutine say_goodbye
 
 end subroutine
 
+subroutine print_log(line)
+!
+! Prints line into log file, separated by blank lines.
+!
+  character (len=*), intent(in) :: line
+
+  write(*,'(a)') ' '
+  write(*,'(a)') line
+  write(*,'(a)') ' '
+
+end subroutine
 
 function csr_to_k(icell,jcell,ioffset,ja) result(k)
 !

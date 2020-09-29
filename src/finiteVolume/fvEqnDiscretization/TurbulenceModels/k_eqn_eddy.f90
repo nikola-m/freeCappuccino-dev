@@ -23,8 +23,8 @@ module k_eqn_eddy
 
   private 
 
-  public :: correct_turbulence_k_eqn_eddy
-  public :: correct_turbulence_inlet_k_eqn_eddy
+  public :: modify_viscosity_k_eqn_eddy
+  public :: modify_viscosity_inlet_k_eqn_eddy
 
 
 contains
@@ -32,7 +32,7 @@ contains
 
 !***********************************************************************
 !
-subroutine correct_turbulence_k_eqn_eddy()
+subroutine modify_viscosity_k_eqn_eddy()
 !
 !***********************************************************************
 !
@@ -53,7 +53,7 @@ end subroutine
 
 !***********************************************************************
 !
-subroutine correct_turbulence_inlet_k_eqn_eddy()
+subroutine modify_viscosity_inlet_k_eqn_eddy()
 !
 !***********************************************************************  
 !

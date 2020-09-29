@@ -1,0 +1,15 @@
+internalField
+  uniform
+  31.94
+boundaryField
+  ulaz
+    Dirichlet
+      uniform
+        31.94
+  zid
+    Dirichlet
+      uniform
+        31.94
+  izlaz
+    Neumann
+    zeroGradient

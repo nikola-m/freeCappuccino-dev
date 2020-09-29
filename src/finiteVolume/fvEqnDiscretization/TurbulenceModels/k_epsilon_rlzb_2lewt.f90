@@ -35,15 +35,15 @@ module k_epsilon_rlzb_2lewt
   private 
 
 
-  public :: correct_turbulence_k_epsilon_rlzb_2lewt
-  public :: correct_turbulence_inlet_k_epsilon_rlzb_2lewt
+  public :: modify_viscosity_k_epsilon_rlzb_2lewt
+  public :: modify_viscosity_inlet_k_epsilon_rlzb_2lewt
 
 contains
 
 
 !***********************************************************************
 !
-subroutine correct_turbulence_k_epsilon_rlzb_2lewt()
+subroutine modify_viscosity_k_epsilon_rlzb_2lewt()
 !
 !***********************************************************************
 !
@@ -71,7 +71,7 @@ end subroutine
 
 !***********************************************************************
 !
-subroutine correct_turbulence_inlet_k_epsilon_rlzb_2lewt()
+subroutine modify_viscosity_inlet_k_epsilon_rlzb_2lewt()
 !
 !***********************************************************************
 !

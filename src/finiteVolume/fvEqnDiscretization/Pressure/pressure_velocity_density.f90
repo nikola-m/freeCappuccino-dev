@@ -1,8 +1,6 @@
 module compressible
 !
-! Contains functions for compressible flow calculations
-! using peessure as referent varibale, that is using
-! pressure based approach.
+! Contains functions for compressible flow calculations using pressure based solver.
 !  
   use types
   use parameters
@@ -46,9 +44,9 @@ subroutine pressure_velocity_density_coupling
   do inp = 1, numCells
 
     ! We consider only BDF2 timestepping here
-    C_rho = 1./(RVOZD*t(inp))
-    sp(inp) = C_rho*(3*vol(inp))/(2*timestep)
-    su(inp) = (3*den(inp)-4*deno(inp)+denoo(inp))*vol(inp)/(2*timestep)
+    C_rho = 1./(RVOZD*T(inp))
+    sp(inp) = C_rho*1.5_dp*vol(inp)/timestep
+    su(inp) = ( 2*deno(inp) - 0.5_dp*denoo(inp) )*vol(inp)/timestep
 
   end do
 
@@ -79,7 +77,7 @@ subroutine pressure_velocity_density_coupling
     call facefluxsc( ijp, ijn, &
                      xf(i), yf(i), zf(i), arx(i), ary(i), arz(i), &
                      flmass(i), facint(i), gam, &
-                     fi, dFidxi, prtr, capc, canc, suadd )
+                     p, dpdxi, capc, canc, suadd )
 
     ! > Off-diagonal elements:
 
@@ -105,42 +103,6 @@ subroutine pressure_velocity_density_coupling
 
     su(ijp) = su(ijp) - flmass(i) + suadd
     su(ijn) = su(ijn) + flmass(i) - suadd 
-
-  end do
-
-
-  ! o- and c-grid cuts
-  do i=1,noc
-
-    iface= ijlFace(i) ! In the future implement Weiler-Atherton cliping algorithm to compute area vector components for non matching boundaries.
-    ijp=ijl(i)
-    ijn=ijr(i)
-
-    call facefluxmass(ijp, ijn, xf(iface), yf(iface), zf(iface), arx(iface), ary(iface), arz(iface), foc(i), capd, cand, fmoc(i))
- 
-
-    call facefluxsc( ijp, ijn, &
-                     xf(iface), yf(iface), zf(iface), arx(iface), ary(iface), arz(iface), &
-                     fmoc(i), foc(i), gam, &
-                     srdoc(i), fi, dfidxi, prtr, capc, canc, suadd )
-
-    ar(i) = cand + canc
-    al(i) = capd + capc
-
-    ! > Elements on main diagonal:
-
-    ! (icell,icell) main diagonal element
-    k = diag(ijp)
-    a(k) = a(k) - ar(i)
-    
-    ! (jcell,jcell) main diagonal element
-    k = diag(ijn)
-    a(k) = a(k) - al(i)
-
-    ! > Sources:
-
-    su(ijp) = su(ijp) - fmoc(i) + suadd
-    su(ijn) = su(ijn) + fmoc(i) - suadd
 
   end do
 
@@ -207,28 +169,24 @@ subroutine pressure_velocity_density_coupling
   
     enddo
 
-    !
-    ! Correct mass fluxes at faces along O-C grid cuts.
-    !
-    do i=1,noc
-        fmoc(i) = fmoc(i) + ar(i) * pp(ijr(i)) - al(i) *  pp(ijl(i)) 
-    end do
-
-    !
+  
     ! Correct velocities and pressure
-    !      
     do inp=1,numCells
+
         u(inp) = u(inp) - dPdxi(1,inp) * vol(inp)*apu(inp)
         v(inp) = v(inp) - dPdxi(2,inp) * vol(inp)*apv(inp)
         w(inp) = w(inp) - dPdxi(3,inp) * vol(inp)*apw(inp)
+
         p(inp) = p(inp) + urf(ip)*(pp(inp)-ppref)
+
     enddo   
 
     ! Explicit correction of boundary conditions 
     call correctBoundaryConditionsVelocity
 
-    !.......................................................................................................!
-    if(ipcorr.ne.npcor) then      
+
+    if(ipcorr.ne.npcor) then ! non-orthogonal corrections -> > >
+
     !                                    
     ! The source term for the non-orthogonal corrector, also the secondary mass flux correction.
     !
@@ -249,27 +207,10 @@ subroutine pressure_velocity_density_coupling
 
       enddo                                                              
 
-      ! Faces along O-C grid cuts
-      do i=1,noc
-        iface= ijlFace(i) ! In the future implement Weiler-Atherton cliping algorithm to compute area vector components for non matching boundaries.
-        ijp = ijl(i)
-        ijn = ijr(i)
-
-        call fluxmc(ijp, ijn, xf(iface), yf(iface), zf(iface), arx(iface), ary(iface), arz(iface), foc(i), fmcor)
-
-        fmoc(i)=fmoc(i)+fmcor
-
-        su(ijp)=su(ijp)-fmcor
-        su(ijn)=su(ijn)+fmcor
-
-      end do
-
-    endif                                                             
-    !.......................................................................................................!
+    endif ! < < <- END: non-orthogonal corrections
 
 
-!*END: Multiple pressure corrections loop *******************************************************************
-  enddo
+  enddo ! END: Multiple pressure corrections loop 
 
   ! Write continuity error report:
   include 'continuityErrors.h'
@@ -282,14 +223,14 @@ end
 !***********************************************************************
 !
 subroutine facefluxsc(ijp, ijn, xf, yf, zf, arx, ary, arz, &
-                      flmass, lambda, gam, FI, dFidxi, &
-                      prtr, cap, can, suadd)
+                      fm, lambda, gam, FI, dFidxi, &
+                      cap, can, suadd)
 !
 !***********************************************************************
 !
   use types
   use parameters
-  use variables, only: vis
+  use variables
   use interpolation
 
   implicit none
@@ -300,22 +241,17 @@ subroutine facefluxsc(ijp, ijn, xf, yf, zf, arx, ary, arz, &
   integer, intent(in) :: ijp, ijn
   real(dp), intent(in) :: xf,yf,zf
   real(dp), intent(in) :: arx, ary, arz
-  real(dp), intent(in) :: flmass
+  real(dp), intent(in) :: fm
   real(dp), intent(in) :: lambda
   real(dp), intent(in) :: gam 
   real(dp), dimension(numTotal), intent(in) :: Fi
   real(dp), dimension(3,numCells), intent(in) :: dFidxi
-  real(dp), intent(in) :: prtr
   real(dp), intent(inout) :: cap, can, suadd
 
 
 ! Local variables
-  integer  :: nrelax
-  character(len=12) :: approach
-  real(dp) :: Cp,Ce
-  real(dp) :: fii,fm
+  real(dp) :: fii
   real(dp) :: fcfie,fcfii,ffic
-
   real(dp) :: fxp,fxn
 
 !----------------------------------------------------------------------
@@ -327,28 +263,18 @@ subroutine facefluxsc(ijp, ijn, xf, yf, zf, arx, ary, arz, &
 
 
   ! Coeff in convection-like term
-  Crho_den = 1./(RVOZD*t(inp)*den(inp))*fxp + 1./(RVOZD*t(ine)*den(ine))*fxe
+  Crhof = 1./(RVOZD*T(inp)*den(inp))*fxp + 1./(RVOZD*T(ine)*den(ine))*fxe
 
-  ! Upwind varijanta
-  Crho_den_pj = 1./(RVOZD*t(ijn)*den(ijn))
-  Crho_den_p  = 1./(RVOZD*t(ijp)*den(ijp))
 
   ! Convection fluxes - uds
-  fm = flmass
-  ce = min(fm,zero) 
-  cp = max(fm,zero)
-
-  !-------------------------------------------------------
+ 
   ! System matrix coefficients
-  !-------------------------------------------------------
-  cap = max(-fm,zero)*Crho_den_pj*urf(ip)
-  can = max( fm,zero)*Crho_den_p *urf(ip)
-  !-------------------------------------------------------
+  cap = min(fm*Crhof,zero)
+  can = max(fm*Crhof,zero)
 
 
-  !-------------------------------------------------------
   ! Explicit higher order convection
-  !-------------------------------------------------------
+
   if( flmass .ge. zero ) then 
     ! Flow goes from p to pj - > p is the upwind node
     fii = face_value(ijp, ijn, xf, yf, zf, fxp, fi, dFidxi)
@@ -359,20 +285,12 @@ subroutine facefluxsc(ijp, ijn, xf, yf, zf, arx, ary, arz, &
 
   fcfie = fm*fii
 
-  !-------------------------------------------------------
   ! Explicit first order convection
-  !-------------------------------------------------------
-  fcfii = ce*fi(ijn)+cp*fi(ijp)
+  fcfii = min(fm,zero)*fi(ijn)+max(fm,zero)*fi(ijp)
+ 
 
-  !-------------------------------------------------------
-  ! Deffered correction for convection = gama_blending*(high-low)
-  !-------------------------------------------------------
-  ffic = gam*(fcfie-fcfii)
-
-  !-------------------------------------------------------
-  ! Explicit part of fluxes
-  !-------------------------------------------------------
-  suadd = -ffic
+  ! Explicit part of fluxes - Deffered correction for convection = gama_blending*(high-low) 
+  suadd = -gam*(fcfie-fcfii)
 
 end subroutine
 

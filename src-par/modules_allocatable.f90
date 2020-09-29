@@ -104,6 +104,7 @@ module parameters
   logical :: lcds_flnt = .false.
   logical :: l2nd_flnt = .false.
   logical :: lmuscl_flnt = .false.
+  logical :: lcubic = .false.
 
   logical :: flux_limiter = .false.
     

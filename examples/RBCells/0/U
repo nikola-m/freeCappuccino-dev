@@ -1,0 +1,21 @@
+internalField
+  uniform
+  1e-4 0.0 0.0
+boundaryField
+  floor
+   Dirichlet
+    uniform
+     0. 0. 0.
+  ceiling
+   Dirichlet
+    uniform
+     0. 0. 0.
+  sideWalls
+   Dirichlet
+    uniform
+     0. 0. 0.
+  frontAndBack
+   Neumann
+    zeroGradient
+
+

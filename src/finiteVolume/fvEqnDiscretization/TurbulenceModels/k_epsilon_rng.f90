@@ -26,14 +26,14 @@ module k_epsilon_rng
   private 
 
 
-  public :: correct_turbulence_k_epsilon_rng
-  public :: correct_turbulence_inlet_k_epsilon_rng
+  public :: modify_viscosity_k_epsilon_rng
+  public :: modify_viscosity_inlet_k_epsilon_rng
 
 contains
 
 
 
-subroutine correct_turbulence_k_epsilon_rng()
+subroutine modify_viscosity_k_epsilon_rng()
 !
 ! Main module routine to solve turbulence model equations and update effective viscosity.
 !
@@ -47,11 +47,11 @@ subroutine correct_turbulence_k_epsilon_rng()
   call calcsc(ED,dEDdxi,ied) ! Assemble and solve specific dissipation rate (omega [1/s]) of tke eq.
   call modify_mu_eff()
 
-end subroutine correct_turbulence_k_epsilon_rng
+end subroutine modify_viscosity_k_epsilon_rng
 
 
 
-subroutine correct_turbulence_inlet_k_epsilon_rng()
+subroutine modify_viscosity_inlet_k_epsilon_rng()
 !
 ! Update effective viscosity at inlet
 !
@@ -59,7 +59,7 @@ subroutine correct_turbulence_inlet_k_epsilon_rng()
 
   call modify_mu_eff_inlet()
 
-end subroutine correct_turbulence_inlet_k_epsilon_rng
+end subroutine modify_viscosity_inlet_k_epsilon_rng
 
 
 !***********************************************************************

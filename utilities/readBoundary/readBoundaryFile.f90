@@ -40,7 +40,7 @@ logical :: lpar = .false.
             i = i+1
             call get_command_argument(i,argument)
             read(argument,*) np
-            write(*,'(a)') " Number of processes: ", np
+            write(*,'(a,i0)') " Number of processes: ", np
             i = i+1
 
           case ('-d')
@@ -74,9 +74,10 @@ logical :: lpar = .false.
       rewind process_file
       write(process_file, '(a)') '# neighbProcNo nFaces startFace'
       !--------------------------------------------------------
-      call process_boundary_file(boundary_of,boundary_file,process_file)
+      call process_boundary_file_par(boundary_of,boundary_file,process_file)
       !--------------------------------------------------------
       close( boundary_file )
+      close( process_file )
     enddo
   else
     call execute_command_line("cp polyMesh/boundary polyMesh/boundary-OF")

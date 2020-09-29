@@ -49,15 +49,15 @@ module k_omega_sst
   private 
 
   public :: LowRe
-  public :: correct_turbulence_k_omega_sst
-  public :: correct_turbulence_inlet_k_omega_sst
+  public :: modify_viscosity_k_omega_sst
+  public :: modify_viscosity_inlet_k_omega_sst
 
 contains
 
 
 !***********************************************************************
 !
-subroutine correct_turbulence_k_omega_sst()
+subroutine modify_viscosity_k_omega_sst()
 !
 !***********************************************************************
 !
@@ -84,7 +84,7 @@ end subroutine
 
 !***********************************************************************
 !
-subroutine correct_turbulence_inlet_k_omega_sst()
+subroutine modify_viscosity_inlet_k_omega_sst()
 !
 !***********************************************************************
 !

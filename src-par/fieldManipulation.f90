@@ -868,6 +868,7 @@
       use types
       use parameters
       use geometry, only: numCells,numTotal
+      use utils, only: init_random_seed
 
       implicit none
 !

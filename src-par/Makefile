@@ -25,7 +25,8 @@ MOD_FILES=\
     gradients.f90 \
     output.f90 \
     interpolation.f90 \
-    scalar_fluxes.f90
+    scalar_fluxes.f90 \
+    periodicity.f90
 
 MPI_FILES=\
     global_max_mpi.f90 \
@@ -51,7 +52,7 @@ TURBULENCE_FILES=\
     k_epsilon_rng.f90 \
     spalart_allmaras.f90 \
     k_eqn_eddy.f90
-#     k_epsilon_zeta_f.f90
+    #k_epsilon_zeta_f.f90
 
 CAFFA_FILES=\
     allocate.f90 \
@@ -74,14 +75,12 @@ CAFFA_FILES=\
     updateVelocityAtBoundary.f90 \
     correct_turbulence.f90 \
     correct_turbulence_inlet.f90 \
-    continuityErrors.f90\
     constant_mass_flow_forcing.f90 \
-    recirculate_flow.f90 \
+    continuityErrors.f90\
     fvm_laplacian.f90 \
     init.f90 \
     readfiles.f90 \
     read_input.f90 \
-    random_seed.f90 \
     time_shift.f90 \
     vortexIdentification.f90\
     writefiles.f90 \

@@ -6,7 +6,6 @@ module temperature
   use parameters
   use geometry
   use variables
-  ! use scalar_fluxes, only: facefluxsc
 
   implicit none
 
@@ -93,15 +92,19 @@ subroutine calcsc(Fi,dFidxi,ifi)
 
     ! Unsteady Term
     if (ltransient) then
+
       if( bdf .or. cn ) then
         apotime = den(inp)*vol(inp)/timestep
         su(inp) = su(inp) + apotime*to(inp)
         sp(inp) = sp(inp) + apotime
+
       elseif( bdf2 ) then
         apotime=den(inp)*vol(inp)/timestep
         su(inp) = su(inp) + apotime*( 2*to(inp) - 0.5_dp*too(inp) )
         sp(inp) = sp(inp) + 1.5_dp*apotime
+
       endif
+
     endif
 
 
@@ -204,7 +207,7 @@ subroutine calcsc(Fi,dFidxi,ifi)
 
       end do
 
-    elseif ( bctype(ib) == 'wall') then
+    elseif ( bctype(ib) == 'wall' .and. bcDFraction(ien,ib)==1.0_dp ) then
 
       ! Isothermal wall boundaries (that's Dirichlet on temperature)
 
@@ -224,7 +227,7 @@ subroutine calcsc(Fi,dFidxi,ifi)
 
       enddo
 
-    elseif ( bctype(ib) == 'wallAdiab') then
+    elseif ( bctype(ib) == 'wall' .and. bcDFraction(ien,ib)==0.0_dp ) then
 
       ! Adiabatic wall boundaries (that's actually zero grad on temperature)
 
@@ -233,7 +236,6 @@ subroutine calcsc(Fi,dFidxi,ifi)
         iface = startFace(ib) + i
         ijp = owner(iface)
         ijb = iBndValueStart(ib) + i
-
 
         t(ijb)=t(ijp)
 
@@ -295,6 +297,7 @@ subroutine calcsc(Fi,dFidxi,ifi)
           k = jcell_icell_csr_index(i)
           su(ijn) = su(ijn) - a(k)*to(ijp)
       enddo
+      
       do ijp=1,numCells
           apotime=den(ijp)*vol(ijp)/timestep
           off_diagonal_terms = sum( a( ioffset(ijp) : ioffset(ijp+1)-1 ) ) - a(diag(ijp))

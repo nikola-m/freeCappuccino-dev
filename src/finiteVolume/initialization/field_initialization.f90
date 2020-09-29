@@ -9,7 +9,7 @@ module field_initialization
 
 use types
 use geometry
-use utils, only: get_unit
+use utils,    only: get_unit
 
 implicit none
 
@@ -25,14 +25,16 @@ implicit none
 contains
 
 
-subroutine initialize_vector_field(u,v,w, dUdxi, field_name)
+subroutine initialize_vector_field(u,v,w, dUdxi, iphi, field_name)
 !
 ! Reads 'field_name' file form 0/ folder
 !
+
 implicit none
 
   real(dp), dimension(numTotal) :: u,v,w
   real(dp), dimension(3,numTotal) :: dUdxi
+  integer, intent(in) :: iphi
   character(len=*) :: field_name
 
   !
@@ -106,54 +108,57 @@ implicit none
           write(*,'(4x,a)') type
 
           if ( type == 'Dirichlet' ) then
+
+            bcDFraction(iphi,ib) = 1.0_dp !!! Set Dirichlet fraction for value update to one.
+
             read(input_unit,*) distribution
-              if ( distribution == 'uniform' ) then
-                read(input_unit,*) u0,v0,w0
-                write(*,'(8x,a,3e15.7)') 'uniform',u0,v0,w0  
-                do i=1,nfaces(ib)
-                  ijb = iBndValueStart(ib) + i
-                  u(ijb) = u0
-                  v(ijb) = v0
-                  w(ijb) = w0
-                end do        
-              else ! nonuniform
-                write(*,'(8x,a)') 'nonuniform'
-                do i=1,nfaces(ib)
-                  ijb = iBndValueStart(ib) + i
-                  read(input_unit,*) u(ijb),v(ijb),w(ijb)
-                  ! write(*,'(8x,3e15.7)') u(ijb),v(ijb),w(ijb)
-                end do
-              endif
+            if ( distribution == 'uniform' ) then
+              read(input_unit,*) u0,v0,w0
+              write(*,'(8x,a,3e15.7)') 'uniform',u0,v0,w0  
+              do i=1,nfaces(ib)
+                ijb = iBndValueStart(ib) + i
+                u(ijb) = u0
+                v(ijb) = v0
+                w(ijb) = w0
+              end do        
+            else ! nonuniform
+              write(*,'(8x,a)') 'nonuniform'
+              do i=1,nfaces(ib)
+                ijb = iBndValueStart(ib) + i
+                read(input_unit,*) u(ijb),v(ijb),w(ijb)
+                ! write(*,'(8x,3e15.7)') u(ijb),v(ijb),w(ijb)
+              end do
+            endif
           endif
 
           if ( type == 'Neumann' ) then
             read(input_unit,*) distribution
-              write(*,'(6x,a)') distribution
-              if ( distribution == 'uniform' ) then
-                read(input_unit,*) u0,v0,w0
-                write(*,'(8x,3e15.7)') u0,v0,w0  
-                do i=1,nfaces(ib)
-                  ijb = iBndValueStart(ib) + i
-                  dUdxi(1,ijb) = u0
-                  dUdxi(2,ijb) = v0
-                  dUdxi(3,ijb) = w0
-                end do    
-              elseif ( distribution == 'zeroGradient' ) then
-                do i=1,nfaces(ib)
-                  iface = startFace(ib) + i
-                  ijp = owner(iface)
-                  ijb = iBndValueStart(ib) + i
-                  u(ijb) = u(ijp)
-                  v(ijb) = v(ijp)
-                  w(ijb) = w(ijp)
-                end do       
-              else ! nonuniform
-                write(*,'(8x,a,3e15.7)') 'nonuniform'
-                do i=1,nfaces(ib)
-                  ijb = iBndValueStart(ib) + i
-                  read(input_unit,*) dUdxi(1,ijb),dUdxi(2,ijb),dUdxi(3,ijb)
-                end do
-              endif
+            write(*,'(6x,a)') distribution
+            if ( distribution == 'uniform' ) then
+              read(input_unit,*) u0,v0,w0
+              write(*,'(8x,3e15.7)') u0,v0,w0  
+              do i=1,nfaces(ib)
+                ijb = iBndValueStart(ib) + i
+                dUdxi(1,ijb) = u0
+                dUdxi(2,ijb) = v0
+                dUdxi(3,ijb) = w0
+              end do    
+            elseif ( distribution == 'zeroGradient' ) then
+              do i=1,nfaces(ib)
+                iface = startFace(ib) + i
+                ijp = owner(iface)
+                ijb = iBndValueStart(ib) + i
+                u(ijb) = u(ijp)
+                v(ijb) = v(ijp)
+                w(ijb) = w(ijp)
+              end do       
+            else ! nonuniform
+              write(*,'(8x,a,3e15.7)') 'nonuniform'
+              do i=1,nfaces(ib)
+                ijb = iBndValueStart(ib) + i
+                read(input_unit,*) dUdxi(1,ijb),dUdxi(2,ijb),dUdxi(3,ijb)
+              end do
+            endif
           endif
 
         enddo
@@ -166,14 +171,17 @@ implicit none
 end subroutine
 
 
-subroutine initialize_scalar_field(T, dTdxi, field_name)
+subroutine initialize_scalar_field(T, dTdxi, iphi, field_name)
 !
 ! Reads 'field_name' file form 0/ folder
 !
+use geometry, only: bcDFraction
+
 implicit none
 
   real(dp), dimension(numTotal), intent(inout) :: T
   real(dp), dimension(numTotal), intent(inout):: dTdxi
+  integer, intent(in) :: iphi
   character(len=*) :: field_name
 
   !
@@ -245,49 +253,53 @@ implicit none
           write(*,'(4x,a)') type
 
           if ( type == 'Dirichlet' ) then
+
+            bcDFraction(iphi,ib) = 1.0_dp !!! Set Dirichlet fraction for value update to one.
+
             read(input_unit,*) distribution
-              write(*,'(6x,a)') distribution
-              if ( distribution == 'uniform' ) then
-                read(input_unit,*) t0
-                write(*,'(8x,a,3e15.7)') 'uniform',t0  
-                do i=1,nfaces(ib)
-                  ijb = iBndValueStart(ib) + i
-                  T(ijb) = t0
-                end do        
-              else ! nonuniform
-                write(*,'(8x,a,3e15.7)') 'nonuniform'
-                do i=1,nfaces(ib)
-                  ijb = iBndValueStart(ib) + i
-                  read(input_unit,*) T(ijb)
-                  ! write(*,'(8x,e15.7)') T(ijb)
-                end do
-              endif
+            write(*,'(6x,a)') distribution
+
+            if ( distribution == 'uniform' ) then
+              read(input_unit,*) t0
+              write(*,'(8x,a,3e15.7)') 'uniform',t0  
+              do i=1,nfaces(ib)
+                ijb = iBndValueStart(ib) + i
+                T(ijb) = t0
+              end do        
+            else ! nonuniform
+              write(*,'(8x,a,3e15.7)') 'nonuniform'
+              do i=1,nfaces(ib)
+                ijb = iBndValueStart(ib) + i
+                read(input_unit,*) T(ijb)
+                ! write(*,'(8x,e15.7)') T(ijb)
+              end do
+            endif
           endif
 
           if ( type == 'Neumann' ) then
             read(input_unit,*) distribution
-              write(*,'(6x,a)') distribution
-              if ( distribution == 'uniform' ) then
-                read(input_unit,*) t0
-                write(*,'(8x,a,3e15.7)') 'uniform',t0
-                do i=1,nfaces(ib)
-                  ijb = iBndValueStart(ib) + i
-                  dTdxi(ijb) = t0
-                end do    
-              elseif ( distribution == 'zeroGradient' ) then
-                do i=1,nfaces(ib)
-                  iface = startFace(ib) + i
-                  ijp = owner(iface)
-                  ijb = iBndValueStart(ib) + i
-                  T(ijb) = T(ijp)
-                end do       
-              else ! nonuniform
-                write(*,'(8x,a,3e15.7)') 'nonuniform'
-                do i=1,nfaces(ib)
-                  ijb = iBndValueStart(ib) + i
-                  read(input_unit,*) dTdxi(ijb)
-                end do
-              endif
+            write(*,'(6x,a)') distribution
+            if ( distribution == 'uniform' ) then
+              read(input_unit,*) t0
+              write(*,'(8x,a,3e15.7)') 'uniform',t0
+              do i=1,nfaces(ib)
+                ijb = iBndValueStart(ib) + i
+                dTdxi(ijb) = t0
+              end do    
+            elseif ( distribution == 'zeroGradient' ) then
+              do i=1,nfaces(ib)
+                iface = startFace(ib) + i
+                ijp = owner(iface)
+                ijb = iBndValueStart(ib) + i
+                T(ijb) = T(ijp)
+              end do       
+            else ! nonuniform
+              write(*,'(8x,a,3e15.7)') 'nonuniform'
+              do i=1,nfaces(ib)
+                ijb = iBndValueStart(ib) + i
+                read(input_unit,*) dTdxi(ijb)
+              end do
+            endif
           endif
 
         enddo

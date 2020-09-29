@@ -22,8 +22,7 @@ subroutine calcp_piso
 !      P       P       P
 !     "These are though as velocities from which the contribution of the 
 !     pressure gradient has been removed"-Ferziger,Peric
-!
-!     Relevant code here is get_rAU_x_UEqnH() subroutine.
+
 !
 !  3) Ansemble pressure equation (Eq. 7.35).
 !     RHS is divergence of 
@@ -73,7 +72,7 @@ subroutine calcp_piso
   integer :: i, k, inp, iface, if, ib, ipro, istage
   integer :: ijp, ijn
   real(dp) :: cap, can
-  real(dp) :: pavg
+  ! real(dp) :: pavg
   real(dp) :: ppref
   real(dp) :: fmcor
 

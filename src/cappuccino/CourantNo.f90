@@ -7,12 +7,12 @@ subroutine CourantNo
   use parameters, only: CoNum,meanCoNum, CoNumFixValue, CoNumFix, timestep, ltransient, itime, time
   use geometry, only: numCells, numInnerFaces, owner, neighbour, numBoundaries, bctype, nfaces, startFace, Vol
   use sparse_matrix, only: res
-  use variables, only: flmass
+  use variables, only: flmass,den
 
   implicit none
 
   integer :: i, ijp, ijn, inp, ib, iface
-  real(dp):: suma,dt
+  real(dp):: TotalVol,dt
 
   if (ltransient) then
   CoNum = 0.0_dp
@@ -55,22 +55,22 @@ subroutine CourantNo
 
 
   ! Accumulate by looping trough cells
-  suma = 0.0_dp
-
+  TotalVol = 0.0_dp
+ 
   do inp=1,numCells
 
-    CoNum = max( CoNum , res(inp)/Vol(inp) )
+    CoNum = max( CoNum , res(inp)/(den(inp)*Vol(inp)) )
 
-    meanCoNum = meanCoNum + res(inp)
+    meanCoNum = meanCoNum + res(inp)/den(inp)
     
-    suma = suma + Vol(inp)
+    TotalVol = TotalVol + Vol(inp)
 
   enddo
 
   res = 0.0_dp
 
   CoNum = 0.5*CoNum*timestep
-  meanCoNum = 0.5*meanCoNum/suma*timestep
+  meanCoNum = 0.5*meanCoNum/TotalVol*timestep
 
   !// If we keep the value of Courant Number fixed
   if( CoNumFix ) then

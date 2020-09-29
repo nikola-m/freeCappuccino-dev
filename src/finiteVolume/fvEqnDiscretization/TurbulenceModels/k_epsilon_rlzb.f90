@@ -27,15 +27,15 @@ module k_epsilon_rlzb
   private 
 
 
-  public :: correct_turbulence_k_epsilon_rlzb
-  public :: correct_turbulence_inlet_k_epsilon_rlzb
+  public :: modify_viscosity_k_epsilon_rlzb
+  public :: modify_viscosity_inlet_k_epsilon_rlzb
 
 contains
 
 
 !***********************************************************************
 !
-subroutine correct_turbulence_k_epsilon_rlzb()
+subroutine modify_viscosity_k_epsilon_rlzb()
 !
 !***********************************************************************
 !
@@ -63,7 +63,7 @@ end subroutine
 
 !***********************************************************************
 !
-subroutine correct_turbulence_inlet_k_epsilon_rlzb()
+subroutine modify_viscosity_inlet_k_epsilon_rlzb()
 !
 !***********************************************************************
 !

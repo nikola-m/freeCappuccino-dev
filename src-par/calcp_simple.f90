@@ -118,7 +118,8 @@ subroutine calcp_simple
     enddo ! Boundary loop
 
 
-  if(.not.const_mflux) call adjustMassFlow
+  ! if(.not.const_mflux) 
+  call adjustMassFlow
 
   ! Add contributions to source of the inlet and outlet boundaries.
 
@@ -169,8 +170,8 @@ subroutine calcp_simple
     pp = 0.0_dp
 
     ! Solving pressure correction equation
-    ! call bicgstab(pp,ip) 
-    call iccg(pp,ip)
+    call bicgstab(pp,ip) 
+    ! call iccg(pp,ip)
     ! call dpcg(pp,ip)
     ! call jacobi(pp,ip)
     ! call pmgmres_ilu ( numCells, nnz, ioffset, ja, a, diag, pp, ip, su, nsw(ip), 4, 1e-3, sor(ip) )

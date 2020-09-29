@@ -48,6 +48,9 @@ function face_value(ijp,ijn,xf,yf,zf,lambda,u,dUdxi) result(ue)
   elseif (lmuscl_flnt) then
     ue = face_value_muscl(ijp, ijn, xf, yf, zf, u, dUdxi)
 
+  elseif (lcubic) then
+    ue = face_value_cubic(ijp, ijn, xf, yf, zf, lambda, u, dUdxi)
+
   elseif (flux_limiter) then
     ue = face_value_2nd_upwind_flux_limiter(ijp, ijn, lambda, u, dUdxi)
 
@@ -291,6 +294,74 @@ end function
 
   face_value = theta*face_value_central + (1.0_dp-theta)*face_value_2nd_upwind
   
+  end function
+
+
+!***********************************************************************
+!
+  function face_value_cubic(inp,inn, xf, yf, zf, lambda, fi, gradfi) result(face_value)
+!
+!***********************************************************************
+!
+!    CUBIC interpolation function.
+!    Calculates face value using values of variables and their gradients
+!    at neighbours cell-centers fitted into a cubic polynomial. 
+!    Implementation corresponds to one found tin OpenFOAM, but the details
+!    are taken from derivation in an cfd-online thread:
+!    https://www.cfd-online.com/Forums/openfoam-programming-development/184766-factors-cubic-inerpolation-scheme-openfoam.html
+!
+!***********************************************************************
+!
+
+  implicit none
+
+  ! Result
+  real(dp) :: face_value
+
+  ! Input
+  integer :: inp, inn
+  real(dp) :: xf, yf, zf, lambda
+  real(dp), dimension(numTotal) :: fi
+  real(dp), dimension(3,numPCells) :: gradfi
+
+  ! Locals
+  real(dp) :: central,corr1,corr2,lambda_,fP,fN,gx,gy,gz,dx,dy,dz,dpn
+
+  ! Face interpolation factor
+  lambda_=1.0_dp-lambda
+  
+  ! The CUBIC interpolation has follwong for according to derivation
+  !\phi_f = \phi(1-\lambda) = \lambda \phi_P + (1-\lambda)\phi_N + \lambda (1-\lambda)(1-2\lambda)(\phi_N -\phi_P)  - \lambda^2(\lambda-1) \nabla \phi_P - \lambda (1-\lambda)^2 \nabla \phi_N
+  ! Here \lambda is our lambda_=1-lambda.
+  !
+
+  central  = lambda_ * fi(inp) + (1.0-lambda_)*fi(inn) 
+
+  corr1    = lambda_*(1-lambda_)*(1-2*lambda_)*(fi(inn)-fi(inp)) 
+
+  fP = lambda_**2*(lambda_-1.0)
+  fN = lambda_*(1.0-lambda_)**2 
+  gx = fP * gradfi(1,inp) + fN * gradfi(1,inn)
+  gy = fP * gradfi(2,inp) + fN * gradfi(2,inn)
+  gz = fP * gradfi(3,inp) + fN * gradfi(3,inn)
+
+
+  ! Project to face normal direction by doting with face area vector and then mulitpy with distance dpn
+  !  ->    ->
+  ! Grad * Sf/|Sf| *
+  !aresq = arx * arx + ary * ary + arz * arz
+  !corr2 = ( gx * arx + gy * ary + gz * arz ) / are * dpn  ! Maybe we don't need dpn factor?
+
+  dx = xc(inn) - xc(inp)
+  dy = yc(inn) - yc(inp)
+  dz = zc(inn) - zc(inp)
+  dpn = sqrt(dx*dx + dy*dy +dz*dz)
+
+  corr2 = (gx*dx + gy*dy + gz*dz)/dpn
+
+  ! Finally cubic scheme, central scheme + high order corrections
+  face_value = central + corr1 - corr2
+
   end function
 
 

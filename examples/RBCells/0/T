@@ -1,0 +1,19 @@
+internalField
+  uniform
+  300.0
+boundaryField
+  floor
+   Dirichlet
+    uniform
+     301.0
+  ceiling
+   Dirichlet
+    uniform
+     300.0
+  sideWalls
+   Neumann
+    zeroGradient
+  frontAndBack
+   Neumann
+    zeroGradient
+

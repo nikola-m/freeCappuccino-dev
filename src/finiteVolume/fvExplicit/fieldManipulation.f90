@@ -8,10 +8,19 @@
 
   implicit none
 
-  ! The inerpolations that we do for e.g. divergence is hardcoded here
-  ! I think it is the best thing to choose the best working thing.
+  !****************************************************
+  ! The inerpolations that we do for e.g. divergence is hardcoded here.
   ! Recommended are: 'central', 'cds', 'cdscorr'
-  character(len=10), parameter :: scheme = 'cdscorr' 
+  ! NOTE: 
+  ! . scheme = 'cdscorr' or scheme = 'central' are good if we have specified ( interpolation_coeff_variant == 1 )
+  !   in the "geometry" module. 
+  ! . scheme = 'cds' or scheme = 'central' are good if we have specified ( interpolation_coeff_variant == 2 )
+  !   in the "geometry" module.
+  ! The "interpolation_coeff_variant" is set as parameter in the header of the "geometry" module and determines 
+  ! how we calculate interpolation factor. Option "2" is typical for CFD codes, while "1" is something specific
+  ! for freeCappuccino.
+  !****************************************************
+  character(len=10), parameter :: scheme = 'cds' 
 
   interface explDiv
     module procedure explDiv
@@ -76,19 +85,22 @@
 !***********************************************************************
 !
   use geometry
+  use parameters, only: small
   use variables, only: p,dPdxi
-  use sparse_matrix, only: su,sv,sw
+  use sparse_matrix, only: su,sv,sw,apu
 
   implicit none
+
+  ! Local
+  integer, parameter :: nipgrad = 2 
+  integer :: i,ijp,ijn,ijb,iface,istage
+  real(dp) :: dfxe,dfye,dfze
+  real(dp) :: pf
+
 !
 !***********************************************************************
 !
 
-
-!...Local
-    integer, parameter :: nipgrad = 2 
-    integer :: i,ijp,ijn,ijb,iface,istage
-    real(dp) :: dfxe,dfye,dfze
 
     ! Pressure gradient
     do istage=1,nipgrad
@@ -104,8 +116,21 @@
     do i=1,numInnerFaces
       ijp = owner(i)
       ijn = neighbour(i)
-      call presFaceDivInner(ijp, ijn, xf(i), yf(i), zf(i), arx(i), ary(i), arz(i), facint(i), &
-                        p, dPdxi,dfxe,dfye,dfze)
+
+      ! ! Linear interpolation of rpessure to face
+      ! call presFaceDivInner(ijp, ijn, xf(i), yf(i), zf(i), arx(i), ary(i), arz(i), facint(i), &
+      !                   p, dPdxi,dfxe,dfye,dfze)
+
+
+      ! Pressure on face based on "Standard" interpolation in Fluent.
+      ! This is weighted interpolation where weights are mass flows estimated at respective cell center
+      pf = ( p(ijp)*Apu(ijp)+p(ijn)*Apu(ijn) ) / ( Apu(ijp) + Apu(ijn) + small )
+
+      ! Contribution =(interpolated mid-face value)x(area)
+      dfxe = pf*arx(i)
+      dfye = pf*ary(i)
+      dfze = pf*arz(i)
+
 
       ! Accumulate contribution at cell center and neighbour.
       ! ***NOTE, we calculate negative Divergence, therefore opposite sign (minus in front of e.g. dfxe, etc.) 
@@ -126,6 +151,11 @@
       ijp = owner(iface)
       ijb = numCells + i
       call presFaceDivBoundary(arx(iface), ary(iface), arz(iface), p(ijb), su(ijp), sv(ijp), sw(ijp))
+
+      ! su(ijp) = su(ijp) - p(ijb)*arx(iface)
+      ! sv(ijp) = sv(ijp) - p(ijb)*ary(iface)
+      ! sw(ijp) = sw(ijp) - p(ijb)*arz(iface)
+
     enddo
 
   return
@@ -182,11 +212,7 @@
       iface = numInnerFaces + i
       ijp = owner(iface)
       ijb = numCells + i
-      call faceDivBoundary(arx(iface), ary(iface), arz(iface), u(ijb),v(ijb),w(ijb), dfxe)
-      ! I'm putting minus here, because the face normal is allways facing out
-      ! and if we get positive alignement with that vector we will have a positive contribution 
-      ! to divergence, but the thing is in fact opposite since divergence 
-      ! grows if something goes into the volume      
+      call faceDivBoundary(arx(iface), ary(iface), arz(iface), u(ijb),v(ijb),w(ijb), dfxe)   
       div(ijp) = div(ijp) + dfxe
     enddo
 
@@ -248,10 +274,6 @@
       ijp = owner(iface)
       ijb = numCells + i
       call faceDivBoundary(arx(iface), ary(iface), arz(iface), u(ijb),v(ijb),w(ijb), dfxe)
-      ! I'm putting minus here, because the face normal is allways facing out
-      ! and if we get positive alignement with that vector we will have a positive contribution 
-      ! to divergence, but the thing is in fact opposite since divergence 
-      ! grows if something goes into the volume
       div(ijp) = div(ijp) + flmass(iface) * dfxe
     enddo
 

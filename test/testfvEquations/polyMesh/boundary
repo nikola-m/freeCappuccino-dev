@@ -1,0 +1,4 @@
+#type nFaces startFace
+movingTop wall 20 760
+fixedWalls wall 60 780
+backForth symmetry 800 840

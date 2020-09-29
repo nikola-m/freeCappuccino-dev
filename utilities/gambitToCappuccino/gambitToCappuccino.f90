@@ -21,6 +21,8 @@
 ! Modification:
 !   23. November 2019. (November is coding time!)
 !
+! September 27th - Bug found in array indexing and looping by Xie TianCi.
+! 
 
  use utils
  use qsort_c_module
@@ -76,7 +78,7 @@
 ! Gambit related
  integer :: NUMNP, NELEM, NGRPS, NBSETS, NDFCD, NDFVL
  integer :: NP
- integer :: NE, NTYPE, NDP, NODE(8), elem(4)
+ integer :: NE, NTYPE, NDP, NODE(8), elem(10)
  integer :: ITYPE, NENTRY, NVALUES, IBCODE1
  integer :: NGP, NELGP, MTYP, NFLAGS
  character( len = 82 ) :: inLine

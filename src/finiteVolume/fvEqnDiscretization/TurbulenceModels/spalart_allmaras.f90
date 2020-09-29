@@ -35,14 +35,14 @@ module Spalart_Allmaras
 
   private 
 
-  public :: correct_turbulence_spalart_allmaras
-  public :: correct_turbulence_inlet_spalart_allmaras
+  public :: modify_viscosity_spalart_allmaras
+  public :: modify_viscosity_inlet_spalart_allmaras
 
 
 contains
 
 
-subroutine correct_turbulence_spalart_allmaras()
+subroutine modify_viscosity_spalart_allmaras()
 !
 ! Main module routine to solve turbulence model equations and update effective viscosity.
 ! ***
@@ -62,7 +62,7 @@ end subroutine
 
 
 
-subroutine correct_turbulence_inlet_spalart_allmaras()
+subroutine modify_viscosity_inlet_spalart_allmaras()
 !
 ! Update effective viscosity at inlet
 !

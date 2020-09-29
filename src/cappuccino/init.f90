@@ -112,21 +112,22 @@ subroutine init
 
 
 ! 1.2)  Field Initialisation
-  call initialize_vector_field(u,v,w,dUdxi,'U')
+
+  call initialize_vector_field(u,v,w,dUdxi,iu,'U')
 
   if (levm) then
   ! 
   ! > TE Turbulent kinetic energy.
   !   
-  call initialize_scalar_field(te,dTEdxi,'k')
+  call initialize_scalar_field(te,dTEdxi,ite,'k')
 
   ! 
   ! > ED Specific turbulent kinetic energy dissipation rate, also turbulence frequency - omega
   !  
   if(solveOmega) then   
-    call initialize_scalar_field(ed,dEDdxi,'omega')
+    call initialize_scalar_field(ed,dEDdxi,ied,'omega')
   else
-    call initialize_scalar_field(ed,dEDdxi,'epsilon')
+    call initialize_scalar_field(ed,dEDdxi,ied,'epsilon')
   endif
 
   endif
@@ -134,12 +135,12 @@ subroutine init
   ! 
   ! > Temperature
   !
-  if( lcal(ien) )   call initialize_scalar_field(t,dTdxi,'T')
+  if( lcal(ien) )   call initialize_scalar_field(t,dTdxi,ien,'T')
 
   ! 
   ! Magnetic field
   ! 
-  if ( lcal(iep) ) call initialize_vector_field(bmagx,bmagy,bmagz,dEpotdxi,'B')
+  if ( lcal(iep) ) call initialize_vector_field(bmagx,bmagy,bmagz,dEpotdxi,ibmag,'B')
 
   ! Density
   den = densit
@@ -155,7 +156,7 @@ subroutine init
   if(lcal(icon)) con = conin
 
 
-  ! Initialize mass flow
+  ! Initialize mass flow on inner faces
   do i=1,numInnerFaces
     ijp = owner(i)
     ijn = neighbour(i)

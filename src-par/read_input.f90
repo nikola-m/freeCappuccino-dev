@@ -235,6 +235,8 @@ subroutine read_input_file
       l2nd_flnt = .true.
     case('muscl-f')
       lmuscl_flnt = .true.
+    case('cubic')
+      lcubic = .true.      
     case default
       if (myid .eq. 0) write(*,'(a)') '  Using default convective scheme - 2nd order upwind.'
       l2nd_flnt = .true.
@@ -304,7 +306,7 @@ subroutine read_input_file
   ! Open files for data at monitoring points 
   !
 
-  if( ltransient ) then
+  if( ltransient .and. mpoints>0 ) then
 
     ! nproc_char <- myid zapisan levo u vidu stringa.
     call i4_to_s_left ( myid, nproc_char )

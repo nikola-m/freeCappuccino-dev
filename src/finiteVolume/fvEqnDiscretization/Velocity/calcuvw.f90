@@ -183,9 +183,7 @@ subroutine calcuvw
 
 
       elseif( bdf3 ) then
-      !
-      ! Three Level Implicit Time Integration (BDF2) - 2nd order.
-      !
+
         apotime = den(inp)*vol(inp)/timestep
 
         ! RHS vector contribution

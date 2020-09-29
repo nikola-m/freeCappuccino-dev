@@ -4,14 +4,8 @@ module boundary_module
 
   character(len=20) :: key(10), value(10)
 
-  interface process_boundary_file
-    module procedure process_boundary_file
-    module procedure process_boundary_file_par
-  end interface
 
- private
- 
- public :: process_boundary_file, get_unit, key, value
+ public
 
 
  contains
@@ -57,6 +51,7 @@ module boundary_module
                 read(boundary_of,*) ch                   ! This reads '{' again
                 read(boundary_of,*) char_string, bc_type ! Read BC type
                 call check_dict(bc_type)                 ! Check in Dictionary if there is a substitute word for this type          
+                call check_dict(bc_name)                 ! Check in Dictionary if there is a substitute word for this name
 
         inner_loop: do
         read(boundary_of,*) char_string, line_string
@@ -135,12 +130,15 @@ subroutine process_boundary_file_par(boundary_of,boundary_file, process_file)
                 read(boundary_of,*) ch                   ! This reads '{' again
                 read(boundary_of,*) char_string, bc_type ! Read BC type
                 call check_dict(bc_type)                 ! Check in Dictionary if there is a substitute word for this type   
+                call check_dict(bc_name)                 ! Check in Dictionary if there is a substitute word for this name
 
         inner_loop: do
         read(boundary_of,*) char_string, line_string
 
             if ( line_string(1:9) == 'processor' ) then
                 processor_boundary = .true.
+            else
+                processor_boundary = .false.
             endif
 
             if (char_string == "nFaces") then
@@ -157,8 +155,9 @@ subroutine process_boundary_file_par(boundary_of,boundary_file, process_file)
                 read(line_string,*) startFace
 
             elseif (char_string == "neighbProcNo") then 
-                read(line_string,*) neighbProcNo
-                write(process_file,'(2(i0,1x),i0)') neighbProcNo,nFaces,startFace
+                ! read(line_string,*) neighbProcNo
+                write(process_file,*) line_string !neighbProcNo
+                write(boundary_file,'(2a,2(1x,i0))')  bc_name,bc_type,nFaces,startFace
                 exit inner_loop
 
             endif

@@ -61,7 +61,6 @@ program cappuccino
 
   call init
 
-
   !
   !===============================================
   ! Time loop: 
@@ -94,14 +93,18 @@ program cappuccino
       call cpu_time(start)
 
       ! Calculate velocities.
-      call calcuvw  
+      if(lcal(iu)) call calcuvw  
 
       ! Pressure-velocity coupling. Two options: SIMPLE and PISO
-      if(SIMPLE)   call calcp_simple
-      if(PISO)     call calcp_piso
+      if(lcal(ip)) then
+
+        if(SIMPLE)   call calcp_simple
+        if(PISO)     call calcp_piso
+
+      endif 
 
       ! Turbulence
-      if(lturb)    call correct_turbulence()
+      if(lturb)    call modify_viscosity
 
       !Scalars: Temperature , temperature variance, and concentration eqs.
       if(lcal(ien))   call calculate_temperature_field

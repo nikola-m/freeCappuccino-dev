@@ -32,15 +32,15 @@ module k_epsilon_zeta_f
   private 
 
 
-  public :: correct_turbulence_k_epsilon_zeta_f
-  public :: correct_turbulence_inlet_k_epsilon_zeta_f
+  public :: modify_viscosity_k_epsilon_zeta_f
+  public :: modify_viscosity_inlet_k_epsilon_zeta_f
 
 contains
 
 
 !***********************************************************************
 !
-subroutine correct_turbulence_k_epsilon_zeta_f()
+subroutine modify_viscosity_k_epsilon_zeta_f()
 !
 !***********************************************************************
 !
@@ -70,7 +70,7 @@ end subroutine
 
 !***********************************************************************
 !
-subroutine correct_turbulence_inlet_k_epsilon_zeta_f()
+subroutine modify_viscosity_inlet_k_epsilon_zeta_f()
 !
 !***********************************************************************
 !

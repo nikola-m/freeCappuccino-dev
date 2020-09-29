@@ -44,6 +44,7 @@ subroutine writefiles
   call execute_command_line('mkdir '//trim( timechar )//'/processor'//trim(nproc_char) )
   call execute_command_line('mkdir '//trim( timechar )//'/processor'//trim(nproc_char)//'/boundary')  
 
+  
 !
 ! > Open and write a .vtm file for multi-block datasets for interior + boundary regions data.
 !
@@ -131,7 +132,15 @@ subroutine writefiles
 
     call vtu_write_XML_vector_field( output_unit, 'Uavg', u_aver,v_aver,w_aver )
 
-    if(solveTKE) call vtu_write_XML_scalar_field ( output_unit, 'tkeAvg', te_aver )
+    if(lturb) then
+      call vtu_write_XML_scalar_field ( output_unit, '05uiui', te_aver )
+      call vtu_write_XML_scalar_field ( output_unit, 'uu', uu_aver )
+      call vtu_write_XML_scalar_field ( output_unit, 'vv', vv_aver )
+      call vtu_write_XML_scalar_field ( output_unit, 'ww', ww_aver )
+      call vtu_write_XML_scalar_field ( output_unit, 'uv', uv_aver )
+      call vtu_write_XML_scalar_field ( output_unit, 'uw', uw_aver )
+      call vtu_write_XML_scalar_field ( output_unit, 'vw', vw_aver )                            
+    endif
 
     if(lcal(ien) ) call vtu_write_XML_scalar_field ( output_unit, 'Tavg', t_aver )
 
@@ -261,7 +270,15 @@ subroutine writefiles
 
       call vtu_write_XML_vector_field_boundary ( output_unit, 'Uavg', u_aver,v_aver,w_aver, istart, iend )
 
-      if(solveTKE) call vtu_write_XML_scalar_field_boundary ( output_unit, 'tkeAvg', te_aver, istart, iend )
+      if(lturb) then
+        call vtu_write_XML_scalar_field_boundary ( output_unit, '05uiui', te_aver, istart, iend )
+        call vtu_write_XML_scalar_field_boundary  ( output_unit, 'uu', uu_aver, istart, iend )
+        call vtu_write_XML_scalar_field_boundary  ( output_unit, 'vv', vv_aver, istart, iend )
+        call vtu_write_XML_scalar_field_boundary  ( output_unit, 'ww', ww_aver, istart, iend )
+        call vtu_write_XML_scalar_field_boundary  ( output_unit, 'uv', uv_aver, istart, iend )
+        call vtu_write_XML_scalar_field_boundary  ( output_unit, 'uw', uw_aver, istart, iend )
+        call vtu_write_XML_scalar_field_boundary  ( output_unit, 'vw', vw_aver, istart, iend )  
+      endif      
 
       if(lcal(ien) ) call vtu_write_XML_scalar_field_boundary ( output_unit, 'Tavg', t_aver, istart, iend )
 

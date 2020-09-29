@@ -45,8 +45,8 @@ CourantNo.f90
 constant_mass_flow_forcing.f90
 create_fields.f90
 updateVelocityAtBoundary.f90
-correct_turbulence.f90
-correct_turbulence_inlet.f90
+modify_viscosity.f90
+modify_viscosity_inlet.f90
 laplacian.f90
 init.f90
 readfiles.f90
