@@ -1,0 +1,5 @@
+#!/bin/bash
+./preprocessor cube1000
+cp points faces cells boundary owner neighbour /home/dell/Dropbox/kodovi/unstructured
+cd /home/dell/Dropbox/kodovi/unstructured
+./heatCappuccino

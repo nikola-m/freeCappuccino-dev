@@ -2,7 +2,11 @@
 !
 subroutine writefiles
 !
-! Write output files in Paraview .vtu format
+! Write output files in Paraview .vtm format.
+!
+! For this one we have a template .vtu and .vtp files for internal
+! domain and boundaries ready in vtk/ folder, we just interpolate
+! the files with vectors of field values.
 !
 !***********************************************************************
 !

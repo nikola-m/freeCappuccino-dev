@@ -1,5 +1,5 @@
 #
-# Makefile for gambitToCappuccino program
+# Makefile for su2ToCappuccino program
 #         
 
 F90FLAGS = -O3 -Wall
@@ -9,8 +9,7 @@ F90 = gfortran
 
 F90FILES=\
       utils.f90 \
-      qsort_c_module.f90 \
-      gambitToCappuccino.f90 
+      su2ToCappuccino.f90 
 
 
 
@@ -20,11 +19,11 @@ F90OBJS = ${F90FILES:.f90=.o}
 # Targets for make.
 ##################################################################
 
-gambitToCappuccino: ${F90OBJS}
+su2ToCappuccino: ${F90OBJS}
 	@echo  "Linking" $@ "... "
-	${F90} ${F90OBJS} -o ./../bin/gambitToCappuccino 
+	${F90} ${F90OBJS} -o ../../bin/su2ToCappuccino 
 clean:
-	@rm  *.o *.mod ./../bin/gambitToCappuccino 
+	@rm  *.o *.mod ../../bin/su2ToCappuccino 
 
 ##################################################################
 # Generic rules

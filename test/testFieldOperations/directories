@@ -2,7 +2,6 @@ src/cappuccino
 src/misc
 src/mesh
 src/sparseMatrix
-misc/
 src/finiteVolume/tensorFields
 src/finiteVolume/fvExplicit
 

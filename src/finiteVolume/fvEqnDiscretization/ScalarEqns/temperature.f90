@@ -365,7 +365,7 @@ end subroutine calcsc
 !***********************************************************************
 !
 subroutine facefluxsc(ijp, ijn, xf, yf, zf, arx, ary, arz, &
-                      flmass, lambda, gam, FI, dFidxi, &
+                      fm, lambda, gam, FI, dFidxi, &
                       prtr, cap, can, suadd)
 !
 !***********************************************************************
@@ -381,16 +381,16 @@ subroutine facefluxsc(ijp, ijn, xf, yf, zf, arx, ary, arz, &
 !***********************************************************************
 ! 
 
-  integer, intent(in) :: ijp, ijn
-  real(dp), intent(in) :: xf,yf,zf
-  real(dp), intent(in) :: arx, ary, arz
-  real(dp), intent(in) :: flmass
-  real(dp), intent(in) :: lambda
-  real(dp), intent(in) :: gam 
-  real(dp), dimension(numTotal), intent(in) :: Fi
-  real(dp), dimension(3,numCells), intent(in) :: dFidxi
-  real(dp), intent(in) :: prtr
-  real(dp), intent(inout) :: cap, can, suadd
+  integer, intent(in) :: ijp, ijn ! owner and neighbour indices
+  real(dp), intent(in) :: xf,yf,zf ! face centroid coordinates
+  real(dp), intent(in) :: arx, ary, arz ! area vector
+  real(dp), intent(in) :: fm ! mass flow at face
+  real(dp), intent(in) :: lambda ! interpoaltion factor
+  real(dp), intent(in) :: gam  ! deferred correction factor [0,1], 1-high order.
+  real(dp), dimension(numTotal), intent(in) :: Fi ! Scalar field in question
+  real(dp), dimension(3,numCells), intent(in) :: dFidxi ! Gradient of the scalar field in question.
+  real(dp), intent(in) :: prtr ! One over prandtl coefficient
+  real(dp), intent(inout) :: cap, can, suadd ! On return - matrix coeffs for owner and neighbour and source contribution.
 
 
 ! Local variables
@@ -399,8 +399,8 @@ subroutine facefluxsc(ijp, ijn, xf, yf, zf, arx, ary, arz, &
   real(dp) :: are
   real(dp) :: xpn,ypn,zpn!, xi,yi,zi,r1,r2,psie,psiw
   real(dp) :: dpn
-  real(dp) :: Cp,Ce
-  real(dp) :: fii,fm
+  real(dp) :: cp,ce
+  real(dp) :: fii
   real(dp) :: fdfie,fdfii,fcfie,fcfii,ffic
   real(dp) :: de, game, viste
   real(dp) :: fxp,fxn
@@ -436,15 +436,14 @@ subroutine facefluxsc(ijp, ijn, xf, yf, zf, arx, ary, arz, &
   de = game*(arx*arx+ary*ary+arz*arz)/(xpn*arx+ypn*ary+zpn*arz)
 
   ! Convection fluxes - uds
-  fm = flmass
   ce = min(fm,zero) 
   cp = max(fm,zero)
 
   !-------------------------------------------------------
   ! System matrix coefficients
   !-------------------------------------------------------
-  cap = -de - max(fm,zero)
-  can = -de + min(fm,zero)
+  cap = -de - cp
+  can = -de + ce
   !-------------------------------------------------------
 
 
@@ -471,7 +470,7 @@ subroutine facefluxsc(ijp, ijn, xf, yf, zf, arx, ary, arz, &
   !-------------------------------------------------------
   ! Explicit higher order convection
   !-------------------------------------------------------
-  if( flmass .ge. zero ) then 
+  if( fm .ge. zero ) then 
     ! Flow goes from p to pj - > p is the upwind node
     fii = face_value(ijp, ijn, xf, yf, zf, fxp, fi, dFidxi)
   else
@@ -487,7 +486,7 @@ subroutine facefluxsc(ijp, ijn, xf, yf, zf, arx, ary, arz, &
   fcfii = ce*fi(ijn)+cp*fi(ijp)
 
   !-------------------------------------------------------
-  ! Deffered correction for convection = gama_blending*(high-low)
+  ! Deferred correction for convection = gama_blending*(high-low)
   !-------------------------------------------------------
   ffic = gam*(fcfie-fcfii)
 
@@ -501,7 +500,7 @@ end subroutine
 
 !***********************************************************************
 !
-subroutine facefluxsc_boundary(ijp, ijn, xf, yf, zf, arx, ary, arz, flmass, FI, dFidxi, prtr, cap, can, suadd)
+subroutine facefluxsc_boundary(ijp, ijn, xf, yf, zf, arx, ary, arz, fm, FI, dFidxi, prtr, cap, can, suadd)
 !
 !***********************************************************************
 !
@@ -518,7 +517,7 @@ subroutine facefluxsc_boundary(ijp, ijn, xf, yf, zf, arx, ary, arz, flmass, FI, 
   integer, intent(in) :: ijp, ijn
   real(dp), intent(in) :: xf,yf,zf
   real(dp), intent(in) :: arx, ary, arz
-  real(dp), intent(in) :: flmass 
+  real(dp), intent(in) :: fm
   real(dp), dimension(numTotal), intent(in) :: Fi
   real(dp), dimension(3,numTotal), intent(in) :: dFidxi
   real(dp), intent(in) :: prtr
@@ -529,8 +528,7 @@ subroutine facefluxsc_boundary(ijp, ijn, xf, yf, zf, arx, ary, arz, flmass, FI, 
   real(dp) :: are
   real(dp) :: xpn,ypn,zpn
   real(dp) :: nxx,nyy,nzz,ixi1,ixi2,ixi3,dpn,costheta,costn
-  real(dp) :: Cp,Ce
-  real(dp) :: fm
+  real(dp) :: cp,ce
   real(dp) :: fdfie,fdfii
   real(dp) :: d1x,d1y,d1z,d2x,d2y,d2z
   real(dp) :: de, vole, game, viste
@@ -588,7 +586,6 @@ subroutine facefluxsc_boundary(ijp, ijn, xf, yf, zf, arx, ary, arz, flmass, FI, 
   ! dpp_j * sf
   vole=xpn*arx+ypn*ary+zpn*arz
 
-
   ! Turbulent viscosity
   viste = vis(ijn)-viscos
 
@@ -618,8 +615,6 @@ subroutine facefluxsc_boundary(ijp, ijn, xf, yf, zf, arx, ary, arz, flmass, FI, 
   dfixii = dfixi*d1x + arx/vole*( fi(ijn)-fi(ijp)-dfixi*d2x-dfiyi*d2y-dfizi*d2z ) 
   dfiyii = dfiyi*d1y + ary/vole*( fi(ijn)-fi(ijp)-dfixi*d2x-dfiyi*d2y-dfizi*d2z ) 
   dfizii = dfizi*d1z + arz/vole*( fi(ijn)-fi(ijp)-dfixi*d2x-dfiyi*d2y-dfizi*d2z ) 
-
-  !-- Skewness correction --
  
 
   ! Explicit diffusion
@@ -633,19 +628,15 @@ subroutine facefluxsc_boundary(ijp, ijn, xf, yf, zf, arx, ary, arz, flmass, FI, 
   de = game*are/dpn
 
   ! Convection fluxes - uds
-  fm = flmass
   ce = min(fm,zero) 
   cp = max(fm,zero)
 
   ! System matrix coefficients
-  cap = -de - max(fm,zero)
-  can = -de + min(fm,zero)
+  cap = -de - cp
+  can = -de + ce
 
-  !-------------------------------------------------------
   ! Explicit part of fluxes
-  !-------------------------------------------------------
   suadd = fdfie-fdfii 
-  !-------------------------------------------------------
 
 end subroutine
 

@@ -317,5 +317,64 @@ implicit none
 end subroutine
 
 
+subroutine pipe_disturbances(x,y,z,ux,uy,uz)
+!
+! Initial disturbances in pipe flow.
+! Note: some values are specific for the case I was running - change it appropriately.
+!
+  use parameters, only: pi
+  use utils, only: init_random_seed
+
+  implicit none
+
+  real(dp), intent(in) :: x,y,z
+  real(dp), intent(inout) :: ux,uy,uz
+
+  real(dp), parameter :: pipeRadius = 0.0105
+  real(dp), parameter :: pipeLength = 0.6
+  real(dp) :: zr,yr,rr,th,xo,uxx
+  real(dp) :: amp_x,freq_x,freq_t,amp_tht,amp_clip,blt,phase_x,arg_tht,amp_sin,rand,big
+
+  zr = z/pipeRadius
+  yr = y/pipeRadius
+  rr = zr*zr + yr*yr
+  if (rr.gt.0) rr=sqrt(rr)
+  th = atan2(y,z)
+  xo = 2*pi*x/pipeLength
+
+  uxx = 6.*(1-rr**6)/5.
+
+  ! Assign a wiggly shear layer near the wall
+  amp_x    = 0.35  ! Fraction of 2pi for z-based phase modification
+  freq_x   = 4     ! Number of wiggles in axial-direction
+  freq_t   = 9     ! Frequency of wiggles in azimuthal-direction
+
+  amp_tht  = 5     ! Amplification factor for clipped sine function
+  amp_clip = 0.2   ! Clipped amplitude
+
+  blt      = 0.07  ! Fraction of boundary layer with momentum deficit
+
+  phase_x = amp_x*(2*pi)*sin(freq_x*xo)
+
+  arg_tht = freq_t*th + phase_x
+  amp_sin = 5*sin(arg_tht)
+  if (amp_sin.gt. amp_clip) amp_sin =  amp_clip
+  if (amp_sin.lt.-amp_clip) amp_sin = -amp_clip
+
+  if (rr.gt.(1-blt)) uxx = uxx + amp_sin
+
+  ! Quick P-independent randomizer
+  big  = 1.e3*x + 1.e2*y + 1.e1*z
+  rand = sin(big)
+
+  ! CALL init_random_seed()
+  ! CALL RANDOM_NUMBER(rand)
+
+  ux   = ux * (uxx + .01*rand) ! to scake it to the proper level of u
+  uy   = .10*rand*rand*rand
+  uz   = .05*rand*rand
+
+end subroutine
+
 
 end module

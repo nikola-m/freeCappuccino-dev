@@ -88,7 +88,7 @@ program cappuccino
 
   ! Initialisation of fields
   call init
-  
+ 
   !call add_random_noise_to_field(U,20)
   call face_mapping
 !
@@ -181,7 +181,7 @@ program cappuccino
           ! Correct driving force for a constant mass flow rate simulation:
           if(const_mflux) then
             call constant_mass_flow_forcing
-            call recirculate_flow
+            ! call recirculate_flow
           endif
 
           ! Write values at monitoring points and recalculate time-average values for statistics:

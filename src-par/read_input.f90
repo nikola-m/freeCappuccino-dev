@@ -44,7 +44,6 @@ subroutine read_input_file
   read(5,*) levm,lasm,lles,ldes
   read(5,*) lsgdh,lggdh,lafm
   read(5,*) TurbModel
-  read(5,*) uin,vin,win,tein,edin,tin,vartin,conin
   read(5,*) convective_scheme
   read(5,*) limiter
   read(5,*) (gds(i),i=1,nphi)
@@ -55,7 +54,7 @@ subroutine read_input_file
   read(5,*) lstsq, lstsq_qr, lstsq_dm, gauss
   read(5,*) npcor, nigrad
   read(5,*) simple,piso,ncorr
-  read(5,*) const_mflux
+  read(5,*) const_mflux,magUBar
   read(5,*) CoNumFix, CoNumFixValue
 
   close (5)
@@ -77,7 +76,6 @@ subroutine read_input_file
   write(6,'(4(l1,1x),a)') levm,lasm,lles,ldes,'levm,lasm,lles,ldes'
   write(6,'(3(l1,1x),a)') lsgdh,lggdh,lafm,'lsgdh,lggdh,lafm'
   write(6,'(i2,1x,a)') TurbModel, 'Turbulence Model'
-  write(6,'(8(es11.4,1x),a)') uin,vin,win,tein,edin,tin,vartin,conin,'uin,vin,win,tein,edin,tin,vartin,conin'
   write(6,'(a,a)') convective_scheme, 'Convective scheme'
   write(6,'(a,1x,a)') limiter, 'Gradient limiter'
   write(6,'(10(f4.2,1x),a)') (gds(i),i=1,nphi),'(gds(i),i=1,nphi)'
@@ -88,7 +86,7 @@ subroutine read_input_file
   write(6,'(4(L1,1x),a)') lstsq, lstsq_qr, lstsq_dm, gauss,'lstsq, lstsq_qr, lstsq_dm, gauss'
   write(6,'(i1,1x,i1,1x,a)') npcor, nigrad,'npcor, nigrad'
   write(6,'(2(l1,1x),i1,1x,a)') simple,piso,ncorr,'simple,piso,ncorr'
-  write(6,'(1(L1,1x),5x,a)') const_mflux,'const_mflux'
+  write(6,'(L1,1x,es9.2,5x,a)') const_mflux,magUBar,'const_mflux,magUBar'
   write(6,'(L1,es11.4,5x,a)') CoNumFix, CoNumFixValue,'CoNumFix, CoNumFixValue'
   write(6,'(a)') '---cut here-----------------------------------------------------------------------------'
 

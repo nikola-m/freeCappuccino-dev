@@ -6,9 +6,23 @@ freeCappuccino is a three-dimensional unstructured finite volume code for Comput
 
 Moreover, freeCappuccino is a fortran library for manipulation of discrete tensor fields, defined over polyhedral meshes.
 
+Face based data structure enables use of cells of any shape.
+
 ### Name 'Cappuccino' encapsulates the idea that it is CAFFA (Computer Aided Fluid Flow Analysis) with some FOAM (Field Operation and Manipulation).
 
 freeCappuccino is free both as a free coffee and as free speech.
+
+
+   __                _____                                 _             
+  / _|              / ____|                               (_)            
+ | |_ _ __ ___  ___| |     __ _ _ __  _ __  _   _  ___ ___ _ _ __   ___  
+ |  _| '__/ _ \/ _ \ |    / _` | '_ \| '_ \| | | |/ __/ __| | '_ \ / _ \ 
+ | | | | |  __/  __/ |___| (_| | |_) | |_) | |_| | (_| (__| | | | | (_) |
+ |_| |_|  \___|\___|\_____\__,_| .__/| .__/ \__,_|\___\___|_|_| |_|\___/ 
+                               | |   | |                                 
+                               |_|   |_|                                  
+
+                               
 
              MM          MMM
             NMN.           MM
@@ -61,7 +75,9 @@ N Mirkov, B Rašuo, S Kenjereš, On the improved finite volume procedure for sim
 
 The code allows meshes in OpenFOAM® polyMesh format. Only slight changes are necessary in the 'boundary' file. 
 
-Code provides a utility for converting mashes saved in Gambit .neu format (made in Gambit or in Gmsh and exported as .neu) to native format of freeCappuccino.
+Code provides a utility for converting mashes saved in SU2 .su2 format (eg. made in Gmsh and exported as .su2) to native format of freeCappuccino.
+
+This way we encourage collaboration among people using other open-source CFD codes!
 
 Discretized equations are written in CSR (Compressed Sparse Row) format, which allows easy interface with many linear solver libraries, such as [LIS](http://www.ssisc.org/lis/). Also, one can use linear solvers provided in the code such as, Incomplete Cholesky Conjugate Gradient (ICCG), ILU(0) preconditioned Bi-Conjugate Gradient Stabilised method for non-symmetric systems, etc.
 
@@ -71,23 +87,8 @@ The code is written in modern fortran, so you will need fortran compiler (e.g. g
 
 Getting started
 -----------------
-Clone the git repository or download the zip archive of the most recent source, compile and build the code, and checkout the examples such as the lid-driven cavity, Pitz-Daily backward facing step, channel, and many more to come.
+Clone the git repository or download the zip archive of the most recent source, compile and build the code, and checkout the examples such as the lid-driven cavity, von Karman vortices behind a cylinder, Pitz-Daily backward facing step, MHD flow in a channel, and many more to come.
 
 License
 ------------------
 The code is published under GNU General Public License v3.0.
-
-
-Tribute section
-------------------
-
-This section tributes some open source CFD developers
-
-![alt tag](https://github.com/nikola-m/freeCappuccino/blob/master/doc/cluster.jpg)
-
-Andrei Chernousov and his cluster circa 2001.
-
-![alt tag](https://github.com/nikola-m/freeCappuccino/blob/master/doc/henry%20and%20papers.png)
-
-Henry Weller and writing papers.
-

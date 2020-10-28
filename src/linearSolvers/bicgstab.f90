@@ -26,6 +26,7 @@ subroutine bicgstab(fi,ifi)
   real(dp), dimension(numCells) :: reso,pk,uk,zk,vk,d
   real(dp) :: rsm, resmax, res0, resl
   real(dp) :: alf, beto, gam, bet, om, ukreso,tol
+  real(dp) :: factor ! normalization factor for scaled residuals
 
 ! residual tolerance
   resmax = sor(ifi)
@@ -39,9 +40,8 @@ subroutine bicgstab(fi,ifi)
   
   res = 0.0_dp
 
-  ! Vector form
-  ! res( 1:numCells ) = su( 1:numCells ) - a( ioffset(i),ioffset(i+1)-1 ) * fi( ja( ioffset(i),ioffset(i+1)-1 ) )
-
+  ! Residual
+ 
   do i=1,numCells
     res(i) = su(i) 
     do k = ioffset(i),ioffset(i+1)-1
@@ -211,8 +211,13 @@ subroutine bicgstab(fi,ifi)
 !
 ! Check convergence
 !
-  if(l.eq.1) resor(ifi) = res0
-  rsm = resl/(resor(ifi)+small)
+  if(l.eq.1) then
+    ! Normalization factor for scaled residuals
+    factor = sum( abs( a(diag(1:numCells)) * fi(1:numCells) ))
+    resor(ifi) = res0/(factor+small)
+  endif
+
+  rsm = resl/(res0+small)
   if(ltest) write(6,'(19x,3a,i4,a,1pe10.3,a,1pe10.3)') ' fi=',chvar(ifi),' sweep = ',l,' resl = ',resl,' rsm = ',rsm
   if(rsm.lt.resmax) exit
 

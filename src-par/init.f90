@@ -31,7 +31,7 @@ subroutine init
   ! Local variables 
   !
   ! character(len = 5) :: nproc_char
-  integer :: i, ijp, ijn, ijb, ib, iface, ipro
+  integer :: i, inp, ijp, ijn, ijb, ib, iface, ipro
   ! integer :: output_unit
   integer :: nsw_backup
   real(dp) :: fxp, fxn, ui, vi, wi
@@ -93,7 +93,7 @@ subroutine init
   cumulativeContErr = 0.0_dp
 
   ! Bulk velocity - important const_mflux flow!
-  magUbar = uin
+  ! magUbar = uin
 
 
 ! 2)  Field Initialisation
@@ -108,6 +108,11 @@ subroutine init
 
   call initialize_vector_field(u,v,w,dUdxi,'U')
 
+  ! ! Create initial disturbances for - ONLY FOR PIPE FLOW
+  do inp = 1,numCells
+    call pipe_disturbances(xc(inp),yc(inp),zc(inp),u(inp),v(inp),w(inp))
+  enddo  
+  
   call exchange( u )
   call exchange( v )
   call exchange( w )
@@ -221,6 +226,7 @@ subroutine init
   !
   ! Distance to the nearest wall (needed for some turbulence models).
   !
+  if (TurbModel == 3) then ! only for k-omega SST model now.
 
   if(myid .eq. 0) then
     write(*,*) ' '
@@ -304,6 +310,6 @@ subroutine init
   ! close( output_unit )
   ! !+-----------------------------------------------------------------------------+
 
-
+  endif
 
 end subroutine

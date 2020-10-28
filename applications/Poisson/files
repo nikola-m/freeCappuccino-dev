@@ -15,5 +15,5 @@ LINEAR_SOLVER_FILES=\
     gauss-seidel.f90
 
 STEADYHEAT_FILES=\
-    fvm_laplacian.f90 \
+    laplacian.f90 \
     steadyHeatEq.f90

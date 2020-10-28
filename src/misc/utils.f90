@@ -1,5 +1,4 @@
 module utils
-use types
 
 public
 

@@ -3,7 +3,15 @@
 !
 program cappuccino
 !
-!******************************************************************************
+!   __               _____                                  _             
+!  / _|             /  __ \                                (_)            
+! | |_ _ __ ___  ___| /  \/ __ _ _ __  _ __  _   _  ___ ___ _ _ __   ___  
+! |  _| '__/ _ \/ _ \ |    / _` | '_ \| '_ \| | | |/ __/ __| | '_ \ / _ \ 
+! | | | | |  __/  __/ \__/\ (_| | |_) | |_) | |_| | (_| (__| | | | | (_) |
+! |_| |_|  \___|\___|\____/\__,_| .__/| .__/ \__,_|\___\___|_|_| |_|\___/ 
+!                               | |   | |                                 
+!                               |_|   |_|                                 
+! 
 !
 ! Description:
 !  A 3D unstructured finite volume solver for Computational Fluid Dynamics.   
@@ -24,8 +32,8 @@ program cappuccino
 
   implicit none
 
+  integer :: k
   integer :: iter
-  ! integer :: narg
   integer :: itimes, itimee
   real(dp):: source
   real :: start, finish
@@ -115,6 +123,11 @@ program cappuccino
 
       if(lcal(iep))  call calculate_electric_potential
 
+     
+      ! Log scaled residuals
+      write(6,'(2x,a)') 'Scaled residuals:'
+      write(6,'(2x,11(a,4x))')     (chvarSolver(k), k=1,nphi)
+      write(6,'(a,11(1PE9.3,2x))') '> ',(resor(k), k=1,nphi)
 
       call cpu_time(finish)
       write(timechar,'(f9.5)') finish-start
@@ -126,7 +139,7 @@ program cappuccino
       !---------------------------------------------------------------
 
       ! Check residual and stop program if residuals diverge
-      source = max(resor(iu),resor(iv),resor(iw),resor(ip)) 
+      source = max(resor(iu),resor(iv),resor(iw)) 
 
       if( source.gt.slarge ) then
           write(6,"(//,10x,a)") "*** Program terminated -  iterations diverge ***" 
@@ -135,43 +148,43 @@ program cappuccino
 
       ! If residuals fall to level below tolerance level - simulation is finished.
       if( .not.ltransient .and. source.lt.sormax ) then
-          call write_restart_files
-          call writefiles
-          exit time_loop
+        call write_restart_files
+        call writefiles
+        exit time_loop
       end if
 
       if(ltransient) then 
 
-          ! Has converged within timestep or has reached maximum no. of SIMPLE iterations per timetstep:
-          if( source.lt.sormax .or. iter.ge.maxit ) then 
+        ! Has converged within timestep or has reached maximum no. of SIMPLE iterations per timetstep:
+        if( source.lt.sormax .or. iter.ge.maxit ) then 
 
-            ! Correct driving force for a constant mass flow rate simulation:
-            if(const_mflux) then
-              call constant_mass_flow_forcing
-            endif
-
-            ! Write values at monitoring points and recalculate time-average values for statistics:
-            call writehistory
-            call calc_statistics 
-
-            ! Write field values after nzapis iterations or at the end of time-dependent simulation:
-            if( mod(itime,nzapis).eq.0  .or. itime.eq.numstep ) then
-              call write_restart_files
-              call writefiles
-            endif
-
-            cycle time_loop
-         
+          ! Correct driving force for a constant mass flow rate simulation:
+          if(const_mflux) then
+            call constant_mass_flow_forcing
           endif
+
+          ! Write values at monitoring points and recalculate time-average values for statistics:
+          call writehistory
+          call calc_statistics 
+
+          ! Write field values after nzapis iterations or at the end of time-dependent simulation:
+          if( mod(itime,nzapis).eq.0  .or. itime.eq.numstep ) then
+            call write_restart_files
+            call writefiles
+          endif
+
+          cycle time_loop
+       
+        endif
 
       end if 
 
     end do iteration_loop
 
     ! Write field values after nzapis iterations or at the end of false-time-stepping simulation:
-    if(.not.ltransient .and. ( mod(itime,nzapis).eq.0 .or. itime.eq.numstep ) ) then
-        call write_restart_files
-        call writefiles
+    if(.not.ltransient .and. ( mod(itime,nzapis).eq.0 .or. (itime-itimes+1).eq.numstep ) ) then
+      call write_restart_files
+      call writefiles
     endif
 
     if(ltransient) call flush(6)

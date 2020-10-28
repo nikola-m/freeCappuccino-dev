@@ -5,7 +5,7 @@ module gradients
 
 use types
 use parameters
-use geometry, only: numCells,numPCells,numTotal,npro,xc,yc,zc
+use geometry
 use sparse_matrix, only: ioffset,ja,diag
 
 implicit none
@@ -138,10 +138,7 @@ implicit none
     call grad_lsq_dm(phi,dPhidxi,2,dmat)
 
   elseif ( (lstsq_dm .and. gauss) .or. (lstsq .and. gauss) ) then
-    ! Using the lstsq or lstsq_qr switch the Least-squares gradients are already calculated above
-    ! Using these we perform more precise interpolation of our variable to faces and get 
-    ! conservative gradients using Gauss rule.
-    ! call grad_lsq_dm(phi,dPhidxi,2,dmat)
+
     call grad_gauss_corrected(phi,dPhidxi(1,:),dPhidxi(2,:),dPhidxi(3,:)) 
 
   else 
@@ -158,10 +155,6 @@ implicit none
   elseif( trim(adjustl(limiter)) == 'Venkatakrishnan') then
 
     call slope_limiter_Venkatakrishnan( phi, dPhidxi )
-
-  elseif( trim(adjustl(limiter)) == 'mVenkatakrishnan') then
-
-    call slope_limiter_modified_Venkatakrishnan( phi, dPhidxi )
   
   elseif(adjustl(limiter) == 'MDL') then
 
@@ -207,18 +200,22 @@ subroutine grad_vector_field(U,V,W,dUdxi,dVdxi,dWdxi)
     call grad_lsq(U,dUdxi,2,dmat)
     call grad_lsq(V,dVdxi,2,dmat)
     call grad_lsq(W,dWdxi,2,dmat)
+
   elseif (lstsq_qr) then
     call grad_lsq_qr(U,dUdxi,2,dmatqr)
     call grad_lsq_qr(V,dVdxi,2,dmatqr)
     call grad_lsq_qr(W,dWdxi,2,dmatqr)
+
   elseif (lstsq_dm) then
     call grad_lsq_dm(U,dUdxi,2,dmat)
     call grad_lsq_dm(V,dVdxi,2,dmat)
     call grad_lsq_dm(W,dWdxi,2,dmat)
+
   elseif ( gauss ) then
     call grad_gauss_corrected(U,dUdxi(1,:),dUdxi(2,:),dUdxi(3,:))
     call grad_gauss_corrected(V,dVdxi(1,:),dVdxi(2,:),dVdxi(3,:))
     call grad_gauss_corrected(W,dWdxi(1,:),dWdxi(2,:),dWdxi(3,:))
+    
   else
     call grad_gauss(U,dUdxi(1,:),dUdxi(2,:),dUdxi(3,:))
     call grad_gauss(V,dVdxi(1,:),dVdxi(2,:),dVdxi(3,:))
@@ -309,10 +306,6 @@ implicit none
 
     call slope_limiter_Venkatakrishnan(phi, dPhidxi)
 
-  elseif(adjustl(option_limiter) == 'mVenkatakrishnan') then
-
-    call slope_limiter_modified_Venkatakrishnan(phi, dPhidxi)
-
   elseif(adjustl(option_limiter) == 'MDL') then
 
     call slope_limiter_multidimensional(phi, dPhidxi)
@@ -400,103 +393,6 @@ subroutine set_phi_min_max(phi)
 
   enddo
 
-
-end subroutine
-
-
-
-!***********************************************************************
-!
-subroutine slope_limiter_modified_Venkatakrishnan(phi, dPhidxi)
-!
-!***********************************************************************
-!
-!     Calculates slope limiter and appiies to scalar gradient:
-!     Wang modified Venkatakrishnan slope limiter
-!     Ref.: Z. J. Wang. "A Fast Nested Multi-grid Viscous Flow Solver for Adaptive Cartesian/Quad Grids",
-!     International Journal for Numerical Methods in Fluids. 33. 657–680. 2000.
-!     The same slope limiter is used in Fluent.
-!
-!***********************************************************************
-!
-  use variables, only:phimax,phimin
-
-  implicit none
-
-  !     Input
-  real(dp),dimension(numTotal) :: phi
-  real(dp),dimension(3,numTotal) :: dPhidxi
-
-
-  !     Locals
-  integer :: inp,ijp,ijn,k
-
-  ! Look at the reference epsprim \in [0.01,0.2]
-  real(dp), parameter :: epsprim = 0.05_dp
-
-  real(dp) :: phi_p
-  real(dp) :: cell_neighbour_value,gradfiXdr,slopelimit
-  real(dp) :: deltam,deltap,epsi
-  real(dp) :: glomax,glomin
-
-
-  ! Set global minimum and maximum; requires mpi_reduce
-  glomin = minval(phi(1:numCells))
-  glomax = maxval(phi(1:numCells))
-
-  call global_min(glomin)
-  call global_max(glomax)
-
-  ! Sets phimin and phi max which are min and max value in the range of a cell and its neighbours.  
-  call set_phi_min_max( phi )
-
-
-  do inp = 1, numCells
-
-    ! Values at cell center:
-    phi_p = phi(inp)
-
-
-    slopelimit = 1.0_dp
-
-    do k=ioffset(inp), ioffset(inp+1)-1
-
-      if (k == diag(inp)) cycle
-   
-      ijp = inp
-      ijn = ja(k)
-
-      gradfiXdr=dPhidxi(1,ijp)*(xc(ijn)-xc(ijp))+dPhidxi(2,ijp)*(yc(ijn)-yc(ijp))+dPhidxi(3,ijp)*(zc(ijn)-zc(ijp)) 
-
-      ! Find unlimited value:
-      cell_neighbour_value =  phi_p + gradfiXdr 
-
-
-      deltam = cell_neighbour_value - phi_p
-
-      if (deltam .gt. 0.0d0) then
-          deltap = phimax(inp)-phi_p
-      else
-          deltap = phimin(inp)-phi_p
-      endif
-
-      ! Wang proposition for epsilon
-      epsi =  epsprim*( glomax-glomin ) 
-      slopelimit = max(                                                                          &
-                        min(                                                                     &
-                              slopelimit,                                                        &
-                              1./(deltam+small)*((deltap**2+epsi**2)*deltam+2*deltam**2*deltap)  &
-                                            /(deltap**2+2*deltam**2+deltap*deltam+epsi**2+small) &
-                            ),                                                                   &
-                        zero                                                                     &
-                      )
-
-
-    enddo
-
-    dPhidxi(:,inp) = slopelimit*dPhidxi(:,inp)
-
-  enddo
 
 end subroutine
 
@@ -693,67 +589,70 @@ subroutine slope_limiter_multidimensional(phi, dPhidxi)
 !
 !***********************************************************************
 !
-!     Calculates slope limiter and applies to scalar gradient:
-!     Multidimensional slope limiter
-!     Ref.: SE Kim, B Makarov, D Caraeni - A Multi-Dimensional Linear 
-!     Reconstruction Scheme for Arbitrary Unstructured Meshes, AIAA 2003-3990.
-!     The same slope limiter is used in Fluent.
+!  Calculates slope limiter and applies to scalar gradient:
+!  Multidimensional slope limiter
+!  Ref.: SE Kim, B Makarov, D Caraeni - A Multi-Dimensional Linear 
+!  Reconstruction Scheme for Arbitrary Unstructured Meshes, AIAA 2003-3990.
+!  The same slope limiter is used in Fluent.
 !
 !***********************************************************************
 !
 
   implicit none
 
-  !     Input
+  ! Input
   real(dp),dimension(numTotal) :: phi
-  real(dp),dimension(3,numCells) :: dPhidxi
+  real(dp),dimension(3,numTotal) :: dPhidxi
 
 
-  !     Locals
-  integer :: inp,ijp,ijn,k
-  real(dp) :: phi_max,phi_min
+  ! Locals
+  integer :: inp,ijp,k,iface
   real(dp) :: dPhi,dPhimax,dPhimin
-  real(dp) :: gx,gy,gz
   real(dp) :: gtx,gty,gtz
-  real(dp) :: gn
+  real(dp) :: gx,gy,gz,gn
   real(dp) :: xpn,ypn,zpn,dpn
   real(dp) :: nx,ny,nz
+  real(dp), dimension(:), allocatable :: phimax,phimin
+
+  allocate(phimax(numCells),phimin(numCells))
 
   ! Find phi_max and phi_min in  neighbours of Co, including itself.
-  do inp = 1, numCells
+  do inp = 1,numCells
 
     ! max and min values over current cell and neighbors
-    phi_max = phi(ja( ioffset(inp) ))
-    phi_min = phi(ja( ioffset(inp) ))
+    phimax(inp) = phi(ja( ioffset(inp) ))
+    phimin(inp) = phi(ja( ioffset(inp) ))
 
     do k=ioffset(inp)+1, ioffset(inp+1)-1
-      phi_max = max( phi_max, phi(ja(k)) )
-      phi_min = min( phi_max, phi(ja(k)) )      
+      phimax(inp) = max( phimax(inp), phi(ja(k)) )
+      phimin(inp) = min( phimin(inp), phi(ja(k)) )      
     enddo
 
-    ! Initialize gradient vector with current unlimited value
-    gx = dPhidxi(1,inp)
-    gy = dPhidxi(2,inp)
-    gz = dPhidxi(3,inp)
+  enddo
 
-    ! Loop over neighbours, we access info about neighbours using CSR ioffset array..
-    do k=ioffset(inp), ioffset(inp+1)-1
 
-      ! Skip the cell itself, we need only neighbours
-      if (k == diag(inp)) cycle
-   
-      ! Present cell - P
-      ijp = inp
-      ! Neighbour cell - N ( we find its index using CSR column array )
-      ijn = ja(k)
+  ! Loop over inner faces:
+  do iface=1,numInnerFaces
 
-      ! Distance vector between cell centers
-      xpn=xc(ijn)-xc(ijp)
-      ypn=yc(ijn)-yc(ijp)
-      zpn=zc(ijn)-zc(ijp)
+    do k=1,2 ! Do the same for both owner and neighbour cell
 
-      ! Distance from P to neighbor N
-      dpn=sqrt(xpn**2+ypn**2+zpn**2) 
+      if (k==1) then
+        ijp = owner(iface)
+      else
+        ijp = owner(iface)
+      endif
+
+      ! Initialize gradient vector with current unlimited value
+      gx = dPhidxi(1,ijp)
+      gy = dPhidxi(2,ijp)
+      gz = dPhidxi(3,ijp)
+
+      ! Distance vector between cell center and face center
+      xpn=xf(iface)-xc(ijp)
+      ypn=yf(iface)-yc(ijp)
+      zpn=zf(iface)-zc(ijp)
+
+      dpn=sqrt(xpn**2+ypn**2+zpn**2)
 
       nx = xpn/dpn
       ny = ypn/dpn
@@ -765,16 +664,15 @@ subroutine slope_limiter_multidimensional(phi, dPhidxi)
       gty = gy - gn*ny
       gtz = gz - gn*nz
 
-      ! Increment from P cell to N cell
-      dPhi=gx*(xc(ijn)-xc(ijp))+gy*(yc(ijn)-yc(ijp))+gz*(zc(ijn)-zc(ijp)) 
+      ! Increment from P cell to face centroid f
+      dPhi=gx*(xf(iface)-xc(ijp))+gy*(yf(iface)-yc(ijp))+gz*(zf(iface)-zc(ijp)) 
 
-      dPhimax = phi_max-phi(inp)
-
-      dPhimin = phi_min-phi(inp)
+      dPhimax = phimax(ijp)-phi(ijp)
+      dPhimin = phimin(ijp)-phi(ijp)
 
       ! Check for overshoots and undershoots and correct accordingly.
 
-      if ( phi_max > phi(inp) .and. dPhi > dPhimax ) then
+      if ( phimax(ijp) > phi(ijp) .and. dPhi > dPhimax ) then
 
         gx = gtx + nx*dPhimax
         gy = gty + ny*dPhimax
@@ -782,7 +680,7 @@ subroutine slope_limiter_multidimensional(phi, dPhidxi)
 
       endif
 
-      if ( phi_min < phi(inp) .and. dPhi < dPhimin ) then
+      if ( phimin(ijp) < phi(ijp) .and. dPhi < dPhimin ) then
 
         gx = gtx + nx*dPhimin
         gy = gty + ny*dPhimin
@@ -790,18 +688,17 @@ subroutine slope_limiter_multidimensional(phi, dPhidxi)
 
       endif
 
+      dPhidxi(1,ijp) = gx
+      dPhidxi(2,ijp) = gy
+      dPhidxi(3,ijp) = gz
 
     enddo
 
-    dPhidxi(1,inp) = gx
-    dPhidxi(2,inp) = gy
-    dPhidxi(3,inp) = gz
-
   enddo
 
+  deallocate(phimax,phimin)
+
 end subroutine
-
-
 
 
 

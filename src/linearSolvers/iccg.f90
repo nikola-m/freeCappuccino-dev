@@ -31,7 +31,8 @@ subroutine iccg(fi,ifi)
   real(dp), dimension(numCells) :: pk,zk,d
   real(dp) :: rsm, resmax, res0, resl
   real(dp) :: s0, sk, alf, bet, pkapk, tol
-
+  real(dp) :: factor ! normalization factor for scaled residuals
+  
 ! residual tolerance
   resmax = sor(ifi)
   tol = 1e-13
@@ -149,8 +150,13 @@ subroutine iccg(fi,ifi)
 !
 ! Check convergence
 !
-  if(l.eq.1) resor(ifi) = res0
-  rsm = resl/(resor(ifi)+small)
+  if(l.eq.1) then
+    ! Normalization factor for scaled residuals
+    factor = sum( abs( a(diag(1:numCells)) * fi(1:numCells) ))
+    resor(ifi) = res0/(factor+small)
+  endif
+
+  rsm = resl/(res0+small)
   if(ltest) write(6,'(19x,3a,i4,a,1pe10.3,a,1pe10.3)') ' fi=',chvar(ifi),' sweep = ',l,' resl = ',resl,' rsm = ',rsm
   if(rsm.lt.resmax) exit
 

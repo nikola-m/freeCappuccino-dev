@@ -72,7 +72,7 @@ subroutine pmgmres_ilu ( n, nz_num, ia, ja, a, ua, x, iu, rhs, itr_max, mr, &
 !
 !    Input, real ( kind = 8 ) A(NZ_NUM), the matrix values.
 !
-!    Input, integer ( kind = 4 ) AU(N), integer pointer to the matrix values at diagonal.
+!    Input, integer ( kind = 4 ) UA(N), integer pointer to the matrix values at diagonal.
 !
 !    Input/output, real ( kind = 8 ) X(N); on input, an approximation to
 !    the solution.  On output, an improved approximation.
@@ -91,7 +91,7 @@ subroutine pmgmres_ilu ( n, nz_num, ia, ja, a, ua, x, iu, rhs, itr_max, mr, &
 !    Input, real ( kind = 8 ) TOL_REL, a relative tolerance comparing the
 !    current residual to the initial residual.
 !
-  use parameters, only: ltest
+  use parameters, only: ltest,resor
   use title_mod, only: chvarSolver
   
   implicit none
@@ -132,6 +132,7 @@ subroutine pmgmres_ilu ( n, nz_num, ia, ja, a, ua, x, iu, rhs, itr_max, mr, &
   logical verbose
   real ( kind = 8 ) x(n)
   real ( kind = 8 ) y(mr+1)
+  real ( kind = 8 ) factor
 
   if(ltest) then
     verbose = .true.
@@ -164,6 +165,12 @@ subroutine pmgmres_ilu ( n, nz_num, ia, ja, a, ua, x, iu, rhs, itr_max, mr, &
 
     if ( itr == 1 ) then
       res0 = rho
+
+      ! Normalization factor for scaled residuals
+      factor = sum( abs( a( ua(1:n) ) * x(1:n) )) + 1e-20
+
+      resor(iu) = res0/factor
+
     endif
 
     if ( verbose ) then

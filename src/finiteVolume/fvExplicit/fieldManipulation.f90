@@ -20,12 +20,17 @@
   ! how we calculate interpolation factor. Option "2" is typical for CFD codes, while "1" is something specific
   ! for freeCappuccino.
   !****************************************************
-  character(len=10), parameter :: scheme = 'cds' 
+  character(len=10), parameter :: scheme = 'central' 
 
   interface explDiv
     module procedure explDiv
-    module procedure explDivMdot
+    module procedure explDivFlmass
   end interface
+
+  ! interface explDdt
+  !   module procedure explDdt
+  !   module procedure explDdtRho
+  ! end interface
 
   public
 
@@ -33,7 +38,7 @@
 
 !***********************************************************************
 !
-  pure function volumeWeightedAverage(U) result(wAvgU)
+pure function volumeWeightedAverage(U) result(wAvgU)
 !
 !***********************************************************************
     use geometry, only:numTotal,numCells,vol
@@ -62,12 +67,12 @@
     
     wAvgU = wAvgU / sumvol
 
-  end function
+end function
 
 
 !***********************************************************************
 !
-  subroutine calcPressDiv 
+subroutine calcPressDiv 
 !
 !***********************************************************************
 ! 
@@ -87,7 +92,7 @@
   use geometry
   use parameters, only: small
   use variables, only: p,dPdxi
-  use sparse_matrix, only: su,sv,sw,apu
+  use sparse_matrix, only: su,sv,sw!,apu
 
   implicit none
 
@@ -117,19 +122,19 @@
       ijp = owner(i)
       ijn = neighbour(i)
 
-      ! ! Linear interpolation of rpessure to face
-      ! call presFaceDivInner(ijp, ijn, xf(i), yf(i), zf(i), arx(i), ary(i), arz(i), facint(i), &
-      !                   p, dPdxi,dfxe,dfye,dfze)
+      ! Linear interpolation of rpessure to face
+      call presFaceDivInner(ijp, ijn, xf(i), yf(i), zf(i), arx(i), ary(i), arz(i), facint(i), &
+                        p, dPdxi,dfxe,dfye,dfze)
 
 
-      ! Pressure on face based on "Standard" interpolation in Fluent.
-      ! This is weighted interpolation where weights are mass flows estimated at respective cell center
-      pf = ( p(ijp)*Apu(ijp)+p(ijn)*Apu(ijn) ) / ( Apu(ijp) + Apu(ijn) + small )
+      ! ! Pressure on face based on "Standard" interpolation in Fluent.
+      ! ! This is weighted interpolation where weights are mass flows estimated at respective cell center
+      ! pf = ( p(ijp)*Apu(ijp)+p(ijn)*Apu(ijn) ) / ( Apu(ijp) + Apu(ijn) + small )
 
-      ! Contribution =(interpolated mid-face value)x(area)
-      dfxe = pf*arx(i)
-      dfye = pf*ary(i)
-      dfze = pf*arz(i)
+      ! ! Contribution =(interpolated mid-face value)x(area)
+      ! dfxe = pf*arx(i)
+      ! dfye = pf*ary(i)
+      ! dfze = pf*arz(i)
 
 
       ! Accumulate contribution at cell center and neighbour.
@@ -159,12 +164,12 @@
     enddo
 
   return
-  end
+end
 
 
 !***********************************************************************
 !
-  function explDiv(u,v,w) result(div)
+function explDiv(u,v,w) result(div)
 !
 !***********************************************************************
 !  
@@ -217,13 +222,13 @@
     enddo
 
   return
-  end
+end
 
 
 
 !***********************************************************************
 !
-  function explDivMdot(flmass,u,v,w) result(div)
+function explDivFlmass(flmass,u,v,w) result(div)
 !
 !***********************************************************************
 !  
@@ -278,16 +283,15 @@
     enddo
 
   return
-  end
+end
 
 
 
 !
 !***********************************************************************
 !
-  subroutine presFaceDivInner(ijp,ijn, &
-                              xfc,yfc,zfc,sx,sy,sz,fif, &
-                              fi,df,dfxe,dfye,dfze)
+subroutine presFaceDivInner(ijp,ijn,xfc,yfc,zfc,sx,sy,sz,fif, &
+                            fi,df,dfxe,dfye,dfze)
 !
 !***********************************************************************
 !
@@ -316,14 +320,13 @@
   dfye = fie*sy
   dfze = fie*sz
 
-  end subroutine
+end subroutine
 
 
 !
 !***********************************************************************
 !
-  subroutine faceDivInner(ijp,ijn, &
-                          xfc,yfc,zfc,sx,sy,sz,fif, &
+subroutine faceDivInner(ijp,ijn,xfc,yfc,zfc,sx,sy,sz,fif, &
                           u,v,w,du,dv,dw,dfxe)
 !
 !***********************************************************************
@@ -353,12 +356,12 @@
   ! (interpolated mid-face value)x(area)
   dfxe = uf*sx + vf*sy + wf*sz
 
-  end subroutine
+end subroutine
 
 
 !***********************************************************************
 !
-  subroutine faceDivBoundary(sx,sy,sz,uf,vf,wf,dfx)
+subroutine faceDivBoundary(sx,sy,sz,uf,vf,wf,dfx)
 !
 !***********************************************************************
 !
@@ -372,11 +375,11 @@
 !
     dfx = uf*sx + vf*sy + wf*sz
 
-  end subroutine
+end subroutine
 
 !***********************************************************************
 !
-  subroutine presFaceDivBoundary(sx,sy,sz,fi,dfx,dfy,dfz)
+subroutine presFaceDivBoundary(sx,sy,sz,fi,dfx,dfy,dfz)
 !
 !***********************************************************************
 !
@@ -392,13 +395,13 @@
     dfy = dfy - fi*sy
     dfz = dfz - fi*sz
 
-  end subroutine
+end subroutine
 
 
 
 !***********************************************************************
 !
-  function average(u) result(aver)
+function average(u) result(aver)
 !
 !***********************************************************************
 !                                       
@@ -466,13 +469,12 @@
       aver(ijp) = aver(ijp)/sumsf(ijp)
     enddo
 
-  end function
-
+end function
 
 
 !***********************************************************************
 !
-  function field_interpolate(u) result(ui)
+function fieldInterpolate(u) result(ui)
 !
 !***********************************************************************
 !  
@@ -488,44 +490,48 @@
 !***********************************************************************
 !
 
-!...Output
-    real(dp), dimension(numFaces) :: ui
+  ! Output
+  real(dp), dimension(numFaces) :: ui
 
-!...Input
-    real(dp), dimension(numTotal) :: u
+  ! Input
+  real(dp), dimension(numTotal), intent(in) :: u
 
-!...Local
-    integer :: i,ijp,ijn,ijb,iface
-    real(dp), dimension(3,numTotal) :: dUdxi
+  ! Local
+  integer :: i,ijp,ijn,ijb,iface
+  real(dp), dimension(:,:), allocatable :: dUdxi
 
-    ! Calculate cell-centered gradient
-    call grad(u,dUdxi)
+  allocate( dUdxi(3,numTotal) )
 
-    ! Calculate terms integrated over surfaces
+  ! Calculate cell-centered gradient
+  call grad(u,dUdxi)
 
-    ! Inner face
-    do i=1,numInnerFaces
-      ijp = owner(i)
-      ijn = neighbour(i)
-      ui(i) = face_value_w_option( ijp, ijn, xf(i), yf(i), zf(i), facint(i), u, dUdxi, scheme )
-    enddo
+  ! Calculate terms integrated over surfaces
 
-    ! Update boundaries?
+  ! Inner face
+  do i=1,numInnerFaces
+    ijp = owner(i)
+    ijn = neighbour(i)
+    ui(i) = face_value_w_option( ijp, ijn, xf(i), yf(i), zf(i), facint(i), u, dUdxi, scheme )
+  enddo
 
-    ! Contribution from boundaries
-    do i=1,numBoundaryFaces
-      iface = numInnerFaces + i
-      ijb = numCells + i
-      ui(iface) = u(ijb)
-    enddo
+  ! Update boundaries?
 
-  end function
+  ! Contribution from boundaries
+  do i=1,numBoundaryFaces
+    iface = numInnerFaces + i
+    ijb = numCells + i
+    ui(iface) = u(ijb)
+  enddo
+
+  deallocate(dUdxi)
+
+end function
 
 
 
 !***********************************************************************
 !
-  function surfaceSum(u) result(ssum)
+function surfaceSum(u) result(ssum)
 !
 !***********************************************************************
 !  
@@ -577,13 +583,13 @@
       ssum(ijp) = ssum(ijp)+u(ijb)
     enddo
 
-  end function
+end function
 
 
 
 !***********************************************************************
 !
-  function surfaceIntegrate(u) result(ssum)
+function surfaceIntegrate(u) result(ssum)
 !
 !***********************************************************************
 !  
@@ -643,13 +649,114 @@
       ssum(ijp) = ssum(ijp)/vol(ijp)
     enddo
 
-  end function
+end function
 
 
+
+! !***********************************************************************
+! !
+! function explDdtRho(den,u,uo,uoo) result(ddt)
+! !
+! !***********************************************************************
+! !  
+! !  volScalarField -> volScalarField
+! !  Explicit time derivative in finite volume form.
+! !
+! !***********************************************************************
+! !
+!   use parameters
+!   use geometry, only: vol, numCells, numTotal
+
+!   implicit none
+! !
+! !***********************************************************************
+! !
+
+!   ! Output
+!   real(dp), dimension(numCells) :: ddt
+
+!   ! Input
+!   real(dp), dimension(numTotal), intent(in) :: den
+!   real(dp), dimension(numTotal), intent(in) :: u,uo
+!   real(dp), dimension(numTotal), intent(in), optional :: uoo
+!   ! Local
+!   integer :: inp
+
+!   ddt = 0.0_dp
+
+!   !
+!   ! > Loop over cells
+!   !
+!   do inp=1,numCells
+
+!     if( bdf .or. cn ) then
+ 
+!       ddt(inp) = den(inp)*vol(inp) * ( u(inp) - uo(inp) )
+
+!     elseif( bdf2 ) then
+
+!       ddt(inp) = den(inp)*vol(inp) * ( 1.5_dp*u(inp) - 2*uo(inp) + 0.5_dp*uoo(inp) )
+
+!     endif
+
+!   enddo
+
+! end function
+
+
+! !***********************************************************************
+! !
+! function explDdt(u,uo,uoo) result(ddt)
+! !
+! !***********************************************************************
+! !  
+! !  volScalarField -> volScalarField
+! !  Explicit time derivative in finite volume form.
+! !
+! !***********************************************************************
+! !
+!   use parameters
+!   use geometry, only: vol, numCells, numTotal
+
+!   implicit none
+! !
+! !***********************************************************************
+! !
+
+!   ! Output
+!   real(dp), dimension(numCells) :: ddt
+
+!   ! Input
+!   real(dp), dimension(numTotal), intent(in) :: u,uo
+!   real(dp), dimension(numTotal), intent(in), optional :: uoo
+
+!   ! Local
+!   integer :: inp
+
+!   ddt = 0.0_dp
+
+!   !
+!   ! > Loop over cells
+!   !
+!   do inp=1,numCells
+
+!     if( bdf .or. cn ) then
+ 
+!       ddt(inp) = vol(inp) * ( u(inp) - uo(inp) )
+
+!     elseif( bdf2 ) then
+
+!       ddt(inp) = vol(inp) * ( 1.5_dp*u(inp) - 2*uo(inp) + 0.5_dp*uoo(inp) )
+
+!     endif
+
+!   enddo
+
+! end function
 
 !***********************************************************************
 !
-  subroutine add_random_noise_to_field(Phi,percent)
+subroutine add_random_noise_to_field(Phi,percent)
 !
 !***********************************************************************
 !
@@ -676,19 +783,19 @@
 
   do inp=1,numCells
 
-        ! Random number based fluctuation of mean profile            
-        CALL init_random_seed()
-        CALL RANDOM_NUMBER(perturb)
-        
-        ! perturb is now between 0. and 1., we want it to be from 0 to 2*amplitude
-        ! e.g. perturb = 0.9+perturb/5. when Max perturbation is +/- 10% of mean profile
-        perturb = ( 1.0_dp - level/100.0_dp ) + perturb * (2*level/100.0_dp)
+    ! Random number based fluctuation of mean profile            
+    CALL init_random_seed()
+    CALL RANDOM_NUMBER(perturb)
+    
+    ! perturb is now between 0. and 1., we want it to be from 0 to 2*amplitude
+    ! e.g. perturb = 0.9+perturb/5. when Max perturbation is +/- 10% of mean profile
+    perturb = ( 1.0_dp - level/100.0_dp ) + perturb * (2*level/100.0_dp)
 
-        Phi(INP) = perturb*Phi(inp)
+    Phi(INP) = perturb*Phi(inp)
 
   enddo
 
-  end subroutine
+end subroutine
 
     
 end module fieldManipulation

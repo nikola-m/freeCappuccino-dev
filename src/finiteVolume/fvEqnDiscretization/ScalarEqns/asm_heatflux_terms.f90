@@ -3,8 +3,8 @@
 subroutine Additional_algebraic_heatflux_terms
 !
 !***********************************************************************
-!     Calculates the additional agebraic heatflux terms for temperature eq.
-!     and adds them to the rhs vector.
+!  Calculates the additional agebraic heatflux terms for temperature eq.
+!  and adds them to the rhs vector.
 !
 !***********************************************************************
   use types, only: dp
@@ -31,22 +31,18 @@ subroutine Additional_algebraic_heatflux_terms
 
 !-------------------------------------------------------
 !
-!     TERM1 is interpolated to faces, then an x-direction
-!     gradient is sought for.
+!     TERM1,2 and 3 are interpolated to faces.
 !     TERM1 is \rho*utt + dTdx*prtr*\mu_t
 !     where: 
 !       \mu_t = \mu_eff - \mu_molecular,
 !       utt - heat flux
 !
-!     TERM2 is interpolated to faces, then an y-direction
-!     gradient is sought for.
 !     TERM2 is \rho*vtt + dTdy*prtr*\mu_t
 !
-!     TERM3 is interpolated to faces, then an z-direction
-!     gradient is sought for.
 !     TERM3 is \rho*wtt + dTdz*prtr*\mu_t
 !
-!     su(inp)=su(inp)-dterm1dx-dterm2dy-dterm3dz
+!     Then negative divergence is added to source.
+!     su(inp)=su(inp)- sum_over_faces(TERM_i*Sf_i)
 !-------------------------------------------------------
 
 do i=1,numInnerFaces

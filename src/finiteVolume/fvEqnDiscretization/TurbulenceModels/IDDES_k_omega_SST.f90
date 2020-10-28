@@ -1,13 +1,22 @@
-module k_omega_sst
+module IDDES_k_omega_SST
 !
-! Implementation of k-omega Shear Stress Transport (SST) two equation turbulence model.
+! Implementation of Improved wall-modeling capability Delayed Detached Eddy Simulation (IDDES) 
+! k-omega Shear Stress Transport (SST) hybrid turbulence model.
 !
 ! REFERENCES:
+
+!     For k-omega SST:
 !     * ANSYS FLUENT Theory Guide
 !     * Menter, F. R., "Two-Equation Eddy-Viscosity Turbulence Models for Engineering Applications",
 !       AIAA Journal, Vol. 32, No. 8, August 1994, pp. 1598-1605. 
 !     * Menter, F. R., Kuntz, M., and Langtry, R., "Ten Years of Industrial Experience with the SST Turbulence Model",
 !       Turbulence, Heat and Mass Transfer 4, ed: K. Hanjalic, Y. Nagano, and M. Tummers, Begell House, Inc., 2003, pp. 625 - 632. 
+!
+!     For DDES:
+!     * M. Gritskevich, A. Garbaruk, J.Shtze, F. Menter,
+!       "Development of DDES and IDDES Formulations for the k-\omega Shear Stress Transport Model", 
+!       Flow, Turbulence Combustion (2012), 88:431-449.
+!
 !
   use types
   use parameters
@@ -17,14 +26,12 @@ module k_omega_sst
 
   implicit none
 
-  logical :: LowRe = .false. ! Has to be set in calling routine or in main program.
-
   ! Turbulence model constants 
   real(dp), parameter :: BETTAST=0.09_dp   
-  real(dp), parameter :: SIGMK1=1.176_dp
+  real(dp), parameter :: SIGMK1=0.85_dp
   real(dp), parameter :: SIGMK2=1.0_dp
-  real(dp), parameter :: SIGMOM1=2.0_dp
-  real(dp), parameter :: SIGMOM2=1.168_dp
+  real(dp), parameter :: SIGMOM1=0.5_dp
+  real(dp), parameter :: SIGMOM2=0.856_dp
   real(dp), parameter :: BETAI1=0.075_dp
   real(dp), parameter :: BETAI2=0.0828_dp
   real(dp), parameter :: A1=0.31_dp
@@ -38,26 +45,38 @@ module k_omega_sst
   real(dp), parameter :: ALPHA1=5./9.0_dp
   real(dp), parameter :: ALPHA2=0.44_dp
 
+  ! IDDES related
+  real(dp), parameter :: cdes1 = 0.78_dp
+  real(dp), parameter :: cdes2 = 0.61_dp
+  real(dp), parameter :: cdt1 = 20.0_dp
+  integer, parameter :: cdt2 = 3
+  real(dp), parameter :: cw = 0.15_dp
+  real(dp), parameter :: cl = 5.0_dp
+  real(dp), parameter :: ct = 1.87
+
   real(dp), parameter :: C3 = 1.44_dp
 
   ! Derived constants
   real(dp), parameter :: CMU25 = sqrt(sqrt(BETTAST))
   real(dp), parameter :: CMU75 = cmu25**3
 
-  real(dp), dimension(:), allocatable :: fsst
+  real(dp), dimension(:), allocatable :: fsst ! Blending function, size[numT]
+  real(dp), dimension(:), allocatable :: hmax ! Maximum edge length of each cell, size[numCells]
+
+  logical :: iddes_simplified ! logical parameter to set in input
 
   private 
 
-  public :: LowRe
-  public :: modify_viscosity_k_omega_sst
-  public :: modify_viscosity_inlet_k_omega_sst
+  public :: modify_viscosity_IDDES_k_omega_sst, &
+            modify_viscosity_inlet_IDDES_k_omega_sst, &
+            iddes_simplified
 
 contains
 
 
 !***********************************************************************
 !
-subroutine modify_viscosity_k_omega_sst()
+subroutine modify_viscosity_IDDES_k_omega_sst
 !
 !***********************************************************************
 !
@@ -68,33 +87,70 @@ subroutine modify_viscosity_k_omega_sst()
   use parameters
   use variables
   use gradients
+
   implicit none
 
-  if(.not.allocated(fsst)) then
-    allocate(fsst(numTotal))
-    write(*,'(a)') "  **Allocated SST blending function."
+  integer :: i,ijp,ijn,if
+  real(dp) :: dpf
+
+  if( .not.allocated(fsst) ) then
+
+    allocate( fsst(numCells) )
+
+    write(*,'(a)') ' '
+    write(*,'(a)') '  **Allocated SST blending function.'
+    write(*,'(a)') ' '
+
   endif
+
+  if(.not.allocated(hmax)) then
+
+    allocate(hmax(numCells))
+
+    write(*,'(a)') ' '
+    write(*,'(a)') '  **Allocated hmax for IDDES.'
+    write(*,'(a)') ' '
+
+    ! Populate hmax array - this is initialized only at start for static meshes.
+     
+    hmax = 0.
+
+    ! Inner faces:                                             
+    do if=1,numInnerFaces                                                       
+      ijp = owner(if)
+      ijn = neighbour(if)
+
+      dpf = sqrt( (xf(if)-xc(ijp))**2 + (yf(if)-yc(ijp))**2 + (zf(if)-zc(ijp))**2 )
+      hmax(ijp) = max( hmax(ijp), dpf  )
+
+      dpf = sqrt( (xf(if)-xc(ijn))**2 + (yf(if)-yc(ijn))**2 + (zf(if)-zc(ijn))**2 )
+      hmax(ijn) = max( hmax(ijn), dpf  )
+
+    enddo
+
+    ! Boundary faces:
+    do i=1,numBoundaryFaces
+      if = numInnerFaces + i
+      ijp = owner(if)
+
+      dpf = sqrt( (xf(if)-xc(ijp))**2 + (yf(if)-yc(ijp))**2 + (zf(if)-zc(ijp))**2 )
+      hmax(ijp) = max( hmax(ijp), dpf  )
+
+    end do
+
+    ! Double the one stored
+    hmax = 2*hmax
+    
+  endif
+
 
   call calcsc(TE,dTEdxi,ite) ! Assemble and solve turbulence kinetic energy eq.
   call calcsc(ED,dEDdxi,ied) ! Assemble and solve specific dissipation rate (omega [1/s]) of tke eq.
+
   call modify_mu_eff()
 
 end subroutine
 
-
-!***********************************************************************
-!
-subroutine modify_viscosity_inlet_k_omega_sst()
-!
-!***********************************************************************
-!
-! Update effective viscosity at inlet
-!
-  implicit none
-
-  call modify_mu_eff_inlet()
-
-end subroutine
 
 
 !***********************************************************************
@@ -135,10 +191,12 @@ subroutine calcsc(Fi,dFidxi,ifi)
   ! real(dp) :: dudx,dudy,dudz,dvdx,dvdy,dvdz,dwdx,dwdy,dwdz
   real(dp) :: viss
   real(dp) :: fimax,fimin
-  real(dp) :: wldist,domegapl,ksi,tmp                            
+  real(dp) :: wldist,domegapl,ksi                        
   real(dp) :: dtedx,dtedy,dtedz,deddx,deddy,deddz
-  real(dp) :: alphast,alphasst,bettasst,domega,vist
+  real(dp) :: alphasst,bettasst,domega,vist
   real(dp) :: wlog,wvis
+  real(dp) :: DeltaIDDES,cdes,lenles,lenrans,rdt,fd,fdt,fb,liddes,alphcf
+  real(dp) :: fe,fe1,fe2,ft,fl,rdl
   ! real(dp) :: W_S,Ri,F4
  
 
@@ -195,17 +253,8 @@ subroutine calcsc(Fi,dFidxi,ifi)
 
     ! PRODUCTION LIMITER FOR SST AND SAS MODELS:
     ! 10*bettainf=10*0.09=0.9
+    gen(inp)=min(gen(inp),0.9_dp*den(inp)*te(inp)*ed(inp))        
 
-    ! High-Re version...............................................................
-      gen(inp)=min(gen(inp),0.9_dp*den(inp)*te(inp)*ed(inp))        
-
-      if (LowRe) then
-    ! Low-Re version of Wilcox and SST k-omega......................................
-        tmp=10*bettast*(4./15.0_dp+(den(inp)*te(inp)/(8.0_dp*viscos*ed(inp)))**4) & !
-                      /(1.0_dp    +(den(inp)*te(inp)/(8.0_dp*viscos*ed(inp)))**4)   !  
-        gen(inp)=min(gen(inp),tmp*den(inp)*te(inp)*ed(inp))                         !
-    !...............................................................................!
-      end if 
 
   enddo
 
@@ -235,16 +284,41 @@ subroutine calcsc(Fi,dFidxi,ifi)
 
     ! Add destruction term to the lhs:
 
-    !.....High-Re version.....................................................
-    sp(inp)=bettast*ed(inp)*den(inp)*vol(inp)    
+    ! *** THIS TERM IS WHERE DIFFERENCE IS BETWEEN THIS ONE AND K-W-SST ***
+    cdes = cdes1*fsst(inp) + cdes2*(1.-fsst(inp))
+    DeltaIDDES = min( cw*max( walldistance(inp),hmax(inp) ), hmax(inp) )
+    lenles = cdes*DeltaIDDES
+    lenrans = sqrt(te(inp))/(bettast*ed(inp))
 
-    if(LowRe) then                                        
-    !.....Low-Re version of Wilcox and SST k-omega.............................
-        tmp = BETTAST*(4./15.0_dp+(den(inp)*te(inp)/(8*viscos*ed(inp)))**4) & !
-                    /(1.0_dp    +(den(inp)*te(inp)/(8*viscos*ed(inp)))**4)    !
-        sp(inp)=tmp*ed(inp)*den(inp)*vol(inp)                                 !           
-    !.........................................................................!
+    vist = (vis(inp)-viscos)/den(inp)
+    rdt = vist &
+        / ( CAPPA**2 * walldistance(inp)**2 * sqrt( 0.5*magStrain(inp)*Vorticity(inp) ) + small )
+    fdt = 1.0-tanh( (cdt1*rdt)**cdt2 )
+    alphcf = 0.25 - walldistance(inp)/hmax(inp)
+    fb = min( 2*exp(-9*alphcf**2) , 1.0 )
+    fd = max( (1.0-fdt), fb)
+
+    ! *** LIDDES - IDDES length scale ***
+    if (iddes_simplified) then
+      lIDDES = fd*lenrans + (1.0-fd)*lenles
+    else
+      ! find fe
+      rdl = viscos/den(inp) &
+          / ( CAPPA**2 * walldistance(inp)**2 * sqrt( 0.5*magStrain(inp)*Vorticity(inp) ) + small )
+      ft = tanh( (ct**2*rdt)**3 )
+      fl = tanh( (cl**2*rdl)**10 )
+      fe2 = 1.0-max(ft,fl)
+      if ( alphcf .ge. 0.0 ) then
+        fe1 = 2*exp(-11.09*alphcf**2)
+      else
+        fe1 = 2*exp(-9.0*alphcf**2)       
+      endif
+      fe = fe2*max((fe1-1.0),0.0)
+      lIDDES = fd*(1.0+fe)*lenrans + (1.0-fd)*lenles
     endif
+
+    sp(inp)=den(inp)*sqrt(te(inp))*vol(inp) / (lIDDES+small) ! <- k^3/2 / k = k, dividing by k when moving to the lhs.    
+
 
     ! If gen negative move to lhs
     sp(inp)=sp(inp)-genn*vol(inp)/(te(inp)+small)
@@ -322,14 +396,14 @@ subroutine calcsc(Fi,dFidxi,ifi)
     deddz=dEDdxi(3,inp)
 
     ! Find $d_{\omega}^{+}$ d_omega+
-    domegapl=max(2*den(inp)/(SIGMOM2*ed(inp)) * (dtedx*deddx+dtedy*deddy+dtedz*deddz),1e-20)
+    domegapl=max(2*den(inp)*SIGMOM2/(ed(inp)) * (dtedx*deddx+dtedy*deddy+dtedz*deddz),1e-20)
 
     ! Find ksi
     ksi=min(  max(                                                   &
                   sqrt(te(inp))/(BETTAST*wldist*ed(inp)+small),      &
                   500.0_dp*viscos/den(inp)/(wldist**2*ed(inp)+small) &
                  ),                                                  &
-              4.0_dp*den(inp)*te(inp)/(SIGMOM2*domegapl*wldist**2)   &
+              4.0_dp*den(inp)*SIGMOM2*te(inp)/(domegapl*wldist**2)   &
             )
 
     ! Find the SST model blending function f_sst:
@@ -351,19 +425,7 @@ subroutine calcsc(Fi,dFidxi,ifi)
     vist = (vis(inp)-viscos)/densit
 
     ! Production coefficient alpha_sst
-    !.....High-Re version...............................................
-      alphasst=fsst(inp)*alpha1+(1.0_dp-fsst(inp))*alpha2               !<
-
-      If(LowRe) then
-     ! Low-Re version of SST k-omega......................................
-      alphast=(0.024_dp+(densit*te(inp))/(6.0_dp*viscos*ed(inp)))  &    !             
-            /(1.0_dp+(densit*te(inp))/(6.0_dp*viscos*ed(inp)))          !
-      tmp=alpha1/alphast*                                   &           !                                     
-             (1./9.0_dp+ (densit*te(inp))/(2.95_dp*viscos*ed(inp))) &   !
-            /(1.0_dp  + (densit*te(inp))/(2.95_dp*viscos*ed(inp)))      !
-      alphasst=fsst(inp)*tmp + (1.0_dp-fsst(inp))*alpha2                !<
-      !.................................................................!
-      endif
+    alphasst=fsst(inp)*alpha1+(1.0_dp-fsst(inp))*alpha2
 
     su(inp)=alphasst*genp*vol(inp)/(vist+small)
 
@@ -379,7 +441,7 @@ subroutine calcsc(Fi,dFidxi,ifi)
       deddy=dEDdxi(2,inp)
       deddz=dEDdxi(3,inp)
 
-      domega = 2*(1.0_dp-fsst(inp))*den(inp)/(SIGMOM2*ed(inp)+small)*(dtedx*deddx+dtedy*deddy+dtedz*deddz)
+      domega = 2*(1.0_dp-fsst(inp))*den(inp)*SIGMOM2/(ed(inp)+small)*(dtedx*deddx+dtedy*deddy+dtedz*deddz)
       domega = max(domega,0.0_dp)
 
     su(inp)=su(inp)+domega*vol(inp)
@@ -436,7 +498,6 @@ subroutine calcsc(Fi,dFidxi,ifi)
         sp(inp)=sp(inp)-(utn+vtn+wtn)/(ed(inp)+small)
       end if
 
-      !
       !=====================================
       ! UNSTEADY TERM
       !=====================================
@@ -468,11 +529,11 @@ subroutine calcsc(Fi,dFidxi,ifi)
 
     ! In SST model the Effective diffusivity is a field variable:
     if(ifi.eq.ite) then
-      prtr_ijp = fsst(ijp)*(1./sigmk1)  + (1.0_dp-fsst(ijp))*(1./sigmk2)
-      prtr_ijn = fsst(ijn)*(1./sigmk1)  + (1.0_dp-fsst(ijn))*(1./sigmk2)
+      prtr_ijp = fsst(ijp)*SIGMK1  + (1.0_dp-fsst(ijp))*SIGMK2
+      prtr_ijn = fsst(ijn)*SIGMK1  + (1.0_dp-fsst(ijn))*SIGMK2
     else
-      prtr_ijp = fsst(ijp)*(1./sigmom1) + (1.0_dp-fsst(ijp))*(1./sigmom2)
-      prtr_ijn = fsst(ijn)*(1./sigmom1) + (1.0_dp-fsst(ijn))*(1./sigmom2)
+      prtr_ijp = fsst(ijp)*SIGMOM1 + (1.0_dp-fsst(ijp))*SIGMOM2
+      prtr_ijn = fsst(ijn)*SIGMOM1 + (1.0_dp-fsst(ijn))*SIGMOM2
     endif
 
     call facefluxsc(  ijp, ijn, &
@@ -526,9 +587,9 @@ subroutine calcsc(Fi,dFidxi,ifi)
 
         ! In SST model the Effective diffusivity is a field variable:
         if(ifi.eq.ite) then
-          prtr=fsst(ijp)*(1./sigmk1)  + (1.0_dp-fsst(ijp))*(1./sigmk2)
+          prtr=fsst(ijp)*SIGMK1  + (1.0_dp-fsst(ijp))*SIGMK2
         else
-          prtr=fsst(ijp)*(1./sigmom1) + (1.0_dp-fsst(ijp))*(1./sigmom2)
+          prtr=fsst(ijp)*SIGMOM1 + (1.0_dp-fsst(ijp))*SIGMOM2
         endif
 
         call facefluxsc( ijp, ijb, &
@@ -553,9 +614,9 @@ subroutine calcsc(Fi,dFidxi,ifi)
 
         ! In SST model the Effective diffusivity is a field variable:
         if(ifi.eq.ite) then
-          prtr=fsst(ijp)*(1./sigmk1)  + (1.0_dp-fsst(ijp))*(1./sigmk2)
+          prtr=fsst(ijp)*SIGMK1  + (1.0_dp-fsst(ijp))*SIGMK2
         else
-          prtr=fsst(ijp)*(1./sigmom1) + (1.0_dp-fsst(ijp))*(1./sigmom2)
+          prtr=fsst(ijp)*SIGMOM1 + (1.0_dp-fsst(ijp))*SIGMOM2
         endif
 
         call facefluxsc( ijp, ijb, &
@@ -772,7 +833,7 @@ subroutine modify_mu_eff()
   real(dp) :: nxf,nyf,nzf,are
   real(dp) :: Vnp,Vtp,xtp,ytp,ztp
   real(dp) :: Utau,viscw
-  real(dp) :: wldist,etha,f2_sst,alphast
+  real(dp) :: wldist,etha,f2_sst
   real(dp) :: Utauvis,Utaulog,Upl
   ! real(dp) :: fimax,fimin
 
@@ -796,16 +857,6 @@ subroutine modify_mu_eff()
     f2_sst = tanh(etha*etha)
 
     vis(inp)=viscos+den(inp)*a1*te(inp)/(max(a1*ed(inp), magStrain(inp)*f2_sst))
-
-    ! Low-re version..........................................................
-    if (LowRe) then                                                          !
-    ! Let's find alpha*                                                      !                                         
-      alphast=(0.024_dp+(densit*te(inp))/(6*viscos*ed(inp)))   &             !           
-             /(1.0_dp+(densit*te(inp))/(6*viscos*ed(inp)))                   !
-      vis(inp)=viscos+den(inp)*te(inp)/(ed(inp)+small)               &       !  
-            *1.0_dp/max(1.0_dp/alphast, magStrain(inp)*f2_sst/(a1*ed(inp)))  !                                                   
-    ! End of low-re version..................................................!
-    end if
 
 
     ! Underelaxation
@@ -970,7 +1021,7 @@ subroutine modify_mu_eff()
 end subroutine modify_mu_eff
 
 
-subroutine modify_mu_eff_inlet()
+subroutine modify_viscosity_inlet_IDDES_k_omega_sst
 !
 ! Update turbulent and effective viscosity at inlet.
 !
@@ -1002,7 +1053,7 @@ subroutine modify_mu_eff_inlet()
 
   enddo 
 
-end subroutine modify_mu_eff_inlet
+end subroutine
 
 
-end module k_omega_sst
+end module

@@ -4,7 +4,7 @@ subroutine continuityErrors
 !   Calculates and prints the continuity errors.
 !
   use types
-  use parameters, only: sumLocalContErr, globalContErr, cumulativeContErr
+  use parameters, only: sumLocalContErr, globalContErr, cumulativeContErr, resor, ip
   use geometry, only: numInnerFaces, owner, neighbour, numBoundaries, bctype, nfaces, startFace
   use sparse_matrix, only: res,apu
   use variables, only: flmass
@@ -66,6 +66,9 @@ subroutine continuityErrors
   cumulativeContErr = cumulativeContErr + globalContErr
 
   res = 0.0_dp
+
+  ! For report of scaled residuals - scaled residual for continuity is this.
+  resor(ip) = sumLocalContErr
 
   write(6,'(3(a,es10.3))') "  time step continuity errors : avg local = ", sumLocalContErr, &
  &                          ", global = ", globalContErr, &

@@ -7,7 +7,9 @@ subroutine modify_viscosity
   use k_epsilon_rng
   use k_epsilon_rlzb  
   use k_epsilon_rlzb_2lewt 
-  use k_omega_sst
+  use k_omega_SST
+  use DDES_k_omega_SST
+  use IDDES_k_omega_SST
   use k_eqn_eddy
   use spalart_allmaras
 
@@ -26,6 +28,9 @@ subroutine modify_viscosity
   call calc_strain_and_vorticity
 
   select case (TurbModel)
+
+    case(0)
+      return
 
     case (1)
       call modify_viscosity_k_epsilon_std()
@@ -55,6 +60,12 @@ subroutine modify_viscosity
 
     case (9)
       call modify_viscosity_k_epsilon_rlzb_2lewt()
+
+    case (10)
+      call modify_viscosity_DDES_k_omega_sst
+
+    case (11)
+      call modify_viscosity_IDDES_k_omega_sst
 
     case default
       

@@ -63,7 +63,7 @@ module boundary_module
             elseif (char_string == "startFace" ) then 
                 read(line_string,*) startFace
                 if(nFaces > 0) then
-                  write(boundary_file,'(2a,2(1x,i0))')  bc_name,bc_type,nFaces,startFace
+                  write(boundary_file,'(a,1x,a,2(1x,i0))')  trim(bc_name),trim(bc_type),nFaces,startFace
                 endif
                 exit inner_loop
 
@@ -157,7 +157,7 @@ subroutine process_boundary_file_par(boundary_of,boundary_file, process_file)
             elseif (char_string == "neighbProcNo") then 
                 ! read(line_string,*) neighbProcNo
                 write(process_file,*) line_string !neighbProcNo
-                write(boundary_file,'(2a,2(1x,i0))')  bc_name,bc_type,nFaces,startFace
+                write(boundary_file,'(2a,2(1x,i0))')  trim(bc_name),trim(bc_type),nFaces,startFace
                 exit inner_loop
 
             endif

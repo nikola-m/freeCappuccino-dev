@@ -49,7 +49,7 @@ function face_value(ijp,ijn,xf,yf,zf,lambda,u,dUdxi) result(ue)
     ue = face_value_muscl(ijp, ijn, xf, yf, zf, u, dUdxi)
 
   elseif (lcubic) then
-    ue = face_value_cubic(ijp, ijn, xf, yf, zf, lambda, u, dUdxi)
+    ue = face_value_cubic(ijp, ijn, lambda, u, dUdxi)
 
   elseif (flux_limiter) then
     ue = face_value_2nd_upwind_flux_limiter(ijp, ijn, lambda, u, dUdxi)
@@ -202,27 +202,11 @@ end function
   real(dp), dimension(3,numPCells) :: gradfi
 
   ! Locals
-  real(dp) ::  phi_p
-  real(dp) :: xcp,ycp,zcp
-  real(dp) :: gradfi_p_x,gradfi_p_y,gradfi_p_z
   real(dp) :: gradfidr
 
-  ! Values at cell center's of neighbouring cells:
-  phi_p = fi(inp)
+  gradfidr = gradfi(1,inp)*(xf-xc(inp))+gradfi(2,inp)*(yf-yc(inp))+gradfi(3,inp)*(zf-zc(inp))
 
-  xcp = xc(inp)
-  ycp = yc(inp)
-  zcp = zc(inp)
-
-  gradfi_p_x = gradfi(1,inp)
-  gradfi_p_y = gradfi(2,inp)
-  gradfi_p_z = gradfi(3,inp)
-
-
-  gradfidr = gradfi_p_x*(xf-xcp)+gradfi_p_y*(yf-ycp)+gradfi_p_z*(zf-zcp)
-
-  face_value = phi_p + gradfidr
-
+  face_value = fi(inp) + gradfidr
   end function
 
 
@@ -299,7 +283,7 @@ end function
 
 !***********************************************************************
 !
-  function face_value_cubic(inp,inn, xf, yf, zf, lambda, fi, gradfi) result(face_value)
+  function face_value_cubic(inp,inn, lambda, fi, gradfi) result(face_value)
 !
 !***********************************************************************
 !
@@ -320,7 +304,7 @@ end function
 
   ! Input
   integer :: inp, inn
-  real(dp) :: xf, yf, zf, lambda
+  real(dp) :: lambda
   real(dp), dimension(numTotal) :: fi
   real(dp), dimension(3,numPCells) :: gradfi
 
@@ -422,10 +406,10 @@ end function
     psi = max(0., min(2.*r, 2./3._dp*r+1./3._dp, 2.))
 
   elseif(lcharm) then
-    psi = (r+abs(r))*(3*r+1.)/(2*(r+1.)**2)
+    psi = max(0., min(2*r,(r+abs(r))*(3*r+1.0)/(2*(r+1.0)**2), 2.0))
 
   elseif(lospre) then
-    psi = 1.5*r*(r+1.)/(r**2+r+1.)
+    psi = max(0., min(2*r,1.5*r*(r+1.0)/(r**2+r+1.0), 2.0))
 
   else
   ! psi for 2nd order upwind (luds) scheme:

@@ -982,50 +982,50 @@ endif
 ! > Report on geometrical quantities > I will leave this for debug purposes.
 !..............................................................................
 
-  if (myid .eq. 0 ) then
+  ! if (myid .eq. 0 ) then
 
-  write ( *, '(a)' ) ' '
-  write ( *, '(a)' ) '  Cell data: '
+  ! write ( *, '(a)' ) ' '
+  ! write ( *, '(a)' ) '  Cell data: '
 
-  call r8vec_print_some ( numCells, vol, 1, 10, &
-      '  First 10 elements of cell volumes array:' )
+  ! call r8vec_print_some ( numCells, vol, 1, 10, &
+  !     '  First 10 elements of cell volumes array:' )
 
-  call r8vec_print_some ( numCells, xc, 1, 10, &
-      '  First 10 elements of cell x-centers array:' )
+  ! call r8vec_print_some ( numCells, xc, 1, 10, &
+  !     '  First 10 elements of cell x-centers array:' )
 
-  call r8vec_print_some ( numCells, yc, 1, 10, &
-      '  First 10 elements of cell y-centers array:' )
+  ! call r8vec_print_some ( numCells, yc, 1, 10, &
+  !     '  First 10 elements of cell y-centers array:' )
 
-  call r8vec_print_some ( numCells, zc, 1, 10, &
-      '  First 10 elements of cell z-centers array:' )
+  ! call r8vec_print_some ( numCells, zc, 1, 10, &
+  !     '  First 10 elements of cell z-centers array:' )
 
-  write ( *, '(a)' ) ' '
-  write ( *, '(a)' ) '  Face data: '
+  ! write ( *, '(a)' ) ' '
+  ! write ( *, '(a)' ) '  Face data: '
 
-  call i4vec_print2 ( 10, owner, neighbour, '  First 10 lines of owner and neighbour arrays:' )
+  ! call i4vec_print2 ( 10, owner, neighbour, '  First 10 lines of owner and neighbour arrays:' )
 
-  call r8vec_print_some ( numFaces, arx, 1, 10, &
-      '  First 10 elements of Arx array:' )
+  ! call r8vec_print_some ( numFaces, arx, 1, 10, &
+  !     '  First 10 elements of Arx array:' )
 
-  call r8vec_print_some ( numFaces, ary, 1, 10, &
-      '  First 10 elements of Ary array:' )
+  ! call r8vec_print_some ( numFaces, ary, 1, 10, &
+  !     '  First 10 elements of Ary array:' )
 
-  call r8vec_print_some ( numFaces, arz, 1, 10, &
-      '  First 10 elements of Arz array:' )
+  ! call r8vec_print_some ( numFaces, arz, 1, 10, &
+  !     '  First 10 elements of Arz array:' )
 
-    call r8vec_print_some ( numFaces, xf, 1, 10, &
-      '  First 10 elements of xf array:' )
+  !   call r8vec_print_some ( numFaces, xf, 1, 10, &
+  !     '  First 10 elements of xf array:' )
 
-  call r8vec_print_some ( numFaces, yf, 1, 10, &
-      '  First 10 elements of yf array:' )
+  ! call r8vec_print_some ( numFaces, yf, 1, 10, &
+  !     '  First 10 elements of yf array:' )
 
-  call r8vec_print_some ( numFaces, zf, 1, 10, &
-      '  First 10 elements of zf array:' )
+  ! call r8vec_print_some ( numFaces, zf, 1, 10, &
+  !     '  First 10 elements of zf array:' )
 
-  call r8vec_print_some ( numInnerFaces, facint, 1, 10, &
-      '  First 10 elements of interpolation factor (facint) array:' )
+  ! call r8vec_print_some ( numInnerFaces, facint, 1, 10, &
+  !     '  First 10 elements of interpolation factor (facint) array:' )
 
-  endif
+  ! endif
 
   ! Thank you
   deallocate (x)

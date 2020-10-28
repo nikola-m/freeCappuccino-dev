@@ -66,6 +66,10 @@ module parameters
   real(dp) :: erough            ! E parameter for rough wall
   real(dp) :: zzero             ! z0 - wall roughness [m] for aerodynamically rough walls
 
+  !
+  ! Mesh format type
+  !
+  character( len=10 ) :: mesh_format
 
   !
   ! Timesteping control

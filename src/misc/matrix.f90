@@ -350,7 +350,7 @@
    w(k) = w(k) - s  
    g = sqrt(dot_product(w,w))
    DO i=k,m
-   w(i) = w(i)/g
+   w(i) = w(i)/(g+1e-30)
    END DO
    u = 2.0_dp*matmul(w,R)
    R = rank_one_update(R,m,n,W,u,-1.0_dp)    ! R = R – W*uT 
@@ -699,7 +699,7 @@
      lam = matmul(r,q)
 !     if (maxval(lam)<1e-1) exit
    end do
-!   print*,'eig converged in', i ,'iterations.'
+   !print*,'eig converged in', i ,'iterations.'
    end subroutine eig
 
 !=======================================================================

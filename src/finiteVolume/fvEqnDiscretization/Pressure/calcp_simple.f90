@@ -129,8 +129,9 @@ subroutine calcp_simple
 
     ! Solving pressure correction equation
     ! call dpcg(pp,ip)
-    call iccg(pp,ip)
-    ! call bicgstab(pp,ip) 
+    ! call iccg(pp,ip)
+    call bicgstab(pp,ip) 
+    ! call pmgmres_ilu ( numCells, nnz, ioffset, ja, a, diag, pp(1:numCells), ip, su, 30, 4, 1e-7, sor(ip) )
     
     !  write(maxno,'(i5)') nsw(ip)
     !  write(tol,'(es9.2)') sor(ip)

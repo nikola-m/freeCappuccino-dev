@@ -4,7 +4,7 @@ subroutine calcp_piso
 !
 !***********************************************************************
 !
-! This implementation fo PISO algorithm follows descripton given in
+! This implementation of PISO algorithm follows descripton given in
 ! Ferziger, Peric - Computational Methods for Fluid Dynamics, 2nd ed.
 ! It uses PRESSURE instead of PRESSURE CORRECTION as a variable.
 ! The same approach is also used in OpenFOAM library.

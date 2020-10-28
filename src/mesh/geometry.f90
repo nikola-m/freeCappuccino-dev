@@ -4,6 +4,7 @@ module geometry
 ! Purpose: Module for manipulation of unstructured meshes.
 !
 use types
+use parameters, only: mesh_format
 use utils, only: get_unit, file_row_count, r8vec_print_some, i4vec_print2
 
 implicit none
@@ -38,7 +39,7 @@ integer, parameter :: nomax = 30 ! Max no. of nodes in face - determines size of
 real(dp), parameter :: tiny = 1e-30
 
 ! Mesh file units
-integer :: points_file, cells_file, faces_file, owner_file, neighbour_file, boundary_file 
+integer :: points_file, cells_file, faces_file, owner_file, neighbour_file, boundary_file, size_file
 
 integer, parameter :: interpolation_coeff_variant = 2 ! (1,2) look at the code below.
 
@@ -72,11 +73,46 @@ real(dp), dimension(:), allocatable :: srdw,dnw    ! srdw = |are|/|dnw|, dnw = n
 integer, dimension(:), allocatable :: owner     ! Index of the face owner cell
 integer, dimension(:), allocatable :: neighbour ! Index of the neighbour cell  - it shares the face with owner
 
+! Stuff related to Cell-to-Node interpolation using weighted Pseudo-Laplacian interpolation method.
+! This is approached using CSR like data format, where, 
+! iCellNode[1:numNodes+1] are offsets for each mesh node, 
+! jCellNode[1:nCellNode]  are surrounding cells of each mesh node in a linear list, and
+! wCellNode[1:nCellNode]  are weights for cell-to-node interpolation.
+! nCellNode's value is sum( noel(cellType) ), therefore min is 4*numCells (all tets), max is 8*numCells (all hex).
+integer :: nCellNode
+integer, dimension(:), allocatable :: iCellNode, jCellNode 
+real(dp), dimension(:), allocatable :: wCellNode
+
 
 public 
 
 contains
 
+
+subroutine read_mesh
+!
+! Simple driver subroutine, that call one of the subrouines below, 
+! based on the specified format. 
+! This allows some form of flexibility
+!
+  if (mesh_format == 'nativeMesh') then
+
+    call read_mesh_native
+
+  elseif(mesh_format == 'foamMesh') then
+
+    call read_mesh_openfoam
+
+  else
+      write ( *, '(a)' ) ' '
+      write ( *, '(a)' ) '  Fatal error!'
+      write ( *, '(a)' ) '  Please specify mesh format type in the input file!'
+      write ( *, '(a)' ) "  Supported options are 'nativeMesh' and 'foamMesh'"
+      stop
+  end if
+
+
+end subroutine
 
 
 subroutine read_mesh_native
@@ -137,9 +173,9 @@ subroutine read_mesh_native
   open( unit = points_file,file = 'polyMesh/points' )
   rewind points_file
 
-  call get_unit( cells_file )
-  open( unit = cells_file,file = 'polyMesh/cells' )
-  rewind cells_file
+  ! call get_unit( cells_file )
+  ! open( unit = cells_file,file = 'polyMesh/cells' )
+  ! rewind cells_file
 
   call get_unit( faces_file )
   open( unit = faces_file, file='polyMesh/faces' )
@@ -157,6 +193,9 @@ subroutine read_mesh_native
   open( unit = boundary_file, file='polyMesh/boundary' )
   rewind boundary_file
 
+  call get_unit( size_file )
+  open( unit = size_file, file='polyMesh/size' )
+  rewind size_file
 !
 ! > Read boundary conditions file. 
 !
@@ -214,18 +253,18 @@ subroutine read_mesh_native
 ! > Find out numCells, numNodes, numFaces, numInnerFaces, etc.
 !
 
-  read(cells_file, *) numCells
-  close( cells_file)
-
-  read(points_file, *) numNodes
-
-  read(owner_file, *) numFaces
-
-  read(neighbour_file, *) numInnerFaces
+  read(size_file, *) numNodes
+  read(size_file, *) numCells
+  read(size_file, *) numInnerFaces
+  read(size_file, *) numBoundaryFaces
+  read(size_file, *) numFaces
 
 
   ! Number of boundary faces
-  numBoundaryFaces = numFaces - numInnerFaces
+  if (numBoundaryFaces /= numFaces - numInnerFaces) then
+    write(*,*) "Something wrong with the mesh: numBoundaryFaces /= numFaces - numInnerFaces!"
+    stop
+  endif
 
   ! Size of arrays storing variables numCells+numBoundaryFaces
   numTotal = numCells + numBoundaryFaces
@@ -339,7 +378,7 @@ subroutine read_mesh_native
 
   ! The 'faces' file
 
-  read( faces_file, * )  line_string ! we don't need this info on first line
+  ! read( faces_file, * )  line_string ! we don't need this info on first line
 
   ! Allocate tmp array of number of nodes for each face - nnodes, and node array
   allocate( nnodes(numFaces) )
@@ -670,13 +709,14 @@ subroutine read_mesh_native
   close ( owner_file )
   close ( neighbour_file)
   close ( boundary_file)
+  close ( size_file )
 !+-----------------------------------------------------------------------------+
 
-end subroutine read_mesh_native
+end subroutine
 
 
 
-subroutine read_mesh
+subroutine read_mesh_openfoam
 !
 !  Description:
 !    Calculates basic geometrical quantities of numerical mesh
@@ -1414,7 +1454,7 @@ subroutine read_mesh
   close ( boundary_file)
 !+-----------------------------------------------------------------------------+
 
-end subroutine read_mesh
+end subroutine
 
 
 
@@ -1544,6 +1584,89 @@ subroutine read_line_faces_file_polyMesh(faces_file,nn,nod,nmax)
 
 end subroutine
 
+
+subroutine calcWeightCellToNode
+!
+! Purpose:
+! Calculating weights for cell center to cell node weighted interpolation
+! used for e.g. Gauss Node based gradients or for post processing.
+!
+! Description:
+! Implementation based on pseudo_laplacian weighted interpolation method,
+! proposed by Holmes and Connell, which is 2nd order accurate on unstructured meshes.
+!
+! Author:
+! Nikola Mirkov (Email: largeddysimulation@gmail.com) 
+! 10/2020
+!
+  integer :: i,k,jcn
+  real(dp) :: rx,ry,rz
+  real(dp) :: ixx,iyy,izz,ixy,ixz,iyz
+  real(dp) :: D,lamx,lamy,lamz
+
+
+  do i=1,numNodes ! <- loop over mesh nodes
+
+    ! Lambdas (lamx,lamy,lamz) are valid for one mesh node 
+    ! and surrounding set of cell centers.
+    ! We reinitialize these below because they participate in
+    ! calculation of lambdas.
+    rx = 0.
+    ry = 0.
+    rz = 0.
+
+    ixx = 0.
+    iyy = 0.
+    izz = 0.
+
+    ixy = 0.
+    ixz = 0. 
+    iyz = 0.
+
+    do k = iCellNode(i),iCellNode(i+1)-1
+
+      jcn = jCellNode(k) ! <- every cell surrounding this particular node is listed here in ascending order.
+
+      rx = rx + ( xc( jcn ) - x( i ) )
+      ry = ry + ( yc( jcn ) - y( i ) )
+      rz = rz + ( zc( jcn ) - z( i ) )
+
+      ixx = ixx + ( xc( jcn ) - x( i ) )**2
+      iyy = iyy + ( yc( jcn ) - y( i ) )**2
+      izz = izz + ( zc( jcn ) - z( i ) )**2
+
+      ixy = ixy + ( xc( jcn ) - x( i ) )*( yc( jcn ) - y( i ) )
+      ixz = ixz + ( xc( jcn ) - x( i ) )*( zc( jcn ) - z( i ) )
+      iyz = iyz + ( yc( jcn ) - y( i ) )*( zc( jcn ) - z( i ) )
+
+    enddo
+
+    D = ixx*(iyy*izz-iyz**2)-ixy*(ixy*izz-ixz*iyz)+ixz*(ixy*iyz-iyy*ixz)
+    
+    lamx = (-rx*(ixx*izz-iyz**2)  + ry*(ixy*izz-ixz*iyz) - rz*(ixy*iyz-iyy*ixz) )/( D + tiny )
+    lamy = ( rx*(ixy*izz-ixz*iyz) - ry*(ixx*izz-ixz**2)  + rz*(ixx*iyz-ixy*ixz) )/(D + tiny)
+    lamz = (-rx*(ixy*iyz-iyy*ixz) + ry*(ixx*iyz-ixy*ixz) - rz*(ixx*iyy-ixy**2) )/(D + tiny)
+
+    ! **Pseudo-Laplacian weight for each cell-to-node interpolaton**
+    ! NOTE: If you want to change mesh during simulation (moving mesh),
+    ! (xn-xp), (yn-yp) and (zn-zp) changes over time, then
+    ! save lamx,lamy,lamz, and update weight (wc2n) after each mesh update.
+
+    do k = iCellNode(i),iCellNode(i+1)-1
+
+      jcn = jCellNode(k) 
+
+      wCellNode( jcn ) = 1.0_dp + lamx*( xc( jcn ) - x( i ) ) &
+                                + lamy*( yc( jcn ) - y( i ) ) &
+                                + lamz*( zc( jcn ) - z( i ) )
+
+    enddo
+
+  enddo
+
+
+
+end subroutine
 
 
 end module
