@@ -16,6 +16,6 @@ To run this case do the following:
 
 - Unpack zip archives with mesh (polyMesh.zip), vtk mesh file (vtk.zip), and initial and boundary conditions (0.zip).
 
--Provided that you have cappuccino code on your path execute 'run' script from command line.
+- Provided that you have cappuccino code on your path execute 'run' script from command line.
 
--Open solution files located in vtk folder in Paraview.
+- Open solution files located in vtk folder in Paraview.

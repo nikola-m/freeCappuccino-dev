@@ -18,62 +18,62 @@ Create the mesh with Gmsh (it is advised to install Gmsh https://gmsh.info/):
 
 Note: We have saved mesh in su2 format - which is possible in Gmsh. We do that becasue of the conversion utility that we have, and which we will call in following step. If you haven't done it - you will need to compile this utility - which is located in 'utilities' folder of freeCappuccino. This program will create mesh files for our simulation:
 
-`mkdir polyMesh vtk vtk/mesh 0`
-`su2ToCappuccino cylinder_annular`
+`mkdir polyMesh vtk vtk/mesh 0`  
+`su2ToCappuccino cylinder_annular`  
 
 
 Edit polyMesh 'boundary' file to set boundary types to:
 
-bcName bcType nFaces startFace
-wallInner wall 156 12012
-front symmetry 6084 12168
-back symmetry 6084 18252
-wallOuter wall 156 24336
+bcName bcType nFaces startFace  
+wallInner wall 156 12012  
+front symmetry 6084 12168  
+back symmetry 6084 18252  
+wallOuter wall 156 24336  
 
 Mesh conversion utility will also create template files for initial conditions in '0' folder. We will open files and edit them:
 
 Rename file with template for scalar field initialization to 'T' for temperature
 `mv 0/T.template 0/T`
 
-Copy settings provided below:
-internalField
-  uniform
-  300.0
-boundaryField
-wallInner
-   Dirichlet
-    uniform
-     302.0
-front
-   Neumann
-    zeroGradient
-back
-   Neumann
-    zeroGradient
-wallOuter
-   Dirichlet
-    uniform
-     300.0
+Copy settings provided below:  
+internalField  
+  uniform  
+  300.0  
+boundaryField  
+wallInner  
+   Dirichlet  
+    uniform  
+     302.0  
+front  
+   Neumann  
+    zeroGradient  
+back  
+   Neumann  
+    zeroGradient  
+wallOuter  
+   Dirichlet  
+    uniform  
+     300.0  
 
-In 'U' file, change settings to these:
-internalField
-  uniform
-  0.0 0.0 0.0
-boundaryField
-wallInner
-   Dirichlet
-    uniform
-     0. 0. 0.
-front
-   Neumann
-    zeroGradient
-back
-   Neumann
-    zeroGradient
-wallOuter
-   Dirichlet
-    uniform
-     0. 0. 0.
+In 'U' file, change settings to these:  
+internalField  
+  uniform  
+  0.0 0.0 0.0  
+boundaryField  
+wallInner  
+   Dirichlet  
+    uniform  
+     0. 0. 0.  
+front  
+   Neumann  
+    zeroGradient  
+back  
+   Neumann  
+    zeroGradient  
+wallOuter  
+   Dirichlet  
+    uniform  
+     0. 0. 0.  
 
 
 Now we are ready to go!

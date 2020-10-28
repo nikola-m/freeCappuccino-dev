@@ -16,14 +16,12 @@ freeCappuccino is free both as a free coffee and as free speech.
    __                _____                                 _             
   / _|              / ____|                               (_)            
  | |_ _ __ ___  ___| |     __ _ _ __  _ __  _   _  ___ ___ _ _ __   ___  
- |  _| '__/ _ \/ _ \ |    / _` | '_ \| '_ \| | | |/ __/ __| | '_ \ / _ \ 
+ |  _| '__/ _ \/ _ \ |    / _' | '_ \| '_ \| | | |/ __/ __| | '_ \ / _ \ 
  | | | | |  __/  __/ |___| (_| | |_) | |_) | |_| | (_| (__| | | | | (_) |
  |_| |_|  \___|\___|\_____\__,_| .__/| .__/ \__,_|\___\___|_|_| |_|\___/ 
                                | |   | |                                 
                                |_|   |_|                                  
-
-                               
-
+                              
              MM          MMM
             NMN.           MM
            MMM..   OMM.    MMM.
@@ -73,9 +71,9 @@ The code is based on the reference:
 
 N Mirkov, B Rašuo, S Kenjereš, On the improved finite volume procedure for simulation of turbulent flows over real complex terrains, Journal of Computational Physics, Vol. 297 (2015), pp.18-45.
 
-The code allows meshes in OpenFOAM® polyMesh format. Only slight changes are necessary in the 'boundary' file. 
+The code can read meshes in OpenFOAM® polyMesh format. Only slight changes are necessary in the 'boundary' file. 
 
-Code provides a utility for converting mashes saved in SU2 .su2 format (eg. made in Gmsh and exported as .su2) to native format of freeCappuccino.
+Code also provides a utility for converting meshes made for SU2, in .su2 format (eg. made in Gmsh and exported as .su2) to native format of freeCappuccino.
 
 This way we encourage collaboration among people using other open-source CFD codes!
 

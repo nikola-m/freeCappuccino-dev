@@ -8,8 +8,7 @@ To run the case just execute run script in Linux terminal:
 
 `./run-simple`
 
-Click on an image below to open a YouTube video where this case is discussed in detail.
+Click on a link below to open a YouTube video where this case is discussed in detail.
 
-[![Rayleigh-Bénard convection using freeCappuccino CFD](https://img.youtube.com/vi/-ic3U_OsU_k/0.jpg](https://www.youtube.com/watch?v=-ic3U_OsU_k)
-
+[![Rayleigh-Bénard convection using freeCappuccino CFD](https://img.youtube.com/vi/-ic3U_OsU_k/0.jpg)](https://www.youtube.com/watch?v=-ic3U_OsU_k)
 

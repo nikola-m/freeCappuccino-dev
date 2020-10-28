@@ -10,11 +10,11 @@ To be able to write Paraview files, you need to have vtk template for this geome
 
 To run this case do the following:
 
-- Unpack zip archives with mesh (polyMesh.zip), vtk mesh file (vtk.zip), and initial and boundary conditions (0.zip).
+- Unpack zip archives with mesh (polyMesh.zip), vtk mesh file (vtk.zip), and initial and boundary conditions (0.zip).  
 
-- Provided that you have cappuccino code on your path execute 'run' script from command line.
+- Provided that you have cappuccino code on your path execute 'run' script from command line.  
 
-- Open solution files located in vtk folder in Paraview.
+- Open solution files located in vtk folder in Paraview.  
 
 Change 'run' script to call different input file, eg. input-piso. Play with simulation case parameters (turbulence models, convection schemes, gradient approximations, under-relaxation parameters, number of SIMPLE iterations within timestep(maxit), etc.) to test different possibilities.
 
