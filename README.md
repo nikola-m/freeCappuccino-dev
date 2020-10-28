@@ -12,15 +12,7 @@ Face based data structure enables use of cells of any shape.
 
 freeCappuccino is free both as a free coffee and as free speech.
 
-
-   __                _____                                 _             
-  / _|              / ____|                               (_)            
- | |_ _ __ ___  ___| |     __ _ _ __  _ __  _   _  ___ ___ _ _ __   ___  
- |  _| '__/ _ \/ _ \ |    / _' | '_ \| '_ \| | | |/ __/ __| | '_ \ / _ \ 
- | | | | |  __/  __/ |___| (_| | |_) | |_) | |_| | (_| (__| | | | | (_) |
- |_| |_|  \___|\___|\_____\__,_| .__/| .__/ \__,_|\___\___|_|_| |_|\___/ 
-                               | |   | |                                 
-                               |_|   |_|                                  
+                                
                               
              MM          MMM
             NMN.           MM
