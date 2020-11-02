@@ -12,6 +12,7 @@ subroutine modify_viscosity
   use IDDES_k_omega_SST
   use k_eqn_eddy
   use spalart_allmaras
+  use smagorinsky
 
   implicit none
 
@@ -66,6 +67,9 @@ subroutine modify_viscosity
 
     case (11)
       call modify_viscosity_IDDES_k_omega_sst
+
+    case (12)
+      call modify_viscosity_smagorinsky
 
     case default
       

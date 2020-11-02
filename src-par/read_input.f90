@@ -264,10 +264,6 @@ subroutine read_input_file
 
       write(*,'(a)') '  Gradient limiter: Venkatakrishnan'
 
-    elseif(adjustl(limiter) == 'mVenkatakrishnan') then
-
-      write(*,'(a)') '  Gradient limiter: Wang modified Venkatakrishnan'
-
     elseif(adjustl(limiter) == 'MDL') then
 
       write(*,'(a)') '  Gradient limiter: Multidimensional'

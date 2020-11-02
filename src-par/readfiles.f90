@@ -66,18 +66,18 @@ subroutine readfiles
   ! Initialize pressure correction with current pressure field.
   pp = p
 
-  !------------------------------------------------
-  ! [read statistics after first collection: ]
-  !------------------------------------------------
-  if (ltransient .and. lreadstat) then
+  ! !------------------------------------------------
+  ! ! [read statistics after first collection: ]
+  ! !------------------------------------------------
+  ! if (ltransient .and. lreadstat) then
 
-    call get_unit ( statistics_file )
+  !   call get_unit ( statistics_file )
 
-    open( unit=statistics_file, file='statistics'//'-'//trim(nproc_char), form='unformatted' )  
-    rewind statistics_file
-    read(statistics_file) n_sample,u_aver,v_aver,w_aver,uu_aver,vv_aver,ww_aver,uv_aver,uw_aver,vw_aver,te_aver
-    close ( statistics_file )
+  !   open( unit=statistics_file, file='statistics'//'-'//trim(nproc_char), form='unformatted' )  
+  !   rewind statistics_file
+  !   read(statistics_file) n_sample,u_aver,v_aver,w_aver,uu_aver,vv_aver,ww_aver,uv_aver,uw_aver,vw_aver,te_aver
+  !   close ( statistics_file )
 
-  endif
+  ! endif
 
 end subroutine

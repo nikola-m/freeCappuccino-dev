@@ -152,6 +152,8 @@ subroutine pmgmres_ilu ( n, nz_num, ia, ja, a, ua, x, iu, rhs, itr_max, mr, &
 
   call ilu_cr ( n, nz_num, ia, ja, a, ua, l )
 
+  ! Normalization factor for scaled residuals
+  factor = sum( abs( a( ua(1:n) ) * x(1:n) )) + 1e-20
 
   do itr = 1, itr_max
 
@@ -164,10 +166,8 @@ subroutine pmgmres_ilu ( n, nz_num, ia, ja, a, ua, x, iu, rhs, itr_max, mr, &
     rho = sqrt ( dot_product ( r, r ) )
 
     if ( itr == 1 ) then
+      
       res0 = rho
-
-      ! Normalization factor for scaled residuals
-      factor = sum( abs( a( ua(1:n) ) * x(1:n) )) + 1e-20
 
       resor(iu) = res0/factor
 
@@ -275,7 +275,7 @@ subroutine pmgmres_ilu ( n, nz_num, ia, ja, a, ua, x, iu, rhs, itr_max, mr, &
 
   ! Write linear solver report:
   write(6,'(a,i2,3a,1PE10.3,a,1PE10.3,a,I0)') '  PMGMRES_ILU(',mr,'):  Solving for ',trim(chvarSolver(iu)), &
-  ', Initial residual = ',res0,', Final residual = ',rho,', No Iterations ',itr_used
+  ', Initial residual = ',resor(iu),', Final residual = ',rho/factor,', No Iterations ',itr_used
 
 
   return

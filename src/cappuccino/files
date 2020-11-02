@@ -26,6 +26,7 @@ k_epsilon_rng.f90
 k_epsilon_rlzb.f90
 k_epsilon_rlzb_2lewt.f90
 spalart_allmaras.f90
+smagorinsky.f90
 k_eqn_eddy.f90
 mhd.f90
 asm_stress_terms.f90

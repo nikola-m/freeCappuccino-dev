@@ -100,7 +100,7 @@ subroutine calcPressDiv
   integer, parameter :: nipgrad = 2 
   integer :: i,ijp,ijn,ijb,iface,istage
   real(dp) :: dfxe,dfye,dfze
-  real(dp) :: pf
+  ! real(dp) :: pf
 
 !
 !***********************************************************************

@@ -49,16 +49,23 @@ subroutine bicgstab(fi,ifi)
     enddo
   enddo
 
-  ! L^1-norm of residual
+  ! Normalization factor for scaled residuals
+  factor = sum( abs( a(diag(1:numCells)) * fi(1:numCells) ))
+
+  ! L1-norm of the residual
   res0=sum(abs(res))
 
-    if(res0.lt.tol) then
-      write(6,'(3a,1PE10.3,a,1PE10.3,a,I0)') '  BiCGStab(ILU(0)):  Solving for ',trim(chvarSolver(ifi)), &
-      ', Initial residual = ',res0,', Final residual = ',res0,', No Iterations ',0
-      return
-    endif
+  ! Initial normalized residual - for convergence report
+  resor(ifi) = res0/(factor+small)
+
+  if(res0.lt.tol) then
+    write(6,'(3a,1PE10.3,a,1PE10.3,a,I0)') '  BiCGStab(ILU(0)):  Solving for ',trim(chvarSolver(ifi)), &
+    ', Initial residual = ',res0,', Final residual = ',res0,', No Iterations ',0
+    return
+  endif
 
   if(ltest) write(6,'(20x,a,1pe10.3)') 'res0 = ',res0
+
 
 !
 ! Calculate elements of diagonal preconditioning matrix
@@ -211,14 +218,10 @@ subroutine bicgstab(fi,ifi)
 !
 ! Check convergence
 !
-  if(l.eq.1) then
-    ! Normalization factor for scaled residuals
-    factor = sum( abs( a(diag(1:numCells)) * fi(1:numCells) ))
-    resor(ifi) = res0/(factor+small)
-  endif
-
   rsm = resl/(res0+small)
+
   if(ltest) write(6,'(19x,3a,i4,a,1pe10.3,a,1pe10.3)') ' fi=',chvar(ifi),' sweep = ',l,' resl = ',resl,' rsm = ',rsm
+  
   if(rsm.lt.resmax) exit
 
 !
@@ -228,7 +231,7 @@ subroutine bicgstab(fi,ifi)
 
 ! Write linear solver report:
   write(6,'(3a,1PE10.3,a,1PE10.3,a,I0)') '  BiCGStab(ILU(0)):  Solving for ',trim(chvarSolver(ifi)), &
-  ', Initial residual = ',res0,', Final residual = ',resl,', No Iterations ',itr_used
+  ', Initial residual = ',resor(ifi),', Final residual = ',resl/(factor+small),', No Iterations ',itr_used
 
 end subroutine
 
