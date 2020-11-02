@@ -394,7 +394,7 @@ end function
     psi = max(0., min(2.*r, 0.75*r+0.25, 4.))
 
   elseif(lavl) then
-    psi = max(0., min(1.5*r, 0.75*r+0.25, 2.5))
+    psi = max(0., min(1.5*r, 0.75*r+0.25, 2.5)) 
 
   elseif(lmuscl) then
     psi = max(0., min(2.*r, 0.5*r+0.5, 2.))
@@ -412,9 +412,9 @@ end function
     psi = max(0., min(2*r,1.5*r*(r+1.0)/(r**2+r+1.0), 2.0))
 
   else
-  ! psi for 2nd order upwind (luds) scheme:
-    psi = 1.0_dp
-
+    ! psi = 1.0_dp   ! psi for 2nd order upwind (luds) scheme
+    ! psi = max(0., min(r, 2.0)) ! boundedCDS - just temporary here until I implement it
+    psi = 2./3.*r+1./3. ! Unique third order kappa scheme, kappa=1/3
   end if
 
   face_value = u(ijp) + fxp*psi*(u(ijn)-u(ijp))

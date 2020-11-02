@@ -1,4 +1,5 @@
-`            _____ _____     _____                                  _             
+<pre>
+             _____ _____     _____                                  _             
             / __  \_   _|   /  __ \                                (_)            
   ___ _   _ `' / /' | | ___ | /  \/ __ _ _ __  _ __  _   _  ___ ___ _ _ __   ___  
  / __| | | |  / /   | |/ _ \| |    / _` | '_ \| '_ \| | | |/ __/ __| | '_ \ / _ \ 
@@ -7,14 +8,15 @@
                                         | |   | |                                 
                                         |_|   |_|                                 `
 
+</pre>
 
 Conversion of SU2 meshes to polyMesh format used by freeCappuccino.
 
-SU2 doesn't have info on cell neighbours trough a face, i.e. face_id-owner-neighbour relation. We have to find it ourselves.
+SU2 doesn't have info on cell neighbours trough a face, i.e. face_id-owner-neighbour relation. This is one onf the main tasks of this program.
 
-What is good about it is that it groups boundary regions by Physical surface name, eg. when making mesh in gmsh and exporting to SU2.
+What is good about su2 format is that it groups boundary regions by Physical surface name when making mesh in gmsh and exporting to SU2.
 
-This workflow is currently a preffered one: making mesh in GMSH and exporting it into SU2 format, then doing conversion for use in freeCappuccino.
+Following workflow is currently a preffered for freeCappuccino: make mesh in GMSH and export it into SU2 format, then do a mesh conversion to format used by freeCappuccino.
 
 It may look cumbersome but it takes only few moments to do it.
 
@@ -29,7 +31,7 @@ create a few folders where mesh, initial condition, and Paraview files will be p
 
 `mkdir polyMesh 0 vtk vtk/mesh`
 
-These all important for simulation case setup.
+These are all important for simulation case setup.
 
 Then call the su2ToCappuccino mesh converter, providing the mesh file name (just name, without extension):
 
@@ -38,7 +40,7 @@ Then call the su2ToCappuccino mesh converter, providing the mesh file name (just
 Finally edit 'polyMesh/boundary' file to set desired boundary conditions for specific boundary regions, as well as
 files where initial conditions are set (files in 0/ folder).
 
-You can inspect the mesh, including every boundary region separately, opening the mesh files for vtk/mesh folder in Paraview.
+You can inspect the mesh, including every boundary region separately, opening the mesh files from vtk/mesh folder in Paraview.
 
 
 

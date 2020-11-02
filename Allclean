@@ -1,2 +1,4 @@
 #!/bin/bash
 make clean execut=bin/cappuccino
+make clean execut=test/testFieldOperations/testFieldOperations
+make clean execut=bin/decomposition

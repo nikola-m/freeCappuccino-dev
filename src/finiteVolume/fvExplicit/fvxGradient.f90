@@ -360,10 +360,6 @@ implicit none
 
     call slope_limiter_Venkatakrishnan(phi, dPhidx,dPhidy,dPhidz )
 
-  elseif( limiter == 'mVenkatakrishnan') then
-
-    call slope_limiter_modified_Venkatakrishnan(phi, dPhidx,dPhidy,dPhidz )
-
   elseif( limiter == 'MDL') then
 
     call slope_limiter_multidimensional(phi, dPhidx,dPhidy,dPhidz )
@@ -434,10 +430,6 @@ implicit none
 
     call slope_limiter_Venkatakrishnan(phi, dPhidx,dPhidy,dPhidz )
 
-  elseif( option_limiter == 'mVenkatakrishnan') then
-
-    call slope_limiter_modified_Venkatakrishnan(phi, dPhidx,dPhidy,dPhidz )
-
   elseif( option_limiter == 'MDL') then
 
     call slope_limiter_multidimensional(phi, dPhidx,dPhidy,dPhidz )
@@ -445,102 +437,6 @@ implicit none
   else
     ! no-limit
   endif
-
-end subroutine
-
-!***********************************************************************
-!
-subroutine slope_limiter_modified_Venkatakrishnan(phi, dPhidx,dPhidy,dPhidz )
-!
-!***********************************************************************
-!
-!     Calculates slope limiter and appiies to scalar gradient:
-!     Wang modified Venkatakrishnan slope limiter
-!     Ref.: Z. J. Wang. "A Fast Nested Multi-grid Viscous Flow Solver for Adaptive Cartesian/Quad Grids",
-!     International Journal for Numerical Methods in Fluids. 33. 657–680. 2000.
-!     The same slope limiter is used in Fluent.
-!
-!***********************************************************************
-!
-
-  implicit none
-
-  ! Input
-  real(dp),dimension(numTotal), intent(in) :: phi
-  real(dp),dimension(numTotal), intent(inout) ::  dPhidx,dPhidy,dPhidz 
-
-
-  ! Locals
-  integer :: inp,ijp,ijn,k
-
-  ! Look at the reference epsprim \in [0.01,0.2]
-  real(dp), parameter :: epsprim = 0.01_dp
-
-  real(dp) :: phi_p
-  real(dp) :: cell_neighbour_value,gradfiXdr,slopelimit
-  real(dp) :: deltam,deltap,epsi
-  real(dp) :: phi_max,phi_min
-  real(dp) :: glomax,glomin
-
-
-  glomin = minval(phi(1:numCells))
-  glomax = maxval(phi(1:numCells))
-
-  do inp = 1, numCells
-
-    ! Values at cell center:
-    phi_p = phi(inp)
-
-    ! max and min values over current cell and neighbors
-    phi_max = phi(ja( ioffset(inp) ))
-    phi_min = phi(ja( ioffset(inp) ))
-
-    do k=ioffset(inp)+1, ioffset(inp+1)-1
-      phi_max = max( phi_max, phi(ja(k)) )
-      phi_min = min( phi_max, phi(ja(k)) )      
-    enddo
-
-
-    slopelimit = 1.0_dp
-
-    do k=ioffset(inp), ioffset(inp+1)-1
-
-      if (k == diag(inp)) cycle
-   
-      ijp = inp
-      ijn = ja(k)
-
-      gradfiXdr=dPhidx(ijp)*(xc(ijn)-xc(ijp))+dPhidy(ijp)*(yc(ijn)-yc(ijp))+dPhidz(ijp)*(zc(ijn)-zc(ijp)) 
-
-      ! Find unlimited value:
-      cell_neighbour_value =  phi_p + gradfiXdr 
-
-
-      deltam = cell_neighbour_value - phi_p
-      if (deltam .gt. 0.0d0) then
-          deltap = phi_max-phi_p
-      else
-          deltap = phi_min-phi_p
-      endif
-
-      ! Wang proposition for epsilon
-      epsi =  epsprim*( glomax-glomin ) 
-      slopelimit = max(                                                                          &
-                        min(                                                                     &
-                              slopelimit,                                                        &
-                              1./(deltam+small)*((deltap**2+epsi**2)*deltam+2*deltam**2*deltap)  &
-                                            /(deltap**2+2*deltam**2+deltap*deltam+epsi**2+small) &
-                            ),                                                                   &
-                        zero                                                                     &
-                      )
-
-    enddo
-
-    dPhidx(inp) = slopelimit*dPhidx(inp)
-    dPhidy(inp) = slopelimit*dPhidy(inp)
-    dPhidz(inp) = slopelimit*dPhidz(inp)
-
-  enddo
 
 end subroutine
 

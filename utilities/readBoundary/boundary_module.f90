@@ -81,7 +81,7 @@ module boundary_module
 
     end do outer_loop
 
-return
+
 end subroutine
 
 
@@ -174,7 +174,6 @@ subroutine process_boundary_file_par(boundary_of,boundary_file, process_file)
 
     end do outer_loop
 
-return
 end subroutine
 
 
@@ -204,6 +203,60 @@ subroutine check_dict(bc_type)
   enddo
 
  return
+end subroutine
+
+
+subroutine create_field_init_files(bcName,nbc)
+!
+! Create two template files in 0/ folder to help setting 
+! initial conditions for scalar and vector fields.
+!
+ implicit none
+
+ integer, intent(in) :: nbc ! no of boundaries
+ character( len = 30 ), dimension(nbc) :: bcName
+
+ integer :: i
+ integer :: os
+
+ ! Write vector field template
+ call get_unit( os )
+
+ open(unit=os, file='0/U')
+ rewind os
+
+ write(os,'(a)') 'internalField'
+ write(os,'(2x,a)') 'uniform'
+ write(os,'(4x,a)') '0.0 0.0 0.0'
+ write(os,'(a)') 'boundaryField'
+ do i=1,nbc
+   write(os,'(a)') trim( bcName(i) )
+   write(os,'(2x,a)') 'Dirichlet/Neumann'
+   write(os,'(4x,a)') 'uniform/zeroGradient'
+   write(os,'(6x,a)') '0.0 0.0 0.0'
+ enddo
+
+ close(os)
+
+ ! Write scalar field template
+ call get_unit( os )
+
+ open(unit=os, file='0/T.template')
+ rewind os
+
+ write(os,'(a)') 'internalField'
+ write(os,'(2x,a)') 'uniform'
+ write(os,'(4x,a)') '0.0'
+ write(os,'(a)') 'boundaryField'
+ do i=1,nbc
+   write(os,'(a)') trim( bcName(i) )
+   write(os,'(2x,a)') 'Dirichlet/Neumann'
+   write(os,'(4x,a)') 'uniform/zeroGradient'
+   write(os,'(6x,a)') '0.0'
+ enddo
+
+ close(os)
+
 end subroutine
 
 

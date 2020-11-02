@@ -106,10 +106,6 @@ subroutine init
   ! Set to zero cumulative error in continuity
   cumulativeContErr = 0.0_dp
 
-  ! Bulk velocity - important const_mflux flow!
-  magUbar = uin
-
-
 
 ! 1.2)  Field Initialisation
 
@@ -138,7 +134,7 @@ subroutine init
   if( lcal(ien) )   call initialize_scalar_field(t,dTdxi,ien,'T')
 
   ! 
-  ! Magnetic field
+  ! > Magnetic field
   ! 
   if ( lcal(iep) ) call initialize_vector_field(bmagx,bmagy,bmagz,dEpotdxi,ibmag,'B')
 
@@ -148,13 +144,6 @@ subroutine init
   ! Effective viscosity
   vis = viscos
   visw = viscos  
-
-  ! Temperature variance
-  if(lcal(ivart)) vart = vartin
-  
-  ! Concentration
-  if(lcal(icon)) con = conin
-
 
   ! Initialize mass flow on inner faces
   do i=1,numInnerFaces
@@ -198,74 +187,77 @@ subroutine init
 ! Distance to the nearest wall (needed for some turbulence models) for all cells via Poisson equation.
 !
 
-  write(*,*) ' '
-  write(*,*) ' Calculate distance to the nearest wall:'
-  write(*,*) ' '
+  if( TurbModel == 3 .or. TurbModel == 4 ) then
 
-  ! Source term
-  su(1:numCells) = -Vol(1:numCells)
+    write(*,*) ' '
+    write(*,*) ' Calculate distance to the nearest wall:'
+    write(*,*) ' '
 
-  ! Initialize solution
-  pp = 0.0_dp
+    ! Source term
+    su(1:numCells) = -Vol(1:numCells)
 
-  !  Coefficient array for Laplacian
-  sv = 1.0_dp       
+    ! Initialize solution
+    pp = 0.0_dp
 
-  ! Laplacian operator and BCs         
-  call laplacian(sv,pp) 
+    !  Coefficient array for Laplacian
+    sv = 1.0_dp       
 
-  sor_backup = sor(ip)
-  nsw_backup = nsw(ip)
+    ! Laplacian operator and BCs         
+    call laplacian(sv,pp) 
 
-  sor(ip) = 1e-10
-  nsw(ip) = 500
+    sor_backup = sor(ip)
+    nsw_backup = nsw(ip)
 
-  ! Solve system
-  call iccg(pp,ip) 
-  ! call bicgstab(p,ip) 
-  ! call pmgmres_ilu ( numCells, nnz, ioffset, ja, a, diag, p(1:numCells), ip, su, 100, 4, 1e-8, sor(ip) )
-  ! write(maxno,'(i5)') nsw(ip)
-  ! write(tol,'(es9.2)') sor(ip)
-  ! ! write(options,'(a)') "-i gmres -restart [20] -p ilut -maxiter "//adjustl(maxno)//"-tol "//adjustl(tol)
-  ! write(options,'(a)') "-i cg -p ilu -ilu_fill 1 -maxiter "//adjustl(maxno)//"-tol "//adjustl(tol)
-  ! call solve_csr( numCells, nnz, ioffset, ja, a, su, p )
+    sor(ip) = 1e-10
+    nsw(ip) = 500
+
+    ! Solve system
+    call iccg(pp,ip) 
+    ! call bicgstab(p,ip) 
+    ! call pmgmres_ilu ( numCells, nnz, ioffset, ja, a, diag, p(1:numCells), ip, su, 100, 4, 1e-8, sor(ip) )
+    ! write(maxno,'(i5)') nsw(ip)
+    ! write(tol,'(es9.2)') sor(ip)
+    ! ! write(options,'(a)') "-i gmres -restart [20] -p ilut -maxiter "//adjustl(maxno)//"-tol "//adjustl(tol)
+    ! write(options,'(a)') "-i cg -p ilu -ilu_fill 1 -maxiter "//adjustl(maxno)//"-tol "//adjustl(tol)
+    ! call solve_csr( numCells, nnz, ioffset, ja, a, su, p )
 
 
-  ! Update values at constant gradient bc faces - we need these values for correct gradients
+    ! Update values at constant gradient bc faces - we need these values for correct gradients
 
-  do ib=1,numBoundaries
+    do ib=1,numBoundaries
 
-    if ( bctype(ib) /= 'wall' ) then
-    ! All other boundary faces besides wall which has to be zero.
+      if ( bctype(ib) /= 'wall' ) then
+      ! All other boundary faces besides wall which has to be zero.
 
-      do i=1,nfaces(ib)
+        do i=1,nfaces(ib)
 
-        iface = startFace(ib) + i
-        ijp = owner(iface)
-        ijb = iBndValueStart(ib) + i
+          iface = startFace(ib) + i
+          ijp = owner(iface)
+          ijb = iBndValueStart(ib) + i
 
-        pp(ijb) = pp(ijp)
+          pp(ijb) = pp(ijp)
 
-      enddo
+        enddo
 
-    endif
-  enddo
+      endif
+    enddo
 
-  sor(ip) = sor_backup
-  nsw(ip) = nsw_backup
+    sor(ip) = sor_backup
+    nsw(ip) = nsw_backup
 
-  ! Gradient of solution field stored in p (gradient stored in dPdxi) :
-  call grad(pp,dPdxi)
+    ! Gradient of solution field stored in p (gradient stored in dPdxi) :
+    call grad(pp,dPdxi)
 
-  ! Wall distance computation from Poisson eq. solution stored in pp:
-  wallDistance = -sqrt(  dPdxi(1,:)*dPdxi(1,:)+dPdxi(2,:)*dPdxi(2,:)+dPdxi(3,:)*dPdxi(3,:) ) + &
-                  sqrt(  dPdxi(1,:)*dPdxi(1,:)+dPdxi(2,:)*dPdxi(2,:)+dPdxi(3,:)*dPdxi(3,:) + 2*pp(1:numCells) )
+    ! Wall distance computation from Poisson eq. solution stored in pp:
+    wallDistance = -sqrt(  dPdxi(1,:)*dPdxi(1,:)+dPdxi(2,:)*dPdxi(2,:)+dPdxi(3,:)*dPdxi(3,:) ) + &
+                    sqrt(  dPdxi(1,:)*dPdxi(1,:)+dPdxi(2,:)*dPdxi(2,:)+dPdxi(3,:)*dPdxi(3,:) + 2*pp(1:numCells) )
 
-  ! Clear arrays
-  su = 0.0_dp
-  sv = 0.0_dp 
-  dPdxi = 0.0_dp
-  pp = p
+    ! Clear arrays
+    su = 0.0_dp
+    sv = 0.0_dp 
+    dPdxi = 0.0_dp
+    pp = p
 
+  end if
 
 end subroutine

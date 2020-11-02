@@ -19,11 +19,11 @@ subroutine recirculate_flow
   integer :: indx, itemp
   real(dp) :: ytemp, ztemp, mindist, dist
 
-  asize = 4089
+  asize = 14905 ! 4089
 
   ! Exchange
-  if (myid.eq.0)  iDFriend = 3
-  if (myid.eq.3)  iDFriend = 0
+  if (myid.eq.0)  iDFriend = 1
+  if (myid.eq.1)  iDFriend = 0
 
   sendtag = 123 + MYID + iDFriend   ! tag for sending
   rectag  = sendtag                 ! tag for receiving
@@ -34,7 +34,7 @@ subroutine recirculate_flow
   call MPI_Barrier(MPI_COMM_WORLD,ierr)
 
 
-  if ( myid.eq.3 ) then  
+  if ( myid.eq.1 ) then  
     do ib=1,numBoundaries
       if ( bctype(ib) == 'outlet' ) then
         asize = nfaces(ib)

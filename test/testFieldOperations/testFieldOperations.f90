@@ -13,7 +13,7 @@
 ! Locals
   !integer :: ierr
 
-  type(volVectorField) :: vec1, vec2, vec3
+  type(volVectorField) :: vec1, vec2
   type(volScalarField) :: phi,psi
   type(volVectorField) :: resVec
   type(volTensorField) :: T
@@ -29,7 +29,7 @@
   ! Read mesh files and calculate mesh geometrical quantities
 !+-----------------------------------------------------------------------------+
 
-  call read_mesh
+  call read_mesh_openFoam
 
   ! Creation and manipulation fo tensor fields
 !+-----------------------------------------------------------------------------+
@@ -132,8 +132,6 @@ vec2 = volVectorField("Vector2", &
 
   ! This is useful for book-keeping, lets give it a name:
   ! resVec%field_name = 'gradient_field'
-
-  ! call grad_gauss(psi%mag, resVec%x, resVec%y, resVec%z)
 
   write(*,'(a)') ' Magnitude of a linear field'
   write(*,'(e15.8)') psi%mag(1:440)

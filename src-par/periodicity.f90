@@ -16,9 +16,9 @@ module periodicity
 
   implicit none
 
-  integer, parameter :: procSender   = 3 ! Sending process
+  integer, parameter :: procSender   = 1 ! Sending process
   integer, parameter :: procReceiver = 0 ! Receiving process
-  integer, parameter :: asize = 4089     ! Number of faces in section, change for every case.
+  integer, parameter :: asize = 21825 !14905  ! Number of faces in section, change for every case.
   integer, dimension(:), allocatable :: mappedIndx
 
   private

@@ -385,7 +385,7 @@ subroutine facefluxsc(ijp, ijn, xf, yf, zf, arx, ary, arz, &
   real(dp), intent(in) :: xf,yf,zf ! face centroid coordinates
   real(dp), intent(in) :: arx, ary, arz ! area vector
   real(dp), intent(in) :: fm ! mass flow at face
-  real(dp), intent(in) :: lambda ! interpoaltion factor
+  real(dp), intent(in) :: lambda ! interpolation factor
   real(dp), intent(in) :: gam  ! deferred correction factor [0,1], 1-high order.
   real(dp), dimension(numTotal), intent(in) :: Fi ! Scalar field in question
   real(dp), dimension(3,numCells), intent(in) :: dFidxi ! Gradient of the scalar field in question.

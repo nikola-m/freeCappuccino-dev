@@ -58,6 +58,7 @@ logical :: lpar = .false.
 
   ! Open files to read
   if(lpar) then
+
     do i=0,np-1,1
       write(ch2,'(i5)') i
       call execute_command_line("cp processor"//trim(adjustl(ch2))//"/constant/polyMesh/boundary &
@@ -79,7 +80,9 @@ logical :: lpar = .false.
       close( boundary_file )
       close( process_file )
     enddo
+
   else
+
     call execute_command_line("cp polyMesh/boundary polyMesh/boundary-OF")
     call get_unit( boundary_of )
     open(unit = boundary_of, file='polyMesh/boundary-OF')
@@ -92,6 +95,10 @@ logical :: lpar = .false.
     call process_boundary_file(boundary_of,boundary_file)
     !--------------------------------------------------------
     close( boundary_file )
+    
+    ! ! Create template files for vector and scalar fields in 0/ folder
+    ! call create_field_init_files(bcName,NMARK)
+
   endif
 
 end program

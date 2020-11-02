@@ -91,10 +91,7 @@ subroutine init
 
   ! Set to zero cumulative error in continuity
   cumulativeContErr = 0.0_dp
-
-  ! Bulk velocity - important const_mflux flow!
-  ! magUbar = uin
-
+  
 
 ! 2)  Field Initialisation
  
@@ -108,10 +105,12 @@ subroutine init
 
   call initialize_vector_field(u,v,w,dUdxi,'U')
 
-  ! ! Create initial disturbances for - ONLY FOR PIPE FLOW
+  !***
+  ! Create initial disturbances for - ONLY FOR PIPE FLOW
   do inp = 1,numCells
     call pipe_disturbances(xc(inp),yc(inp),zc(inp),u(inp),v(inp),w(inp))
   enddo  
+  !\***
   
   call exchange( u )
   call exchange( v )

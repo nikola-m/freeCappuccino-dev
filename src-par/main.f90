@@ -89,7 +89,7 @@ program cappuccino
   ! Initialisation of fields
   call init
  
-  !call add_random_noise_to_field(U,20)
+  ! call add_random_noise_to_field(U,10)
   call face_mapping
 !
 !===============================================
@@ -116,7 +116,7 @@ program cappuccino
     ! Courant number report:
     call CourantNo
 
-    !if ( mod(itime,10).eq.0 ) call add_random_noise_to_field( U, 10 )
+    ! if ( mod(itime,45).eq.0 ) call add_random_noise_to_field( U, 10 )
 
 ! 
 !===============================================
@@ -181,7 +181,7 @@ program cappuccino
           ! Correct driving force for a constant mass flow rate simulation:
           if(const_mflux) then
             call constant_mass_flow_forcing
-            ! call recirculate_flow
+            call recirculate_flow
           endif
 
           ! Write values at monitoring points and recalculate time-average values for statistics:
