@@ -12,13 +12,13 @@
 
 Conversion of SU2 meshes to polyMesh format used by freeCappuccino.
 
-SU2 doesn't have info on cell neighbours trough a face, i.e. face_id-owner-neighbour relation. This is one onf the main tasks of this program.
+SU2 doesn't have info on cell neighbours trough a face, i.e. face_id-owner-neighbour relation. This is one of the main tasks of this program.
 
 What is good about su2 format is that it groups boundary regions by Physical surface name when making mesh in gmsh and exporting to SU2.
 
-Following workflow is currently a preffered for freeCappuccino: make mesh in GMSH and export it into SU2 format, then do a mesh conversion to format used by freeCappuccino.
+Following workflow is currently a preffered one for freeCappuccino: make mesh in GMSH (gmsh.info) and export it into SU2 format, then do a mesh conversion to format used by freeCappuccino.
 
-It may look cumbersome but it takes only few moments to do it.
+It takes only few moments to do it.
 
 First create su2ToCappuccino executable by typing:
 
