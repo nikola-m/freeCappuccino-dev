@@ -1,12 +1,17 @@
 var searchData=
 [
-  ['magsqrsymmetrictensorfield',['magsqrsymmetrictensorfield',['../interfacetensor__fields_1_1operator_07_8magsq_8_08.html#ab1d35dd9db13c94b8d0b35852c8e6ab2',1,'tensor_fields::operator(.magsq.)::magsqrsymmetrictensorfield()'],['../classtensor__fields.html#a160febf9523d975fad84efa927893867',1,'tensor_fields::magsqrsymmetrictensorfield()']]],
-  ['magsqrtensorfield',['magsqrtensorfield',['../interfacetensor__fields_1_1operator_07_8magsq_8_08.html#a936c6d36ac62b6735f160d089e20f871',1,'tensor_fields::operator(.magsq.)::magsqrtensorfield()'],['../classtensor__fields.html#ada1cb7ae9d93a4b6bb1357f73c8382b3',1,'tensor_fields::magsqrtensorfield()']]],
-  ['magsymmetrictensorfield',['magsymmetrictensorfield',['../interfacetensor__fields_1_1operator_07_8mag_8_08.html#a097a1dc4ab7051e21901761e7268fceb',1,'tensor_fields::operator(.mag.)::magsymmetrictensorfield()'],['../classtensor__fields.html#ad669b38b94e143e2c0d140ee89cfb638',1,'tensor_fields::magsymmetrictensorfield()']]],
-  ['magtensorfield',['magtensorfield',['../interfacetensor__fields_1_1operator_07_8mag_8_08.html#adfaa30998e7c1f9415db7494e4d6a294',1,'tensor_fields::operator(.mag.)::magtensorfield()'],['../classtensor__fields.html#ad52a00a818947e8c84864d411de35a4d',1,'tensor_fields::magtensorfield()']]],
-  ['matmult',['matmult',['../classmatrix__module.html#af69a49d66c94be6592dcb58fca86bdf3',1,'matrix_module']]],
-  ['matrix_5fupdate',['matrix_update',['../classmatrix__module.html#ad5e55e5a4eb29b1279b288d6be4ceaf1',1,'matrix_module']]],
-  ['mgs_5fqr',['mgs_qr',['../classmatrix__module.html#a5500c11609ac1e842fde5f050c9c031b',1,'matrix_module']]],
-  ['modify_5fmu_5feff',['modify_mu_eff',['../classk__epsilon__rng.html#a9b6328ba57554ef905a83eaa444b8d83',1,'k_epsilon_rng::modify_mu_eff()'],['../classk__epsilon__std.html#a0a532283b523bd70158bf79b67d8d70e',1,'k_epsilon_std::modify_mu_eff()'],['../classk__epsilon__zeta__f.html#aee004b7784046d5d09ef6090646cd0de',1,'k_epsilon_zeta_f::modify_mu_eff()'],['../classk__eqn__eddy.html#a4b5e12993193ded30a62136cd9637c4c',1,'k_eqn_eddy::modify_mu_eff()'],['../classk__omega__sst.html#a9db01a58eaa429bcca05b716220b3b6b',1,'k_omega_sst::modify_mu_eff()'],['../classspalart__allmaras.html#abdda34975676efe56f48973b6232a3b3',1,'spalart_allmaras::modify_mu_eff()']]],
-  ['modify_5fmu_5feff_5finlet',['modify_mu_eff_inlet',['../classk__epsilon__rng.html#ac9112e6bf146afd6c79028a23415676c',1,'k_epsilon_rng::modify_mu_eff_inlet()'],['../classk__epsilon__std.html#a67a34b9f9d0599206952688d26e0d903',1,'k_epsilon_std::modify_mu_eff_inlet()'],['../classk__epsilon__zeta__f.html#a2c14f0a38ce6658faca9884c37c791b4',1,'k_epsilon_zeta_f::modify_mu_eff_inlet()'],['../classk__eqn__eddy.html#a94c16ae63fa6f594c735d0b482ae9f27',1,'k_eqn_eddy::modify_mu_eff_inlet()'],['../classk__omega__sst.html#a62e6772f2e804ba58b79c623435a5e1b',1,'k_omega_sst::modify_mu_eff_inlet()'],['../classspalart__allmaras.html#a39fb7d437ed286f6c825ef0533461cea',1,'spalart_allmaras::modify_mu_eff_inlet()']]]
+  ['new_5fcsrmatrix_1130',['new_csrmatrix',['../namespacefv__equation.html#a6cdef646079ec69baf08f18aba78f6a9',1,'fv_equation']]],
+  ['new_5ffvequation_1131',['new_fvequation',['../namespacefv__equation.html#a26481f97d53ea82c43a66a0b31e73a4e',1,'fv_equation']]],
+  ['new_5ffvvectorequation_1132',['new_fvvectorequation',['../namespacefv__equation.html#ab46a4f94deb0186ea0798d62c34f2cae',1,'fv_equation']]],
+  ['new_5fsurfacescalarfield_1133',['new_surfacescalarfield',['../namespacetensor__fields.html#a43dbadf69f0711e9f54b26b273a59c48',1,'tensor_fields']]],
+  ['new_5fsurfacesymmetrictensorfield_1134',['new_surfacesymmetrictensorfield',['../namespacetensor__fields.html#aa4a670d5719348306b889b932ccf7269',1,'tensor_fields']]],
+  ['new_5fsurfacetensorfield_1135',['new_surfacetensorfield',['../namespacetensor__fields.html#a557464fc85d557fc094c7b27cb83696b',1,'tensor_fields']]],
+  ['new_5fsurfacevectorfield_1136',['new_surfacevectorfield',['../namespacetensor__fields.html#a4d60ee914ac1da3fd430425a2e9ae35d',1,'tensor_fields']]],
+  ['new_5fvolscalarfield_1137',['new_volscalarfield',['../namespacetensor__fields.html#a596d7733e2f19fb55fe7f09b704d4a16',1,'tensor_fields']]],
+  ['new_5fvolsymmetrictensorfield_1138',['new_volsymmetrictensorfield',['../namespacetensor__fields.html#a6b2a7e99a62e11dd6df66ebe56bbbd6b',1,'tensor_fields']]],
+  ['new_5fvoltensorfield_1139',['new_voltensorfield',['../namespacetensor__fields.html#a62f581f9e29e80f5ed7d3d2b9539398c',1,'tensor_fields']]],
+  ['new_5fvolvectorfield_1140',['new_volvectorfield',['../namespacetensor__fields.html#a664e85f0e946cc3941933db9794fefe5',1,'tensor_fields']]],
+  ['nfaces_1141',['nfaces',['../continuityErrors_8h.html#a2986c05eb78056a519ec353fc7d88b6d',1,'continuityErrors.h']]],
+  ['noel_1142',['noel',['../namespaceoutput.html#a7056173ffdf011c0acd43d0872ac6479',1,'output']]],
+  ['norm2_5foffdiag_1143',['norm2_offdiag',['../namespacematrix__module.html#a46361b935590ba828408a945af33fae0',1,'matrix_module']]]
 ];

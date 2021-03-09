@@ -8,7 +8,6 @@ subroutine readfiles
   use parameters
   use geometry
   use variables
-  use title_mod
   use statistics 
 
   implicit none  
@@ -62,9 +61,6 @@ subroutine readfiles
   rewind restart_unit
   
   close (restart_unit)
-
-  ! Initialize pressure correction with current pressure field.
-  pp = p
 
   !------------------------------------------------
   ! [read statistics after first collection: ]

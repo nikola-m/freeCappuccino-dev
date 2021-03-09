@@ -24,11 +24,13 @@ Note: We have saved mesh in su2 format - which is possible in Gmsh. We do that b
 
 Edit polyMesh 'boundary' file to set boundary types to:
 
-bcName bcType nFaces startFace  
+```
+# bcName bcType nFaces startFace  
 wallInner wall 156 12012  
 front symmetry 6084 12168  
 back symmetry 6084 18252  
 wallOuter wall 156 24336  
+```
 
 Mesh conversion utility will also create template files for initial conditions in '0' folder. We will open files and edit them:
 

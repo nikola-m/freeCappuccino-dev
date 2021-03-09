@@ -1,22 +1,33 @@
 module faceflux_mass
 !
-! Implementation of common functions for obtaining discretized fluxes for
-! Navier-Stokes equation.
-! To the outside world we show only the interface function 'facefluxmass', 
-! wisely checking the arguments, module decides what function to call.
+! Purpose:
+!   Compute mass fluxes and compute matrix elements for discretized Poisson equation.
+!
+! Discussion:
+!   In corrector phase of SIMPLE/PISO we assemble and solve Poisson equation for 
+!   pressure correction, in PISO we assemble and solve Poisson equation for pressure.
+!   Same thing basically.
+!   What we do here is within an inner faces loop in subroutine where we solve pressure-correction
+!   or pressure equation we call a function to compute mass fluxes,
+!   where Rhie-Chow correction is incorporated (which is very important, i.e. crucial for collocated solvers).
+!   Along the way we compute elements of matrix which represents linear system of equations obtained
+!   by discretizing Poisson PDE for pressure-correction or pressure.
+!   So in one call we produce both elements or RHS vector and elements of the MATRIX of linear algebraic system 
+!   coefficients. 
+!
+! Reference:
+!   Freziger&Peric book.
 !
   use types
   use parameters
   use geometry, only: xc,yc,zc,vol
-  use variables!, only: den,U,V,W,dUdxi,dVdxi,dWdxi,p,dpdxi
+  use variables !, only: den,U,V,W,dUdxi,dVdxi,dWdxi,p,dpdxi
   use sparse_matrix, only: apu,apv,apw
   use interpolation
 
   implicit none
 
-  private 
-
-  public :: facefluxmass,facefluxmass2,facefluxmass_piso,fluxmc
+  public 
 
 
 contains
@@ -231,15 +242,98 @@ subroutine facefluxmass2(ijp, ijn, arx, ary, arz, lambda, cap, can, fluxmass)
   cap = -dene*Kj*(arx*arx+ary*ary+arz*arz)/(arx*xpn+ary*ypn+arz*zpn) 
   can = cap
 
+  ! For periodic flows with constant mass flow along x-axis direction
+  ! can = -dene*Kj*arx
 
-!
-! CELL FACE PRESSURE GRADIENTS AND VELOCITIES
-!
+  !////////////////////////////////////////////////////////
+  !     RHIE-CHOW velocity interpolation at face
+  !////////////////////////////////////////////////////////
 
-!////////////////////////////////////////////////////////
-!     RHIE-CHOW velocity interolation at face
-!     Fluxmass = Densit*dot(Uf,Sf)
-!/////////////////////////////////////////////////////////
+
+  ! UI-> (U)f -> second order interpolation at face
+  ! ui = face_value_central( ijp,ijn, xf, yf, zf, u, dUdxi )
+  ! vi = face_value_central( ijp,ijn, xf, yf, zf, v, dVdxi )
+  ! wi = face_value_central( ijp,ijn, xf, yf, zf, w, dWdxi )
+
+  ! Try this - like in Fluent Theory Guide
+  ui = ( u(ijp)/Apu(ijp)+u(ijn)/Apu(ijn) ) / ( 1./Apu(ijp) + 1./Apu(ijn) )
+  vi = ( v(ijp)/Apv(ijp)+v(ijn)/Apv(ijn) ) / ( 1./Apv(ijp) + 1./Apv(ijn) )
+  wi = ( w(ijp)/Apw(ijp)+w(ijn)/Apw(ijn) ) / ( 1./Apw(ijp) + 1./Apw(ijn) )
+
+  dpxi = ( dPdxi(1,ijn)*fxp + dPdxi(1,ijp)*fxn ) * xpn
+  dpyi = ( dPdxi(2,ijn)*fxp + dPdxi(2,ijp)*fxn ) * ypn
+  dpzi = ( dPdxi(3,ijn)*fxp + dPdxi(3,ijp)*fxn ) * zpn
+
+  ! MASS FLUX via Rhie-Chow Interpolation
+  fluxmass = dene*(ui*arx+vi*ary+wi*arz) + cap*(p(ijn)-p(ijp)-dpxi-dpyi-dpzi)
+
+  !///
+  !/// Additional term - For periodic flows with constant mass flow along x-axis direction.
+  !///
+  ! fluxmass = fluxmass + dene*Kj*arx*gradPcmfCorr
+
+end subroutine
+
+
+
+!***********************************************************************
+!
+subroutine facefluxmass2_periodic(ijp, ijn, xf, yf, zf, arx, ary, arz, lambda, cap, can, fluxmass)
+!
+!***********************************************************************
+
+  implicit none
+
+  integer, intent(in) :: ijp, ijn
+  real(dp), intent(in) :: xf,yf,zf
+  real(dp), intent(in) :: arx, ary, arz
+  real(dp), intent(in) :: lambda
+  real(dp), intent(inout) :: cap, can
+  real(dp), intent(inout) :: fluxmass
+
+  ! Local variables
+  real(dp) :: fxn, fxp
+  real(dp) :: are,dpn
+  real(dp) :: xpn,ypn,zpn,dene
+  real(dp) :: ui,vi,wi
+  real(dp) :: dpxi,dpyi,dpzi
+  real(dp) :: Kj ! notation from Muzaferija&Gosman JCP paper
+
+
+  ! > Geometry:
+
+  ! Face interpolation factor
+  fxn = lambda 
+  fxp = 1.0_dp-lambda
+
+  ! Distance vector between cell centers
+  xpn = 2*( xf-xc(ijp) )
+  ypn = 2*( yf-yc(ijp) )
+  zpn = 2*( zf-zc(ijp) )
+
+  ! Distance between cell centers
+  dpn = sqrt(xpn**2+ypn**2+zpn**2)
+
+  ! cell face area
+  are = sqrt(arx**2+ary**2+arz**2)
+
+  ! density at the cell face
+  dene = den(ijp)*fxp+den(ijn)*fxn
+
+  ! COEFFICIENTS OF PRESSURE-CORRECTION EQUATION
+  Kj = vol(ijp)*apu(ijp)*fxp + vol(ijn)*apu(ijn)*fxn
+  ! cap = -dene*Kj*are/dpn
+  !...or..(maybe better)
+  cap = -dene*Kj*(arx*arx+ary*ary+arz*arz)/(arx*xpn+ary*ypn+arz*zpn) 
+  can = cap
+
+  ! For periodic flows with constant mass flow along x-axis direction
+  ! can = -dene*Kj*arx
+
+
+  !////////////////////////////////////////////////////////
+  !     RHIE-CHOW velocity interpolation at face
+  !////////////////////////////////////////////////////////
 
 
   ! UI-> (U)f -> second order interpolation at face
@@ -258,6 +352,11 @@ subroutine facefluxmass2(ijp, ijn, arx, ary, arz, lambda, cap, can, fluxmass)
 
   ! MASS FLUX via Rhie-Chow Interpolation
   fluxmass = dene*(ui*arx+vi*ary+wi*arz) + cap*(p(ijn)-p(ijp)-dpxi-dpyi-dpzi)
+
+  !///
+  !/// Additional term - For periodic flows with constant mass flow along x-axis direction.
+  !///
+  ! fluxmass = fluxmass + dene*Kj*arx*gradPcmfCorr
 
 end subroutine
 
@@ -520,6 +619,294 @@ subroutine fluxmc(ijp, ijn, xf, yf, zf, arx, ary, arz, lambda, fmcor)
   fmcor = rapr*((dPdxi(1,ijn)*xep-dPdxi(1,ijp)*xpp)+&
                 (dPdxi(2,ijn)*yep-dPdxi(2,ijp)*ypp)+&
                 (dPdxi(3,ijn)*zep-dPdxi(3,ijp)*zpp))
+
+end subroutine
+
+
+subroutine facefluxmassCorrPressBnd(ijp, ijb, xf, yf, zf, arx, ary, arz, fluxmass)
+!
+!  Purpose: 
+!
+!    Correct mass fluxes trough pressure boundaries.
+!
+!  Discussion:
+!
+!    One should note, that if we have a pressure set at boundary, then
+!    pressure correction p' or pp in fCp is zero at boundary, pp(ijb)=0.
+!
+!  Licensing:
+!
+!    This code is distributed under the GNU GPL license. 
+!
+!  Modified:
+!
+!    07/12/2020
+!
+!  Author:
+!
+!    Nikola Mirkov/Email: largeddysimulation@gmail.com / nikolamirkov@yahoo.com
+!
+!  Reference:
+!
+!    Milovan Peric/Hidajet Hadzic - caffa source code.
+!    Basara - RSM on unstructured meshes paper
+!
+!  Parameters:
+!
+!    Input, integer, IJP, owner cell index.
+!    Input, integer, IJB, pressure boudnary face index.
+!    Input, real*8, XF, YF, ZF, coordinates of face center.
+!    Input, real*8, ARX, ARY, ARZ, face area vector components.
+!    Input/Output, real*8, FLUXMASS, mass flux to be corrected at this boundary.
+!
+  implicit none
+
+  integer, intent(in) :: ijp, ijb
+  real(dp), intent(in) :: xf,yf,zf
+  real(dp), intent(in) :: arx, ary, arz
+  real(dp), intent(inout) :: fluxmass
+
+  ! Local variables
+  real(dp) :: dpcor
+  real(dp) :: cap
+  real(dp) :: xpn,ypn,zpn
+
+  ! Distance vector between cell center and face center
+  xpn = xf-xc(ijp)
+  ypn = yf-yc(ijp)
+  zpn = zf-zc(ijp)
+
+  cap = vol(ijp)*apu(ijp)/(arx*xpn+ary*ypn+arz*zpn)
+
+  dpcor = -pp(ijp) ! it's pp(ijb)-pp(ijp) with p' at pressure bnd is zero by default.
+
+  u(ijb) = u(ijb)-arx*cap*dpcor
+  v(ijb) = v(ijb)-ary*cap*dpcor
+  w(ijb) = w(ijb)-arz*cap*dpcor
+
+  fluxmass = fluxmass - den(ijp)*(arx*arx+ary*ary+arz*arz)*cap*dpcor
+
+end subroutine
+
+
+subroutine facefluxmassPressBnd(ijp, ijb, xf, yf, zf, arx, ary, arz, cap, fluxmass)
+!
+!  Purpose: 
+!
+!    Compute mass fluxes trough pressure boundaries, 
+!    form pressure correction equation coefficient - cap.
+!
+!
+!  Licensing:
+!
+!    This code is distributed under the GNU GPL license. 
+!
+!  Modified:
+!
+!    07 December 2020.
+!
+!  Author:
+!
+!    Nikola Mirkov/Email: largeddysimulation@gmail.com / nikolamirkov@yahoo.com
+!
+!  Reference:
+!
+!    Milovan Peric/Hidajet Hadzic - caffa source code.
+!    Basara - RSM on unstructured meshes paper (Int. J. Num. Meth. Fluids)
+!
+!  Parameters:
+!
+!    Input, integer, IJP, owner cell index.
+!    Input, integer, IJB, pressure boudnary face index.
+!    Input, real*8, XF, YF, ZF, coordinates of face center.
+!    Input, real*8, ARX, ARY, ARZ, face area vector components.
+!    Output, real*8, CAP, matrix coefficient resulting from discretization.
+!    Input/Output, real*8, FLUXMASS, masss flux to be corrected at this boundary.
+!
+  implicit none
+
+  integer, intent(in) :: ijp, ijb
+  real(dp), intent(in) :: xf,yf,zf
+  real(dp), intent(in) :: arx, ary, arz
+  real(dp), intent(inout) :: cap  
+  real(dp), intent(inout) :: fluxmass
+
+  ! Local variables
+  real(dp) :: dpcor
+  real(dp) :: capp
+  real(dp) :: xpn,ypn,zpn
+
+  ! Distance vector between cell center and face center
+  xpn = xf-xc(ijp)
+  ypn = yf-yc(ijp)
+  zpn = zf-zc(ijp)
+
+
+  capp = vol(ijp)*apu(ijp)/(arx*xpn+ary*ypn+arz*zpn)
+
+  dpcor = p(ijb)-p(ijp)-( dpdxi(1,ijp)*xpn+dpdxi(2,ijp)*ypn+dpdxi(3,ijp)*zpn )
+
+  u(ijb) = u(ijp)-arx*capp*dpcor
+  v(ijb) = v(ijp)-ary*capp*dpcor
+  w(ijb) = w(ijp)-arz*capp*dpcor
+
+  fluxmass = den(ijp)*( u(ijb)*arx+v(ijb)*ary+w(ijb)*arz )
+
+  cap = -den(ijp)*(arx*arx+ary*ary+arz*arz)*capp
+
+end subroutine
+
+
+subroutine adjustMassFlow
+!
+! Purpose:
+!   Correct mass flow at outflow boundaries to satisfy global mass conservation.
+!
+! Description:
+!   Loop over all outlet boundaries and add up mass flows to get total mass flow - flowo.
+!   Compare it to total mass flow that enters the computational doman - flomas. 
+!   Find ratio - fac.
+!   Adjust the massflow to outlet proportionally, also the velocity components at outlet boundary.
+!
+  use types
+  use parameters, only: flomas, small
+  use geometry, only: numBoundaries, owner, bctype, nfaces, startFace, iBndValueStart, arx, ary, arz
+  use variables, only: u,v,w,flmass,den
+
+  implicit none
+
+  integer :: i,ib,ijb,ijp,iface
+  real(dp) :: flowo,fac
+
+
+  ! Mass flow trough all inlet boundaries (prescribed in routine 'bcin') adds up to give 'flmass'.
+
+  ! Loop Outlet faces, first to get flowo, then again after calculating fac.
+
+  ! Extrapolated velocity at outlet boundary, outlet mass fluxes
+  flowo = 0.0_dp
+
+  ! Loop over outlet boundaries
+  do ib=1,numBoundaries
+    
+    if ( bctype(ib) == 'outlet' ) then
+
+      do i=1,nfaces(ib)
+
+        iface = startFace(ib) + i
+        ijp = owner(iface)
+        ijb = iBndValueStart(ib) + i
+
+        u(ijb) = u(ijp)
+        v(ijb) = v(ijp)
+        w(ijb) = w(ijp)
+
+        flmass(iface) = den(ijp)*( u(ijb)*arx(iface)+v(ijb)*ary(iface)+w(ijb)*arz(iface) )        
+
+        flowo = flowo + flmass(iface)
+
+      end do
+
+    endif 
+
+  enddo
+
+
+  ! Correct mass flux to satisfy global mass conservation & add to source
+  fac = flomas/(flowo+small)
+
+
+  ! Loop over outlet boundaries
+  do ib=1,numBoundaries
+    
+    if ( bctype(ib) == 'outlet' ) then
+
+      do i=1,nfaces(ib)
+
+        iface = startFace(ib) + i
+        ijp = owner(iface)
+        ijb = iBndValueStart(ib) + i
+
+        flmass(iface) = flmass(iface)*fac
+
+        u(ijb) = u(ijb)*fac
+        v(ijb) = v(ijb)*fac
+        w(ijb) = w(ijb)*fac
+            
+      end do
+
+    endif 
+
+  enddo
+
+
+end subroutine
+
+
+subroutine facefluxCompressible( ijp, ijn, xf, yf, zf, fm, lambda, FI, dFidxi, cap, can, suadd )
+!
+!  Purpose:
+!    Compressible contribution to mass fluxes for All Speeds SIMPLE algorithm.
+!
+  use types
+  use parameters
+  use variables
+  use interpolation
+
+  implicit none
+
+  integer, intent(in) :: ijp, ijn
+  real(dp), intent(in) :: xf,yf,zf
+  real(dp), intent(in) :: fm
+  real(dp), intent(in) :: lambda
+  real(dp), dimension(numTotal), intent(in) :: fi
+  real(dp), dimension(3,numCells), intent(in) :: dfidxi
+  real(dp), intent(inout) :: cap, can, suadd
+
+
+! Local variables
+  real(dp) :: fii
+  real(dp) :: fcfie,fcfii
+  real(dp) :: fxp,fxn
+  real(dp) :: Crhof
+  real(dp), parameter :: Rvozd = 287.058  ! J/(kg K)
+  character ( len=30 ) :: cScheme = 'muscl'
+!----------------------------------------------------------------------
+
+
+  ! Face interpolation factor
+  fxn=lambda 
+  fxp=1.0_dp-lambda
+
+  ! Coeff in convection-like term
+  Crhof = 1./( RVOZD*T(ijp)*den(ijp) )*fxp + 1./( RVOZD*T(ijn)*den(ijn) )*fxn
+
+  ! Convection fluxes - uds
+ 
+  ! System matrix coefficients
+  cap = min(fm*Crhof,zero)
+  can = max(fm*Crhof,zero)
+
+
+  ! Explicit higher order convection
+
+  if( fm .ge. zero ) then 
+    ! Flow goes from p to pj - > p is the upwind node
+    fii = face_value(ijp, ijn, xf, yf, zf, fxp, fi, dFidxi, cScheme)
+  else
+    ! Other way, flow goes from pj, to p -> pj is the upwind node.
+    fii = face_value(ijn, ijp, xf, yf, zf, fxn, fi, dFidxi, cScheme)
+  endif
+
+  fcfie = fm*fii
+
+  ! Explicit first order convection
+  fcfii = min(fm,zero)*fi(ijn)+max(fm,zero)*fi(ijp)
+ 
+
+  ! Explicit part of fluxes - Deffered correction for convection = gama_blending*(high-low) 
+  ! I have taken gama_blending or gam to be one by default.
+  suadd = -(fcfie-fcfii)
 
 end subroutine
 

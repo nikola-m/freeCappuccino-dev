@@ -1,8 +1,29 @@
-\hypertarget{k__eqn__eddy_8f90}{\section{src-\/par/k\-\_\-eqn\-\_\-eddy.f90 File Reference}
-\label{k__eqn__eddy_8f90}\index{src-\/par/k\-\_\-eqn\-\_\-eddy.\-f90@{src-\/par/k\-\_\-eqn\-\_\-eddy.\-f90}}
-}
-\subsection*{Data Types}
+\hypertarget{k__eqn__eddy_8f90}{}\doxysection{src-\/par/k\+\_\+eqn\+\_\+eddy.f90 File Reference}
+\label{k__eqn__eddy_8f90}\index{src-\/par/k\_eqn\_eddy.f90@{src-\/par/k\_eqn\_eddy.f90}}
+\doxysubsection*{Modules}
 \begin{DoxyCompactItemize}
 \item 
-module \hyperlink{classk__eqn__eddy}{k\-\_\-eqn\-\_\-eddy}
+module \mbox{\hyperlink{namespacek__eqn__eddy}{k\+\_\+eqn\+\_\+eddy}}
+\end{DoxyCompactItemize}
+\doxysubsection*{Functions/\+Subroutines}
+\begin{DoxyCompactItemize}
+\item 
+subroutine, public \mbox{\hyperlink{namespacek__eqn__eddy_a3f14479c8d34070706c89a9438de6ac1}{k\+\_\+eqn\+\_\+eddy\+::correct\+\_\+turbulence\+\_\+k\+\_\+eqn\+\_\+eddy}} ()
+\item 
+subroutine, public \mbox{\hyperlink{namespacek__eqn__eddy_ad5bb72a91afad8c4bf8ad7a1cbe1896c}{k\+\_\+eqn\+\_\+eddy\+::correct\+\_\+turbulence\+\_\+inlet\+\_\+k\+\_\+eqn\+\_\+eddy}} ()
+\item 
+subroutine \mbox{\hyperlink{namespacek__eqn__eddy_a1d234732469b29ce160b57c9b6f1fa47}{k\+\_\+eqn\+\_\+eddy\+::calcsc}} (Fi, d\+Fidxi, ifi)
+\item 
+subroutine \mbox{\hyperlink{namespacek__eqn__eddy_a4b5e12993193ded30a62136cd9637c4c}{k\+\_\+eqn\+\_\+eddy\+::modify\+\_\+mu\+\_\+eff}} ()
+\end{DoxyCompactItemize}
+\doxysubsection*{Variables}
+\begin{DoxyCompactItemize}
+\item 
+real(dp), parameter \mbox{\hyperlink{namespacek__eqn__eddy_a65e5913ad8e939fa283e9608855a9031}{k\+\_\+eqn\+\_\+eddy\+::ck}} = 0.\+094\+\_\+dp
+\item 
+real(dp), parameter \mbox{\hyperlink{namespacek__eqn__eddy_a4dd1902f2410d71ff09dac839034fe26}{k\+\_\+eqn\+\_\+eddy\+::ceps}} = 1.\+048\+\_\+dp
+\item 
+real(dp), parameter \mbox{\hyperlink{namespacek__eqn__eddy_aa3cac83643e2f03b15da3e47e3fffeba}{k\+\_\+eqn\+\_\+eddy\+::cmu25}} = sqrt(sqrt(ck))
+\item 
+real(dp), parameter \mbox{\hyperlink{namespacek__eqn__eddy_ac0518f6f4e948a91b594edd73676577a}{k\+\_\+eqn\+\_\+eddy\+::cmu75}} = cmu25$\ast$$\ast$3
 \end{DoxyCompactItemize}

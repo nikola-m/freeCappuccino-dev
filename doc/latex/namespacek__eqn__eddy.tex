@@ -1,0 +1,84 @@
+\hypertarget{namespacek__eqn__eddy}{}\doxysection{k\+\_\+eqn\+\_\+eddy Module Reference}
+\label{namespacek__eqn__eddy}\index{k\_eqn\_eddy@{k\_eqn\_eddy}}
+\doxysubsection*{Functions/\+Subroutines}
+\begin{DoxyCompactItemize}
+\item 
+subroutine, public \mbox{\hyperlink{namespacek__eqn__eddy_a3f14479c8d34070706c89a9438de6ac1}{correct\+\_\+turbulence\+\_\+k\+\_\+eqn\+\_\+eddy}} ()
+\item 
+subroutine, public \mbox{\hyperlink{namespacek__eqn__eddy_ad5bb72a91afad8c4bf8ad7a1cbe1896c}{correct\+\_\+turbulence\+\_\+inlet\+\_\+k\+\_\+eqn\+\_\+eddy}} ()
+\item 
+subroutine \mbox{\hyperlink{namespacek__eqn__eddy_a1d234732469b29ce160b57c9b6f1fa47}{calcsc}} (Fi, d\+Fidxi, ifi)
+\item 
+subroutine \mbox{\hyperlink{namespacek__eqn__eddy_a4b5e12993193ded30a62136cd9637c4c}{modify\+\_\+mu\+\_\+eff}} ()
+\end{DoxyCompactItemize}
+\doxysubsection*{Variables}
+\begin{DoxyCompactItemize}
+\item 
+real(dp), parameter \mbox{\hyperlink{namespacek__eqn__eddy_a65e5913ad8e939fa283e9608855a9031}{ck}} = 0.\+094\+\_\+dp
+\item 
+real(dp), parameter \mbox{\hyperlink{namespacek__eqn__eddy_a4dd1902f2410d71ff09dac839034fe26}{ceps}} = 1.\+048\+\_\+dp
+\item 
+real(dp), parameter \mbox{\hyperlink{namespacek__eqn__eddy_aa3cac83643e2f03b15da3e47e3fffeba}{cmu25}} = sqrt(sqrt(\mbox{\hyperlink{namespacek__eqn__eddy_a65e5913ad8e939fa283e9608855a9031}{ck}}))
+\item 
+real(dp), parameter \mbox{\hyperlink{namespacek__eqn__eddy_ac0518f6f4e948a91b594edd73676577a}{cmu75}} = \mbox{\hyperlink{namespacek__eqn__eddy_aa3cac83643e2f03b15da3e47e3fffeba}{cmu25}}$\ast$$\ast$3
+\end{DoxyCompactItemize}
+
+
+\doxysubsection{Function/\+Subroutine Documentation}
+\mbox{\Hypertarget{namespacek__eqn__eddy_a1d234732469b29ce160b57c9b6f1fa47}\label{namespacek__eqn__eddy_a1d234732469b29ce160b57c9b6f1fa47}} 
+\index{k\_eqn\_eddy@{k\_eqn\_eddy}!calcsc@{calcsc}}
+\index{calcsc@{calcsc}!k\_eqn\_eddy@{k\_eqn\_eddy}}
+\doxysubsubsection{\texorpdfstring{calcsc()}{calcsc()}}
+{\footnotesize\ttfamily subroutine k\+\_\+eqn\+\_\+eddy\+::calcsc (\begin{DoxyParamCaption}\item[{real(dp), dimension(numtotal)}]{Fi,  }\item[{real(dp), dimension(3,numcells)}]{d\+Fidxi,  }\item[{integer, intent(in)}]{ifi }\end{DoxyParamCaption})}
+
+Here is the call graph for this function\+:
+% FIG 0
+\mbox{\Hypertarget{namespacek__eqn__eddy_ad5bb72a91afad8c4bf8ad7a1cbe1896c}\label{namespacek__eqn__eddy_ad5bb72a91afad8c4bf8ad7a1cbe1896c}} 
+\index{k\_eqn\_eddy@{k\_eqn\_eddy}!correct\_turbulence\_inlet\_k\_eqn\_eddy@{correct\_turbulence\_inlet\_k\_eqn\_eddy}}
+\index{correct\_turbulence\_inlet\_k\_eqn\_eddy@{correct\_turbulence\_inlet\_k\_eqn\_eddy}!k\_eqn\_eddy@{k\_eqn\_eddy}}
+\doxysubsubsection{\texorpdfstring{correct\_turbulence\_inlet\_k\_eqn\_eddy()}{correct\_turbulence\_inlet\_k\_eqn\_eddy()}}
+{\footnotesize\ttfamily subroutine, public k\+\_\+eqn\+\_\+eddy\+::correct\+\_\+turbulence\+\_\+inlet\+\_\+k\+\_\+eqn\+\_\+eddy}
+
+\mbox{\Hypertarget{namespacek__eqn__eddy_a3f14479c8d34070706c89a9438de6ac1}\label{namespacek__eqn__eddy_a3f14479c8d34070706c89a9438de6ac1}} 
+\index{k\_eqn\_eddy@{k\_eqn\_eddy}!correct\_turbulence\_k\_eqn\_eddy@{correct\_turbulence\_k\_eqn\_eddy}}
+\index{correct\_turbulence\_k\_eqn\_eddy@{correct\_turbulence\_k\_eqn\_eddy}!k\_eqn\_eddy@{k\_eqn\_eddy}}
+\doxysubsubsection{\texorpdfstring{correct\_turbulence\_k\_eqn\_eddy()}{correct\_turbulence\_k\_eqn\_eddy()}}
+{\footnotesize\ttfamily subroutine, public k\+\_\+eqn\+\_\+eddy\+::correct\+\_\+turbulence\+\_\+k\+\_\+eqn\+\_\+eddy}
+
+Here is the call graph for this function\+:
+% FIG 1
+\mbox{\Hypertarget{namespacek__eqn__eddy_a4b5e12993193ded30a62136cd9637c4c}\label{namespacek__eqn__eddy_a4b5e12993193ded30a62136cd9637c4c}} 
+\index{k\_eqn\_eddy@{k\_eqn\_eddy}!modify\_mu\_eff@{modify\_mu\_eff}}
+\index{modify\_mu\_eff@{modify\_mu\_eff}!k\_eqn\_eddy@{k\_eqn\_eddy}}
+\doxysubsubsection{\texorpdfstring{modify\_mu\_eff()}{modify\_mu\_eff()}}
+{\footnotesize\ttfamily subroutine k\+\_\+eqn\+\_\+eddy\+::modify\+\_\+mu\+\_\+eff}
+
+Here is the call graph for this function\+:
+% FIG 2
+
+
+\doxysubsection{Variable Documentation}
+\mbox{\Hypertarget{namespacek__eqn__eddy_a4dd1902f2410d71ff09dac839034fe26}\label{namespacek__eqn__eddy_a4dd1902f2410d71ff09dac839034fe26}} 
+\index{k\_eqn\_eddy@{k\_eqn\_eddy}!ceps@{ceps}}
+\index{ceps@{ceps}!k\_eqn\_eddy@{k\_eqn\_eddy}}
+\doxysubsubsection{\texorpdfstring{ceps}{ceps}}
+{\footnotesize\ttfamily real(dp), parameter k\+\_\+eqn\+\_\+eddy\+::ceps = 1.\+048\+\_\+dp}
+
+\mbox{\Hypertarget{namespacek__eqn__eddy_a65e5913ad8e939fa283e9608855a9031}\label{namespacek__eqn__eddy_a65e5913ad8e939fa283e9608855a9031}} 
+\index{k\_eqn\_eddy@{k\_eqn\_eddy}!ck@{ck}}
+\index{ck@{ck}!k\_eqn\_eddy@{k\_eqn\_eddy}}
+\doxysubsubsection{\texorpdfstring{ck}{ck}}
+{\footnotesize\ttfamily real(dp), parameter k\+\_\+eqn\+\_\+eddy\+::ck = 0.\+094\+\_\+dp}
+
+\mbox{\Hypertarget{namespacek__eqn__eddy_aa3cac83643e2f03b15da3e47e3fffeba}\label{namespacek__eqn__eddy_aa3cac83643e2f03b15da3e47e3fffeba}} 
+\index{k\_eqn\_eddy@{k\_eqn\_eddy}!cmu25@{cmu25}}
+\index{cmu25@{cmu25}!k\_eqn\_eddy@{k\_eqn\_eddy}}
+\doxysubsubsection{\texorpdfstring{cmu25}{cmu25}}
+{\footnotesize\ttfamily real(dp), parameter k\+\_\+eqn\+\_\+eddy\+::cmu25 = sqrt(sqrt(\mbox{\hyperlink{namespacek__eqn__eddy_a65e5913ad8e939fa283e9608855a9031}{ck}}))}
+
+\mbox{\Hypertarget{namespacek__eqn__eddy_ac0518f6f4e948a91b594edd73676577a}\label{namespacek__eqn__eddy_ac0518f6f4e948a91b594edd73676577a}} 
+\index{k\_eqn\_eddy@{k\_eqn\_eddy}!cmu75@{cmu75}}
+\index{cmu75@{cmu75}!k\_eqn\_eddy@{k\_eqn\_eddy}}
+\doxysubsubsection{\texorpdfstring{cmu75}{cmu75}}
+{\footnotesize\ttfamily real(dp), parameter k\+\_\+eqn\+\_\+eddy\+::cmu75 = \mbox{\hyperlink{namespacek__eqn__eddy_aa3cac83643e2f03b15da3e47e3fffeba}{cmu25}}$\ast$$\ast$3}
+

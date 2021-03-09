@@ -22,9 +22,8 @@ module fvxInterpolation
  implicit none
 
   ! The inerpolations that we do for e.g. divergence is hardcoded here
-  ! I think it is the best thing to choose the best working thing.
-  ! Recommended are: 'central', 'cds', 'cdscorr'
-  character(len=10), parameter :: interpolation_scheme = 'cds' 
+  ! Recommended schemes are: 'central', 'cds', 'cdscorr'
+  character(len=10), parameter :: interpolation_scheme = 'central' 
 
   interface fvxInterpolate
     module procedure fvxInterpolateScalar
@@ -42,7 +41,6 @@ function fvxInterpolateScalar(phi) result(psi)
 ! Usage:
 !   [type(surfaceScalarField)] psi = fvxInterpolate ( [type(volScalarField)] phi )
 !
-  use fieldManipulation
 
   implicit none
 
@@ -95,7 +93,6 @@ function fvxInterpolateVector(U) result(psi)
 ! Usage:
 !   [type(surfaceVectorField)] psi = fvxInterpolate ( [type(volVectorField)] U )
 !
-  use fieldManipulation
 
   implicit none
 
@@ -204,7 +201,7 @@ function face_value(ijp,ijn,xf,yf,zf,lambda,u,dUdx,dUdy,dUdz) result(ue)
   elseif (interpolation_scheme == 'central') then 
     ue = face_value_central(ijp, ijn, xf, yf, zf, u, dUdx,dUdy,dUdz)
 
-  else !if (interpolation_scheme == 'cds') then 
+  elseif (interpolation_scheme == 'cds') then 
     ue = face_value_cds(ijp,ijn, lambda, u) 
 
   endif 

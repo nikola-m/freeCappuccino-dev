@@ -33,7 +33,6 @@ implicit none
 
  integer :: su2_file = 4
 
- integer, parameter :: dp = kind(1.0d0)
  integer, parameter :: nonoel = 8 ! no. of nodes in element-here Hex
  integer, parameter :: nonofa = 4 ! no, of nodes in element face-here Hex
  integer, parameter :: nofaelmax     = 6 ! no. of faces in element
@@ -53,8 +52,9 @@ implicit none
  integer :: nInnerFacePairs
  integer :: listLength
  integer :: NE, NTYPE, NODE(8), fVert(4) 
- real(dp) :: XCOO(3)
  integer :: NMARK ! no. of boundary regions
+ ! real(dp) :: CCOO(3),TCOO(3),ARE(3) ! Cell center, face ceter, face area normal vector
+ real(dp), dimension(:,:), allocatable :: XCOO
  integer, dimension(:,:), allocatable :: fV
  integer, dimension(:), allocatable :: owner,neighbour
  integer, dimension(:), allocatable :: own,nbr,prmt
@@ -143,6 +143,53 @@ implicit none
   read(su2_file,*) key,ndim
   read(su2_file,*) key,nel  
 
+
+  !//****************************************************************//
+  !
+  ! OK, su2 has vertices after cell conectivity, but we need vertices first
+  ! to be able to find cell centers, face normal vectors and check 
+  ! face orientation, which is crucial for us. 
+  ! This should solve the bug we have encountered, which is caused by wrong face orientation.
+  !
+
+  ! Fast forward to vertices
+  do iel=1,nel
+    read(su2_file,*)
+  end do
+
+  !
+  ! > Continue reading mesh file, first read node coordinates and write them to a file
+  !
+
+  ! OPEN text file: 'points'
+  open(unit=7,file='polyMesh/points')
+  rewind 7
+
+  read(su2_file,*) key,numPoints ! NPOIN in su2 file
+
+  allocate( XCOO(3,numPoints) )
+
+  ! Read nodal coordinates
+  do i=1,numPoints
+
+    read(su2_file,*) (XCOO(k,i),k=1,ndim)
+
+    ! Write to file: 'points'
+    write(7,'(3E20.11)') (XCOO(k,i), k=1,ndim)
+
+  enddo
+
+  ! CLOSE file: 'points'
+  close (7)
+
+  ! Return to where we interupted file reading to do this
+  rewind su2_file
+  read(su2_file,*) 
+  read(su2_file,*)
+
+  !//****************************************************************//
+
+
   ! List length for the hash map
   listLength = nofaelmax*nel*2
 
@@ -181,6 +228,8 @@ implicit none
   ! > Write into 'cells' polyMesh file
   write(12,'(I0,1X,8(I0,1x))') NTYPE,(NODE(k), k=1,np)
 
+  ! Needed for checking orientation of face vertices
+  ! call find_cell_center(np,NODE,numPoints,XCOO,CCOO)
 
 ! write(*,*)iel
 !  Element Type  Identifier
@@ -205,8 +254,16 @@ implicit none
   ! TETRAHEDRON
 
     do iface = 1,nofael(NTYPE)
+
+      fVert = 0
       fVert = face_vertices_NTYPE10(iface,NODE,np)
-      call hashmap_insert(iel,fVert,owner,neighbour,fV,listLength,nInnerFaces,ne)
+
+      ! call triangle_face_center( fVert,numPoints,XCOO,TCOO )
+      ! call triangle_area_vector( fVert,numPoints,XCOO,ARE )
+      ! if ( dot_product( (TCOO-CCOO),ARE ) < 0  ) call reverse_vertices( fVert )
+
+      call hashmap_insert(iel,fVert,owner,neighbour,fV,listLength,nInnerFaces)
+
     enddo
 
     numtet = numtet + 1 
@@ -216,8 +273,16 @@ implicit none
   ! HEXAHEDRON
 
     do iface = 1,nofael(NTYPE)
+
+      fVert = 0
       fVert = face_vertices_NTYPE12(iface,NODE,np)
-      call hashmap_insert(iel,fVert,owner,neighbour,fV,listLength,nInnerFaces,ne)
+
+      ! call triangle_face_center( fVert,numPoints,XCOO,TCOO )
+      ! call triangle_area_vector( fVert,numPoints,XCOO,ARE )
+      ! if ( dot_product( (TCOO-CCOO),ARE ) < 0  ) call reverse_vertices( fVert )
+
+      call hashmap_insert(iel,fVert,owner,neighbour,fV,listLength,nInnerFaces)
+
     enddo
 
     numhex = numhex + 1 
@@ -226,8 +291,16 @@ implicit none
   ! PRISM
 
     do iface = 1,nofael(NTYPE)
+
+      fVert = 0
       fVert = face_vertices_NTYPE13(iface,NODE,np)
-      call hashmap_insert(iel,fVert,owner,neighbour,fV,listLength,nInnerFaces,ne)
+
+      ! call triangle_face_center( fVert,numPoints,XCOO,TCOO )
+      ! call triangle_area_vector( fVert,numPoints,XCOO,ARE )
+      ! if ( dot_product( (TCOO-CCOO) , ARE ) < 0  ) call reverse_vertices( fVert )
+
+      call hashmap_insert(iel,fVert,owner,neighbour,fV,listLength,nInnerFaces)
+
     enddo
 
     numpri = numpri + 1 
@@ -237,8 +310,16 @@ implicit none
   ! PYRAMID
 
     do iface = 1,nofael(NTYPE)
+
+      fVert = 0
       fVert = face_vertices_NTYPE14(iface,NODE,np)
-      call hashmap_insert(iel,fVert,owner,neighbour,fV,listLength,nInnerFaces,ne)
+
+      ! call triangle_face_center( fVert,numPoints,XCOO,TCOO )
+      ! call triangle_area_vector( fVert,numPoints,XCOO,ARE )
+      ! if ( dot_product( (TCOO-CCOO) , ARE ) < 0  ) call reverse_vertices( fVert )
+
+      call hashmap_insert(iel,fVert,owner,neighbour,fV,listLength,nInnerFaces)
+
     enddo
 
     numpyr = numpyr + 1 
@@ -251,21 +332,19 @@ implicit none
   end do element_loop
 
 !
-! > Report after reading al the meesh elements
+! > Report after reading al the mesh elements
 !
 
   numCells = numhex+numtet+numpyr+numpri
 
   write ( *, '(a)' ) ' '
-  write ( *, '(2x,a)' ) ' Gambit file:'
+  write ( *, '(2x,a)' ) ' SU2 file:'
   write ( *, '(4x,a,I0)' ) 'Total no. of HEX cells: ', numhex
   write ( *, '(4x,a,I0)' ) 'Total no. of TET cells: ', numtet
   write ( *, '(4x,a,I0)' ) 'Total no. of PYR cells: ', numpyr
   write ( *, '(4x,a,I0)' ) 'Total no. of PRI cells: ', numpri
   write ( *, '(3x,a)' )    '+--------------------------------='
   write ( *, '(4x,a,I0)' ) 'Total no. of cells: ', numCells
-  write ( *, '(a)' ) ' '
-  write ( *, '(2x,a)' ) 'Normal end of reading .su2 file.'
   write ( *, '(a)' ) ' '
 
   if(nel.ne.numCells) then
@@ -276,7 +355,12 @@ implicit none
   endif  
 
 
-  write(*,*)" Found",nInnerFaces,"inner faces!"
+  write(*,'(a,i0,a)')" Matched cell pairs for: ",nInnerFaces," inner faces!"
+
+
+  !
+  ! Sort and write into respective files owner, neighbour indices, and face vertices
+  !
 
   allocate( own(nInnerFaces), nbr(nInnerFaces), prmt(nInnerFaces), fV1(nonofa,nInnerFaces) )
 
@@ -307,7 +391,7 @@ implicit none
 
     ! Add one bcs zero numbering in su2, reverse order in faces (np:1:-1, instead 1:np), 
     ! and pick face based on permutation done in sorting, which is written in 'prmt' array.
-    write(9, '(5(I0,1x))') np, fV1( np:1:-1, prmt(i) )+1 
+    write(9, '(5(I0,1x))') np, fV1( np:1:-1, prmt(i) ) !fV1( 1:np, prmt(i) ) 
     write(10,'(I0)') own(i)
     write(11,'(I0)') nbr(i)
 
@@ -319,29 +403,11 @@ implicit none
 
   deallocate(own,nbr,prmt,fV1)
 
-  !
-  ! > Continue reading mesh file, first read node cooradinates and write them to a file
-  !
 
-  ! OPEN text file: 'points'
-  open(unit=7,file='polyMesh/points')
-  rewind 7
-
-  read(su2_file,*) key,numPoints ! NPOIN in su2 file
-
-
-  ! Read nodal coordinates
-  do i=1,numPoints
-
-    read(su2_file,*) (XCOO(k),k=1,ndim)
-
-    ! Write to file: 'points'
-    write(7,'(3E20.11)') (XCOO(k), k=1,ndim)
-
+! Fast forward over point coordinates in a su2 file.
+  do i=1,numPoints+1
+    read(su2_file,*)
   enddo
-
-  ! CLOSE file: 'points'
-  close (7)
 
 
 ! Read boudary conditions one by one
@@ -350,7 +416,7 @@ implicit none
 
   nFacesTotal = nInnerFaces
 
-  iel = 0  ! Need to reset it so the neighbour inside hashmap_insert remains 0 - a hack.  
+  iel = 0  
 
   write(8,'(a)') '# bcName bcType nFaces startFace'
 
@@ -370,23 +436,25 @@ implicit none
     nBoundFaces = nBoundFaces + bcSize(nm)
 
 
-    boundary_loop: do i=1,bcSize(nm)
+    boundary_loop: do iel=1,bcSize(nm)
+
+      fVert = 0
 
       read(su2_file,*) NTYPE, (fVert(k), k=1,noel(NTYPE))
 
       np = noel(NTYPE)
 
+      ! Because zero based numbering in su2 file
+      fVert(1:3) = fVert(1:3)+1
+      if( np == 4 ) fVert(4) = fVert(4) + 1
+
       ! > Write into 'cells' polyMesh file
       write(12,'(I0,1X,4(I0,1X))') NTYPE,(NODE(k), k=1,np)
 
-      call hashmap_insert(iel,fVert,owner,neighbour,fV,listLength,nFacesTotal,ne)
+      call hashmap_boundary_face(fVert,owner,fV,listLength,nFacesTotal,ne)
 
-      write(10,'(I0)') ne ! owner cell on return form hashmap_insert
-      write(9,'(5(I0,1x))') np,(fVert(k)+1, k=np,1,-1) ! face vertices of boundary face, reversed.
-
-      ! Note: I had to reverse the order of indices in faces because I have read them in CCW order when 
-      ! looking from inside cell. Reversing order while writing to file is easier than changing everything 
-      ! in 'get_face_vertices_XXX' functions in utils module. Nikola
+      write(10,'(I0)') ne ! owner cell returned form hashmap_insert
+      write(9,'(5(I0,1x))') np,(fVert(k), k=np,1,-1) !fVert(1:np) !
 
     enddo boundary_loop
 
@@ -399,10 +467,31 @@ implicit none
 
   ! Write 'size' file containing mesh size parameters.
   nInnerFacePairs = jface-nBoundFaces
-  nInnerFaces = nInnerFacePairs/2
-  nFacesTotal = nInnerFaces + nBoundFaces
- 
-  write(*,*) "Inner faces: ",nInnerFaces,"Boundary faces: ",nBoundFaces,"Total: ",nfacesTotal
+  
+
+  !
+  ! Two checks to see is everything ok.
+  !
+  if (nInnerFaces /= nInnerFacePairs/2) then
+      write ( *, '(a)' ) ' '
+      write ( *, '(a)' ) '  Fatal error!'
+      write ( *, '(a)' ) '  Have not found all inner face cell pairs!'
+      write ( *, '(2(a,i0))' ) '  Found:',nInnerFaces,' need:', nInnerFacePairs/2
+      ! stop
+  endif
+
+  if (nFacesTotal /= (nInnerFaces + nBoundFaces)) then
+      write ( *, '(a)' ) ' '
+      write ( *, '(a)' ) '  Fatal error!'
+      write ( *, '(a)' ) '  Have not found all boundary face owners!'
+      write ( *, '(2(a,i0))' ) '  Found:',nFacesTotal,' need:', nBoundFaces
+      ! stop
+  endif
+
+  !
+  ! If everything ok - we may continue to write log
+  !
+  write(*,'(3(a,I0))') " Inner faces: ",nInnerFaces," Boundary faces: ",nBoundFaces," Total: ",nfacesTotal
 
   write(13,'(I0,a)') numPoints,   " Vertices"
   write(13,'(I0,a)') nel,         " Cells"

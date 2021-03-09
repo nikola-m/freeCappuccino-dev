@@ -1,0 +1,139 @@
+\hypertarget{namespaceoutput}{}\doxysection{output Module Reference}
+\label{namespaceoutput}\index{output@{output}}
+\doxysubsection*{Data Types}
+\begin{DoxyCompactItemize}
+\item 
+interface \mbox{\hyperlink{interfaceoutput_1_1operator_07_8visualize_8_08}{operator(.\+visualize.)}}
+\end{DoxyCompactItemize}
+\doxysubsection*{Functions/\+Subroutines}
+\begin{DoxyCompactItemize}
+\item 
+pure integer function \mbox{\hyperlink{namespaceoutput_a13f0dd663184eb8a7d5e6bedca6b1ae9}{paraview\+\_\+cell\+\_\+type}} (nnodes)
+\item 
+pure integer function \mbox{\hyperlink{namespaceoutput_a0e9d894fc8d5b970498dbc38da4b5e8b}{paraview\+\_\+ntype}} (N\+T\+Y\+PE)
+\item 
+pure integer function \mbox{\hyperlink{namespaceoutput_a7056173ffdf011c0acd43d0872ac6479}{noel}} (N\+T\+Y\+PE)
+\item 
+integer function \mbox{\hyperlink{namespaceoutput_aec0a5b59f3bf4735afb3ccc21170f80d}{write\+\_\+volscalarfield\+\_\+field}} (phi)
+\item 
+integer function \mbox{\hyperlink{namespaceoutput_a55cacab6d44b5e4d15636bd5c42bead2}{write\+\_\+volvectorfield\+\_\+field}} (v)
+\item 
+subroutine \mbox{\hyperlink{namespaceoutput_ae0737d0d848c897c0bb7556a3a3dd866}{vtu\+\_\+write\+\_\+xml\+\_\+header}} (output\+\_\+unit)
+\item 
+subroutine \mbox{\hyperlink{namespaceoutput_a24246576b3ee212f23b6c17c56c542ff}{vtu\+\_\+write\+\_\+xml\+\_\+meshdata}} (output\+\_\+unit)
+\item 
+subroutine \mbox{\hyperlink{namespaceoutput_a7bb5b7be92f1202f519acc1c8b977bc1}{vtu\+\_\+write\+\_\+xml\+\_\+scalar\+\_\+field}} (output\+\_\+unit, scalar\+\_\+name, scalar\+\_\+field)
+\item 
+subroutine \mbox{\hyperlink{namespaceoutput_a57928f52b93a1be21552a6dc3b57c5b9}{vtu\+\_\+write\+\_\+xml\+\_\+scalar\+\_\+field\+\_\+boundary}} (output\+\_\+unit, scalar\+\_\+name, scalar\+\_\+field, istart, iend)
+\item 
+subroutine \mbox{\hyperlink{namespaceoutput_af8b277fac5da59aef986ff54465695a7}{vtu\+\_\+write\+\_\+xml\+\_\+vector\+\_\+field}} (output\+\_\+unit, field\+\_\+name, u, v, w)
+\item 
+subroutine \mbox{\hyperlink{namespaceoutput_aa3586a7189be137c5f5ae44175c29f56}{vtu\+\_\+write\+\_\+xml\+\_\+vector\+\_\+field\+\_\+boundary}} (output\+\_\+unit, field\+\_\+name, u, v, w, istart, iend)
+\item 
+subroutine \mbox{\hyperlink{namespaceoutput_a4f35a534b7fc56c340357b9efe60be9b}{vtu\+\_\+write\+\_\+scalar\+\_\+field}} (output\+\_\+unit, scalar\+\_\+name, scalar\+\_\+field)
+\item 
+subroutine \mbox{\hyperlink{namespaceoutput_a6e8bb7cb030bfa7246ec346905b1eea6}{vtu\+\_\+write\+\_\+vector\+\_\+field}} (output\+\_\+unit, field\+\_\+name, u, v, w)
+\item 
+subroutine \mbox{\hyperlink{namespaceoutput_a607012450080b564be862ec1a478a87a}{vtu\+\_\+write\+\_\+mesh}} (output\+\_\+unit)
+\end{DoxyCompactItemize}
+
+
+\doxysubsection{Function/\+Subroutine Documentation}
+\mbox{\Hypertarget{namespaceoutput_a7056173ffdf011c0acd43d0872ac6479}\label{namespaceoutput_a7056173ffdf011c0acd43d0872ac6479}} 
+\index{output@{output}!noel@{noel}}
+\index{noel@{noel}!output@{output}}
+\doxysubsubsection{\texorpdfstring{noel()}{noel()}}
+{\footnotesize\ttfamily pure integer function output\+::noel (\begin{DoxyParamCaption}\item[{integer, intent(in)}]{N\+T\+Y\+PE }\end{DoxyParamCaption})}
+
+\mbox{\Hypertarget{namespaceoutput_a13f0dd663184eb8a7d5e6bedca6b1ae9}\label{namespaceoutput_a13f0dd663184eb8a7d5e6bedca6b1ae9}} 
+\index{output@{output}!paraview\_cell\_type@{paraview\_cell\_type}}
+\index{paraview\_cell\_type@{paraview\_cell\_type}!output@{output}}
+\doxysubsubsection{\texorpdfstring{paraview\_cell\_type()}{paraview\_cell\_type()}}
+{\footnotesize\ttfamily pure integer function output\+::paraview\+\_\+cell\+\_\+type (\begin{DoxyParamCaption}\item[{integer, intent(in)}]{nnodes }\end{DoxyParamCaption})}
+
+\mbox{\Hypertarget{namespaceoutput_a0e9d894fc8d5b970498dbc38da4b5e8b}\label{namespaceoutput_a0e9d894fc8d5b970498dbc38da4b5e8b}} 
+\index{output@{output}!paraview\_ntype@{paraview\_ntype}}
+\index{paraview\_ntype@{paraview\_ntype}!output@{output}}
+\doxysubsubsection{\texorpdfstring{paraview\_ntype()}{paraview\_ntype()}}
+{\footnotesize\ttfamily pure integer function output\+::paraview\+\_\+ntype (\begin{DoxyParamCaption}\item[{integer, intent(in)}]{N\+T\+Y\+PE }\end{DoxyParamCaption})}
+
+\mbox{\Hypertarget{namespaceoutput_a607012450080b564be862ec1a478a87a}\label{namespaceoutput_a607012450080b564be862ec1a478a87a}} 
+\index{output@{output}!vtu\_write\_mesh@{vtu\_write\_mesh}}
+\index{vtu\_write\_mesh@{vtu\_write\_mesh}!output@{output}}
+\doxysubsubsection{\texorpdfstring{vtu\_write\_mesh()}{vtu\_write\_mesh()}}
+{\footnotesize\ttfamily subroutine output\+::vtu\+\_\+write\+\_\+mesh (\begin{DoxyParamCaption}\item[{integer, intent(in)}]{output\+\_\+unit }\end{DoxyParamCaption})}
+
+Here is the call graph for this function\+:
+% FIG 0
+\mbox{\Hypertarget{namespaceoutput_a4f35a534b7fc56c340357b9efe60be9b}\label{namespaceoutput_a4f35a534b7fc56c340357b9efe60be9b}} 
+\index{output@{output}!vtu\_write\_scalar\_field@{vtu\_write\_scalar\_field}}
+\index{vtu\_write\_scalar\_field@{vtu\_write\_scalar\_field}!output@{output}}
+\doxysubsubsection{\texorpdfstring{vtu\_write\_scalar\_field()}{vtu\_write\_scalar\_field()}}
+{\footnotesize\ttfamily subroutine output\+::vtu\+\_\+write\+\_\+scalar\+\_\+field (\begin{DoxyParamCaption}\item[{integer, intent(in)}]{output\+\_\+unit,  }\item[{character ( len = $\ast$ ), intent(in)}]{scalar\+\_\+name,  }\item[{real(dp), dimension(numcells), intent(in)}]{scalar\+\_\+field }\end{DoxyParamCaption})}
+
+Here is the call graph for this function\+:
+% FIG 1
+\mbox{\Hypertarget{namespaceoutput_a6e8bb7cb030bfa7246ec346905b1eea6}\label{namespaceoutput_a6e8bb7cb030bfa7246ec346905b1eea6}} 
+\index{output@{output}!vtu\_write\_vector\_field@{vtu\_write\_vector\_field}}
+\index{vtu\_write\_vector\_field@{vtu\_write\_vector\_field}!output@{output}}
+\doxysubsubsection{\texorpdfstring{vtu\_write\_vector\_field()}{vtu\_write\_vector\_field()}}
+{\footnotesize\ttfamily subroutine output\+::vtu\+\_\+write\+\_\+vector\+\_\+field (\begin{DoxyParamCaption}\item[{integer, intent(in)}]{output\+\_\+unit,  }\item[{character ( len = $\ast$ ), intent(in)}]{field\+\_\+name,  }\item[{real(dp), dimension(numcells), intent(in)}]{u,  }\item[{real(dp), dimension(numcells), intent(in)}]{v,  }\item[{real(dp), dimension(numcells), intent(in)}]{w }\end{DoxyParamCaption})}
+
+Here is the call graph for this function\+:
+% FIG 2
+\mbox{\Hypertarget{namespaceoutput_ae0737d0d848c897c0bb7556a3a3dd866}\label{namespaceoutput_ae0737d0d848c897c0bb7556a3a3dd866}} 
+\index{output@{output}!vtu\_write\_xml\_header@{vtu\_write\_xml\_header}}
+\index{vtu\_write\_xml\_header@{vtu\_write\_xml\_header}!output@{output}}
+\doxysubsubsection{\texorpdfstring{vtu\_write\_xml\_header()}{vtu\_write\_xml\_header()}}
+{\footnotesize\ttfamily subroutine output\+::vtu\+\_\+write\+\_\+xml\+\_\+header (\begin{DoxyParamCaption}\item[{integer, intent(in)}]{output\+\_\+unit }\end{DoxyParamCaption})}
+
+Here is the call graph for this function\+:
+% FIG 3
+\mbox{\Hypertarget{namespaceoutput_a24246576b3ee212f23b6c17c56c542ff}\label{namespaceoutput_a24246576b3ee212f23b6c17c56c542ff}} 
+\index{output@{output}!vtu\_write\_xml\_meshdata@{vtu\_write\_xml\_meshdata}}
+\index{vtu\_write\_xml\_meshdata@{vtu\_write\_xml\_meshdata}!output@{output}}
+\doxysubsubsection{\texorpdfstring{vtu\_write\_xml\_meshdata()}{vtu\_write\_xml\_meshdata()}}
+{\footnotesize\ttfamily subroutine output\+::vtu\+\_\+write\+\_\+xml\+\_\+meshdata (\begin{DoxyParamCaption}\item[{integer, intent(in)}]{output\+\_\+unit }\end{DoxyParamCaption})}
+
+Here is the call graph for this function\+:
+% FIG 4
+\mbox{\Hypertarget{namespaceoutput_a7bb5b7be92f1202f519acc1c8b977bc1}\label{namespaceoutput_a7bb5b7be92f1202f519acc1c8b977bc1}} 
+\index{output@{output}!vtu\_write\_xml\_scalar\_field@{vtu\_write\_xml\_scalar\_field}}
+\index{vtu\_write\_xml\_scalar\_field@{vtu\_write\_xml\_scalar\_field}!output@{output}}
+\doxysubsubsection{\texorpdfstring{vtu\_write\_xml\_scalar\_field()}{vtu\_write\_xml\_scalar\_field()}}
+{\footnotesize\ttfamily subroutine output\+::vtu\+\_\+write\+\_\+xml\+\_\+scalar\+\_\+field (\begin{DoxyParamCaption}\item[{integer, intent(in)}]{output\+\_\+unit,  }\item[{character ( len = $\ast$ ), intent(in)}]{scalar\+\_\+name,  }\item[{real(dp), dimension(numcells), intent(in)}]{scalar\+\_\+field }\end{DoxyParamCaption})}
+
+\mbox{\Hypertarget{namespaceoutput_a57928f52b93a1be21552a6dc3b57c5b9}\label{namespaceoutput_a57928f52b93a1be21552a6dc3b57c5b9}} 
+\index{output@{output}!vtu\_write\_xml\_scalar\_field\_boundary@{vtu\_write\_xml\_scalar\_field\_boundary}}
+\index{vtu\_write\_xml\_scalar\_field\_boundary@{vtu\_write\_xml\_scalar\_field\_boundary}!output@{output}}
+\doxysubsubsection{\texorpdfstring{vtu\_write\_xml\_scalar\_field\_boundary()}{vtu\_write\_xml\_scalar\_field\_boundary()}}
+{\footnotesize\ttfamily subroutine output\+::vtu\+\_\+write\+\_\+xml\+\_\+scalar\+\_\+field\+\_\+boundary (\begin{DoxyParamCaption}\item[{integer, intent(in)}]{output\+\_\+unit,  }\item[{character ( len = $\ast$ ), intent(in)}]{scalar\+\_\+name,  }\item[{real(dp), dimension(numtotal), intent(in)}]{scalar\+\_\+field,  }\item[{integer, intent(in)}]{istart,  }\item[{integer, intent(in)}]{iend }\end{DoxyParamCaption})}
+
+\mbox{\Hypertarget{namespaceoutput_af8b277fac5da59aef986ff54465695a7}\label{namespaceoutput_af8b277fac5da59aef986ff54465695a7}} 
+\index{output@{output}!vtu\_write\_xml\_vector\_field@{vtu\_write\_xml\_vector\_field}}
+\index{vtu\_write\_xml\_vector\_field@{vtu\_write\_xml\_vector\_field}!output@{output}}
+\doxysubsubsection{\texorpdfstring{vtu\_write\_xml\_vector\_field()}{vtu\_write\_xml\_vector\_field()}}
+{\footnotesize\ttfamily subroutine output\+::vtu\+\_\+write\+\_\+xml\+\_\+vector\+\_\+field (\begin{DoxyParamCaption}\item[{integer, intent(in)}]{output\+\_\+unit,  }\item[{character ( len = $\ast$ ), intent(in)}]{field\+\_\+name,  }\item[{real(dp), dimension(numcells), intent(in)}]{u,  }\item[{real(dp), dimension(numcells), intent(in)}]{v,  }\item[{real(dp), dimension(numcells), intent(in)}]{w }\end{DoxyParamCaption})}
+
+\mbox{\Hypertarget{namespaceoutput_aa3586a7189be137c5f5ae44175c29f56}\label{namespaceoutput_aa3586a7189be137c5f5ae44175c29f56}} 
+\index{output@{output}!vtu\_write\_xml\_vector\_field\_boundary@{vtu\_write\_xml\_vector\_field\_boundary}}
+\index{vtu\_write\_xml\_vector\_field\_boundary@{vtu\_write\_xml\_vector\_field\_boundary}!output@{output}}
+\doxysubsubsection{\texorpdfstring{vtu\_write\_xml\_vector\_field\_boundary()}{vtu\_write\_xml\_vector\_field\_boundary()}}
+{\footnotesize\ttfamily subroutine output\+::vtu\+\_\+write\+\_\+xml\+\_\+vector\+\_\+field\+\_\+boundary (\begin{DoxyParamCaption}\item[{integer, intent(in)}]{output\+\_\+unit,  }\item[{character ( len = $\ast$ ), intent(in)}]{field\+\_\+name,  }\item[{real(dp), dimension(numtotal), intent(in)}]{u,  }\item[{real(dp), dimension(numtotal), intent(in)}]{v,  }\item[{real(dp), dimension(numtotal), intent(in)}]{w,  }\item[{integer, intent(in)}]{istart,  }\item[{integer, intent(in)}]{iend }\end{DoxyParamCaption})}
+
+\mbox{\Hypertarget{namespaceoutput_aec0a5b59f3bf4735afb3ccc21170f80d}\label{namespaceoutput_aec0a5b59f3bf4735afb3ccc21170f80d}} 
+\index{output@{output}!write\_volscalarfield\_field@{write\_volscalarfield\_field}}
+\index{write\_volscalarfield\_field@{write\_volscalarfield\_field}!output@{output}}
+\doxysubsubsection{\texorpdfstring{write\_volscalarfield\_field()}{write\_volscalarfield\_field()}}
+{\footnotesize\ttfamily integer function output\+::write\+\_\+volscalarfield\+\_\+field (\begin{DoxyParamCaption}\item[{type(\mbox{\hyperlink{structtensor__fields_1_1volscalarfield}{volscalarfield}}), intent(in)}]{phi }\end{DoxyParamCaption})}
+
+Here is the call graph for this function\+:
+% FIG 5
+\mbox{\Hypertarget{namespaceoutput_a55cacab6d44b5e4d15636bd5c42bead2}\label{namespaceoutput_a55cacab6d44b5e4d15636bd5c42bead2}} 
+\index{output@{output}!write\_volvectorfield\_field@{write\_volvectorfield\_field}}
+\index{write\_volvectorfield\_field@{write\_volvectorfield\_field}!output@{output}}
+\doxysubsubsection{\texorpdfstring{write\_volvectorfield\_field()}{write\_volvectorfield\_field()}}
+{\footnotesize\ttfamily integer function output\+::write\+\_\+volvectorfield\+\_\+field (\begin{DoxyParamCaption}\item[{type(\mbox{\hyperlink{structtensor__fields_1_1volvectorfield}{volvectorfield}}), intent(in)}]{v }\end{DoxyParamCaption})}
+
+Here is the call graph for this function\+:
+% FIG 6

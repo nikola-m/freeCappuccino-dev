@@ -16,6 +16,7 @@ module scalar_fluxes
     module procedure facefluxsc
     module procedure facefluxsc_nonconst_prtr
     module procedure facefluxsc_boundary
+    module procedure facefluxsc_periodic
   end interface
 
 
@@ -30,8 +31,8 @@ contains
 !***********************************************************************
 !
 subroutine facefluxsc(ijp, ijn, xf, yf, zf, arx, ary, arz, &
-                      flmass, lambda, gam, FI, dFidxi, &
-                      prtr, cap, can, suadd)
+                      flmass, lambda, gam, cScheme, dScheme, nrelax,  &
+                      FI, dFidxi, prtr, cap, can, suadd)
 !
 !***********************************************************************
 !
@@ -51,6 +52,9 @@ subroutine facefluxsc(ijp, ijn, xf, yf, zf, arx, ary, arz, &
   real(dp), intent(in) :: flmass
   real(dp), intent(in) :: lambda
   real(dp), intent(in) :: gam 
+  character( len=30 ), intent(in) :: cScheme ! Convection scheme.
+  character( len=12 ), intent(in) :: dScheme ! Difussion scheme, i.e. the method for face normal gradient.
+  integer, intent(in) :: nrelax ! Relaxation parameter non-orthogonal correction for face gradient.
   real(dp), dimension(numTotal), intent(in) :: Fi
   real(dp), dimension(3,numCells), intent(in) :: dFidxi
   real(dp), intent(in) :: prtr
@@ -58,8 +62,6 @@ subroutine facefluxsc(ijp, ijn, xf, yf, zf, arx, ary, arz, &
 
 
 ! Local variables
-  integer  :: nrelax
-  character(len=12) :: approach
   real(dp) :: are
   real(dp) :: xpn,ypn,zpn!, xi,yi,zi,r1,r2,psie,psiw
   real(dp) :: dpn
@@ -116,12 +118,8 @@ subroutine facefluxsc(ijp, ijn, xf, yf, zf, arx, ary, arz, &
   ! Explicit part of diffusion
   !-------------------------------------------------------
 
-  nrelax = 0
-  approach  = 'skewness'
-  ! approach = 'offset'
-
   call sngrad(ijp, ijn, xf, yf, zf, arx, ary, arz, lambda, &
-              Fi, dFidxi, nrelax, approach, dfixi, dfiyi, dfizi, &
+              Fi, dFidxi, nrelax, dScheme, dfixi, dfiyi, dfizi, &
               dfixii, dfiyii, dfizii)
   
 
@@ -133,14 +131,14 @@ subroutine facefluxsc(ijp, ijn, xf, yf, zf, arx, ary, arz, &
 
 
   !-------------------------------------------------------
-  ! Explicit higher order convection
+  ! Explicit higher order convection, cSheme is set in input
   !-------------------------------------------------------
   if( flmass .ge. zero ) then 
     ! Flow goes from p to pj - > p is the upwind node
-    fii = face_value(ijp, ijn, xf, yf, zf, fxp, fi, dFidxi)
+    fii = face_value(ijp, ijn, xf, yf, zf, fxp, fi, dFidxi, cScheme)
   else
     ! Other way, flow goes from pj, to p -> pj is the upwind node.
-    fii = face_value(ijn, ijp, xf, yf, zf, fxn, fi, dFidxi)
+    fii = face_value(ijn, ijp, xf, yf, zf, fxn, fi, dFidxi, cScheme)
   endif
 
   fcfie = fm*fii
@@ -168,7 +166,7 @@ end subroutine
 !
 subroutine facefluxsc_nonconst_prtr(ijp, ijn, xf, yf, zf, arx, ary, arz, &
                                     flmass, lambda, gam, FI, dFidxi, &
-                                    prtr_ijp, prtr_ijn, cap, can, suadd)
+                                    prtr_ijp, prtr_ijn, cap, can, suadd, cScheme)
 !
 !***********************************************************************
 !
@@ -200,6 +198,7 @@ subroutine facefluxsc_nonconst_prtr(ijp, ijn, xf, yf, zf, arx, ary, arz, &
   real(dp), dimension(3,numCells), intent(in) :: dFidxi
   real(dp), intent(in) :: prtr_ijp, prtr_ijn
   real(dp), intent(inout) :: cap, can, suadd
+  character(len=30), intent(in) :: cScheme
 
 
 ! Local variables
@@ -276,14 +275,14 @@ subroutine facefluxsc_nonconst_prtr(ijp, ijn, xf, yf, zf, arx, ary, arz, &
 
 
   !-------------------------------------------------------
-  ! Explicit higher order convection
+  ! Explicit higher order convection; cScheme is set in input
   !-------------------------------------------------------
   if( flmass .ge. zero ) then 
     ! Flow goes from p to pj - > p is the upwind node
-    fii = face_value(ijp, ijn, xf, yf, zf, fxp, fi, dFidxi)
+    fii = face_value(ijp, ijn, xf, yf, zf, fxp, fi, dFidxi, cScheme)
   else
     ! Other way, flow goesfrom pj, to p -> pj is the upwind node.
-    fii = face_value(ijn, ijp, xf, yf, zf, fxn, fi, dFidxi)
+    fii = face_value(ijn, ijp, xf, yf, zf, fxn, fi, dFidxi, cScheme)
   endif
 
   fcfie = fm*fii
@@ -305,6 +304,133 @@ subroutine facefluxsc_nonconst_prtr(ijp, ijn, xf, yf, zf, arx, ary, arz, &
 
 end subroutine
 
+
+!***********************************************************************
+!
+subroutine facefluxsc_periodic(ijp, ijn, xf, yf, zf, arx, ary, arz, &
+                               flmass, gam, &
+                               FI, dFidxi, prtr, cap, can, suadd)
+!
+!***********************************************************************
+!
+  use types
+  use parameters
+  use variables, only: vis
+  use interpolation
+
+  implicit none
+!
+!***********************************************************************
+! 
+
+  integer, intent(in) :: ijp, ijn
+  real(dp), intent(in) :: xf,yf,zf
+  real(dp), intent(in) :: arx, ary, arz
+  real(dp), intent(in) :: flmass
+  real(dp), intent(in) :: gam 
+  ! character( len=30 ), intent(in) :: cScheme ! Convection scheme.
+  real(dp), dimension(numTotal), intent(in) :: Fi
+  real(dp), dimension(3,numCells), intent(in) :: dFidxi
+  real(dp), intent(in) :: prtr
+  real(dp), intent(inout) :: cap, can, suadd
+
+
+! Local variables
+  real(dp) :: are
+  real(dp) :: xpn,ypn,zpn!, xi,yi,zi,r1,r2,psie,psiw
+  real(dp) :: dpn
+  real(dp) :: Cp,Ce
+  real(dp) :: fii,fm
+  real(dp) :: fdfie,fdfii,fcfie,fcfii,ffic
+  real(dp) :: de, game, viste
+  real(dp) :: fxp,fxn
+  real(dp) :: dfixi,dfiyi,dfizi
+!----------------------------------------------------------------------
+
+  ! > Geometry:
+
+  ! Face interpolation factor
+  fxn = 0.5_dp ! Assumption for periodic boundaries
+  fxp = fxn
+
+  ! Distance vector between cell centers
+  xpn = 2*( xf-xc(ijp) )
+  ypn = 2*( yf-yc(ijp) )
+  zpn = 2*( zf-zc(ijp) )
+
+  ! Distance from P to neighbor N
+  dpn=sqrt(xpn**2+ypn**2+zpn**2)     
+
+  ! cell face area
+  are=sqrt(arx**2+ary**2+arz**2)
+
+
+  ! Cell face diffussion coefficient
+  viste = (vis(ijp)-viscos)*fxp+(vis(ijn)-viscos)*fxn
+  game = (viste*prtr+viscos)
+
+
+  ! Difusion coefficient for linear system
+  ! de = game*are/dpn
+  de = game*(arx*arx+ary*ary+arz*arz)/(xpn*arx+ypn*ary+zpn*arz)
+
+  ! Convection fluxes - uds
+  fm = flmass
+  ce = min(fm,zero) 
+  cp = max(fm,zero)
+
+  !-------------------------------------------------------
+  ! System matrix coefficients
+  !-------------------------------------------------------
+  cap = -de - max(fm,zero)
+  can = -de + min(fm,zero)
+  !-------------------------------------------------------
+
+
+  !-------------------------------------------------------
+  ! Explicit part of diffusion
+  !-------------------------------------------------------
+
+  dfixi = dFidxi(1,ijp)*fxp+dFidxi(1,ijn)*fxn
+  dfiyi = dFidxi(2,ijp)*fxp+dFidxi(2,ijn)*fxn
+  dfizi = dFidxi(3,ijp)*fxp+dFidxi(3,ijn)*fxn
+
+  ! Explicit diffusion
+  fdfie = game*(dfixi*arx + dfiyi*ary + dfizi*arz)  
+
+  ! Implicit diffussion 
+  fdfii = game*are/dpn*(dfixi*xpn+dfiyi*ypn+dfizi*zpn)
+
+
+  !-------------------------------------------------------
+  ! Explicit higher order convection, cSheme is set in input
+  !-------------------------------------------------------
+  if( flmass .ge. zero ) then 
+    ! Flow goes from p to pj - > p is the upwind node
+    fii = face_value_cds(ijp, ijn, fxp, fi)
+  else
+    ! Other way, flow goes from pj, to p -> pj is the upwind node.
+    fii = face_value_cds(ijn, ijp, fxn, fi)
+  endif
+
+  fcfie = fm*fii
+
+  !-------------------------------------------------------
+  ! Explicit first order convection
+  !-------------------------------------------------------
+  fcfii = ce*fi(ijn)+cp*fi(ijp)
+
+  !-------------------------------------------------------
+  ! Deffered correction for convection = gama_blending*(high-low)
+  !-------------------------------------------------------
+  ffic = gam*(fcfie-fcfii)
+
+  !-------------------------------------------------------
+  ! Explicit part of fluxes
+  !-------------------------------------------------------
+  suadd = -ffic+fdfie-fdfii 
+
+end subroutine
 
 
 !***********************************************************************

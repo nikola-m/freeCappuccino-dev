@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['interpolation',['interpolation',['../classinterpolation.html',1,'']]]
+  ['power_846',['power',['../interfacetensor__fields_1_1power.html',1,'tensor_fields']]]
 ];

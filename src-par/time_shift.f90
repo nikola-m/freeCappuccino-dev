@@ -13,6 +13,7 @@ subroutine time_shift
     wo = w 
     teo = te 
     edo = ed 
+    po = p
     if (lcal(ien)) to = t         
     if (lcal(ivart)) varto = vart 
     if (lcal(icon)) cono = con 

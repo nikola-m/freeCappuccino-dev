@@ -1,151 +1,240 @@
-!***********************************************************************
-!
 subroutine read_input_file
 !
-!***********************************************************************
+! Purpose:
+!   Open, Read and Process Input File
 !
-! Open & Read and Process Input File
+! Reference:
+!  Reading namelist file for input parameters is based on a code of Hiroaki Nishikawa NIA
 !
-!***********************************************************************
   use types
   use parameters
   use gradients, only: lstsq, lstsq_qr, lstsq_dm, gauss, limiter
-  use interpolation
-  use title_mod
+  use velocity, only: calcU, urfU, gdsU, cSchemeU, dSchemeU, nrelaxU, lSolverU, maxiterU, tolAbsU, tolRelU
+  use pressure, only: calcP, urfP, lSolverP, maxiterP, tolAbsP, tolRelP
+  use nablap, only: ScndOrderPressIntrp
+  use temperature
+  use energy
+  use concentration
+  use mhd
+  use turbulence
+  use rheology, only: npow, Consst, shearmin, Tau_0, megp,  &
+                      muplastic, muzero, muinfty, lamtime, &    
+                      calcVis, urfVis, non_newtonian_model
+  use monitors
+
 
   implicit none
 
-  integer :: i,imon
-  character(len=2) :: trpn
-  character(len=25) :: convective_scheme
-  character(len=45) :: dt_scheme
-!
-!***********************************************************************
-!
+  integer :: os
 
-  OPEN(UNIT=5,FILE=input_file)
-  REWIND 5
-
-  READ(5,'(a70)') TITLE
-  READ(5,'(a)') mesh_format 
-  READ(5,*) LREAD,LWRITE,LTEST
-  READ(5,*) (LCAL(I),I=1,NPHI)
-  READ(5,*) monCell,pRefCell,MPoints
-  READ(5,*) SLARGE,SORMAX
-  READ(5,*) DENSIT,VISCOS
-  READ(5,*) PRANL,TREF,BETA
-  READ(5,*) LBUOY,GRAVX,GRAVY,GRAVZ,BOUSSINESQ
-  READ(5,*) roughWall,EROUGH,ZZERO
-  READ(5,*) FACNAP,FACFLX
-  READ(5,*) LTRANSIENT,BDF,BDF2,BDF3,CN
-  READ(5,*) LEVM,LASM,LLES
-  READ(5,*) LSGDH,LGGDH,LAFM
-  READ(5,*) TurbModel
-  READ(5,*) convective_scheme
-  READ(5,*) limiter
-  READ(5,*) (GDS(I),I=1,NPHI)
-  READ(5,*) (URF(I),I=1,NPHI)
-  READ(5,*) (SOR(I),I=1,NPHI)
-  READ(5,*) (NSW(I),I=1,NPHI)
-  READ(5,*) NUMSTEP,TIMESTEP,NZAPIS,MAXIT
-  READ(5,*) lstsq, lstsq_qr, lstsq_dm, gauss
-  READ(5,*) NPCOR, NIGRAD
-  READ(5,*) SIMPLE,PISO,ncorr
-  READ(5,*) const_mflux,magUBar
-  READ(5,*) CoNumFix, CoNumFixValue
-!.END: READ INPUT FILE.............................................!
-  CLOSE (5)
-
-!.Create an input file reading log:
-  WRITE(6,'(a)') '  Input file log: '
-  WRITE(6,'(a)') '---cut here-----------------------------------------------------------------------------'
-  WRITE(6,'(a70)') TITLE
-  WRITE(6,'(a10)') mesh_format
-  WRITE(6,'(3(L1,1x),5x,a)') LREAD,LWRITE,LTEST,'READ3,WRIT3,LTEST'
-  WRITE(6,'(11(L1,1x),5x,a)') (LCAL(I),I=1,NPHI),'(LCAL(I),I=1,NPHI),IP=4,ITE=5,IED=6,IEN=7,IVIS=8,IVART=9,ICON=10,IEP=11'
-  WRITE(6,'(3(i3,1x),5x,a)') monCell,pRefCell,MPoints,'monCell,pRefCell,MPoints'
-  WRITE(6,'(2(es11.4,1x),5x,a)') SLARGE,SORMAX,'SLARGE,SORMAX'
-  WRITE(6,'(2(es11.4,1x),a)') DENSIT,VISCOS,'DENSIT,VISCOS'
-  WRITE(6,'(3(es11.4,1x),a)') PRANL,TREF,BETA,'PRANL,TREF,BETA'
-  WRITE(6,'(L1,1x,3f6.2,1x,l1,1x,a)') LBUOY,GRAVX,GRAVY,GRAVZ,BOUSSINESQ,'LBUOY,GRAVX,GRAVY,GRAVZ,BOUSSINESQ'
-  WRITE(6,'(L1,1x,f5.2,1x,es11.4,1x,a)') roughWall,EROUGH,ZZERO,'roughWall,EROUGH,ZZERO'
-  WRITE(6,'(2(f4.2,1x),a)') FACNAP,FACFLX,'FACNAP,FACFLX'
-  WRITE(6,'(5(L1,1x),1x,a)') LTRANSIENT,BDF,BDF2,BDF3,CN,'LTRANSIENT,BDF,BDF2,BDF3,CN'
-  WRITE(6,'(3(L1,1x),a)') LEVM,LASM,LLES,'LEVM,LASM,LLES'
-  WRITE(6,'(3(L1,1x),a)') LSGDH,LGGDH,LAFM,'LSGDH,LGGDH,LAFM'
-  WRITE(6,'(i0,1x,a)') TurbModel, 'Turbulence Model'
-  WRITE(6,'(a,a)') convective_scheme, 'Convective scheme'
-  WRITE(6,'(a,1x,a)') limiter, 'Gradient limiter'
-  WRITE(6,'(11(f4.2,1x),a)') (GDS(I),I=1,NPHI),'(GDS(I),I=1,NPHI)'
-  WRITE(6,'(11(f4.2,1x),a)') (URF(I),I=1,NPHI),'(URF(I),I=1,NPHI)'
-  WRITE(6,'(11(es9.2,1x),a)') (SOR(I),I=1,NPHI),'(SOR(I),I=1,NPHI)'
-  WRITE(6,'(11(i0,1x),a)') (NSW(I),I=1,NPHI),'(NSW(I),I=1,NPHI)'
-  WRITE(6,'(i0,1x,es9.2,1x,i5,1x,i4,1x,a)') NUMSTEP,TIMESTEP,NZAPIS,MAXIT,'NUMSTEP,TIMESTEP,NZAPIS,MAXIT'
-  WRITE(6,'(4(L1,1x),a)') lstsq, lstsq_qr, lstsq_dm, gauss,'lstsq, lstsq_qr, lstsq_dm, gauss'
-  WRITE(6,'(i0,1x,i1,1x,a)') NPCOR, NIGRAD,'NPCOR, NIGRAD'
-  WRITE(6,'(2(L1,1x),i1,1x,a)') SIMPLE,PISO,ncorr,'SIMPLE,PISO,ncorr'
-  WRITE(6,'(L1,1x,es9.2,5x,a)') const_mflux,magUBar,'const_mflux, magUBar'
-  WRITE(6,'(L1,es11.4,5x,a)') CoNumFix, CoNumFixValue,'CoNumFix, CoNumFixValue'
-  WRITE(6,'(a)') '---cut here-----------------------------------------------------------------------------'
-
+  ! 
+  ! > Parameters namelist for simulation control
   !
+  namelist / input_parameters /   &
+        title, &              ! Descriptive name of the case which will be written in monitor file.                             
+        mesh_format, &        ! Mesh format 'nativeMesh' for native polyMesh format or 'foamMesh' for OpenFOAM polyMesh.
+        lread, &              ! Read restart file - continue simulation from saved state?  True/False.
+        ltest, &              ! Verbosity for linear solver convergence (for troubleshooting) True/False. 
+        !
+        ! Approximation details for velocity field.
+        !
+        calcU, &              ! Activate Velocity field caculation? True/False.
+        urfU, &               ! Under-relaxation factor for momentum eq
+        gdsU, &               ! gamma-deferred correction parameter for velocity
+        cSchemeU, &           ! Convection scheme for momentun eq
+        dSchemeU, &           ! Difussion scheme for momentum eq
+        nrelaxU, &            ! Integer parameter for difussion scheme - advanced
+        lSolverU, &           ! Linear algebraic solver for momentum eq
+        maxiterU, &           ! Max no of iterations for linear U-V-W equations
+        tolAbsU, &            ! Absolute tolerance level for residual for linear U-V-W equations
+        tolRelU, &            ! Relative tolerance level for residual for linear U-V-W equations
+        ScndOrderPressIntrp,& ! Second order (default), or massflow weighted interpolation of pressure to faces.
+        !
+        ! Approximation details for pressure/pressure correction.
+        !
+        calcP, &              ! Activate Pressure field caculation? True/False.
+        urfP, &               ! Under-relaxation factor for pressure
+        lSolverP, &           ! Linear algebraic solver for pressure/pressure correction
+        maxiterP, &           ! Max no of iterations for pressure/pressure correction
+        tolAbsP, &            ! Absolute tolerance level for residual for pressure/pressure correction
+        tolRelP, &            ! Relative tolerance level for residual for pressure/pressure correction  
+        !
+        ! Physical model: Viscous flows - Laminar/Turbulent, Activation and model details.
+        !
+        TurbModel, &          ! Turbulence model. Now a number, maybe char string in the future.    
+        urf, &                ! Under-relaxation factors.
+        gds, &                ! Deferred correction factor.
+        cScheme, &            ! Convection scheme - default is second order upwind.
+        dScheme, &            ! Difussion scheme, i.e. the method for normal gradient at face skewness/offset.
+        nrelax, &             ! Relaxation parameter non-orthogonal correction for face gradient.
+        lSolver, &            ! Linear algebraic solver.
+        maxiter, &            ! Max number of iterations in linear solver.
+        tolAbs, &             ! Absolute residual level.
+        tolRel, &             ! Relative drop in residual to exit linear solver.
+        !
+        ! Physical model: Rheology - Non-Newtonian fluids - model and solution details
+        ! 
+        calcVis, &            ! Activate dynamic viscosity recalculation (Temperature dependance, Non-Newtonian flows)
+        non_newtonian_model, &! Self-explanatory
+        npow, &               ! Exponent for power-law fluids
+        Consst, &             ! Consistency index for power-law fluids
+        shearmin, &           ! Lower limit for the shear rate magnitude for power-law fluids
+        Tau_0, &              ! Yield stress
+        megp,  &              ! Exponential growth parameter
+        muplastic, &          ! Plastic viscosity
+        muzero, &             ! Zero shear rate viscosity
+        muinfty, &            ! Infinity shear rate viscosity
+        lamtime, &            ! Natural time - time parameter
+        urfVis, &              ! Under-relaxation parameter
+        !
+        ! Physical model: Heat transfer, Temperature as energy equation, Activation and model details.
+        !
+        calcT, &              ! Activate Temperature equation caculation? True/False.
+        urfT, &              ! Under-relaxation factors.
+        gdsT, &              ! Deferred correction factor.
+        cSchemeT, &          ! Convection scheme - default is second order upwind.
+        dSchemeT, &          ! Difussion scheme, i.e. the method for normal gradient at face skewness/offset.
+        nrelaxT, &           ! Relaxation parameter non-orthogonal correction for face gradient.
+        lSolverT, &          ! Linear algebraic solver.
+        maxiterT, &          ! Max number of iterations in linear solver.
+        tolAbsT, &           ! Absolute residual level.
+        tolRelT, &           ! Relative drop in residual to exit linear solver.
+        sigt, &             ! sigma_t
+        !
+        ! Physical model: Energy equation, Activation and model details.
+        !
+        calcEn, &             ! Activate Energy equation caculation? True/False.
+        urfEn, &              ! Under-relaxation factors.
+        gdsEn, &              ! Deferred correction factor.
+        cSchemeEn, &          ! Convection scheme - default is second order upwind.
+        dSchemeEn, &          ! Difussion scheme, i.e. the method for normal gradient at face skewness/offset.
+        nrelaxEn, &           ! Relaxation parameter non-orthogonal correction for face gradient.
+        lSolverEn, &          ! Linear algebraic solver.
+        maxiterEn, &          ! Max number of iterations in linear solver.
+        tolAbsEn, &           ! Absolute residual level.
+        tolRelEn, &           ! Relative drop in residual to exit linear solver.
+        sigtEn, &             ! sigma_t
+        solveTotalEnergy, &   !@ What we solve here - default is total energy, change it 
+        solveInternalEnergy, &!@ in input.nml file.
+        solveEnthalpy, &      !@
+        addViscDiss, &        ! Add viscous dissipation term? T/F
+        !
+        ! Physical model: Buoyancy 
+        !
+        lbuoy, &              ! Buoyancy activated True/False
+        boussinesq, &         ! Bousinesq approximation for buoyancy
+        tref, &               ! Reference temperature for buoyant flows
+        gravx, &              !g Three components of gravity vector
+        gravy, &              !g -
+        gravz, &              !g -
+        !
+        ! Physical model: Dispersion of a passive scalar: Activation and solution details
+        !
+        calcCon, &            ! Activate passive scalar concentration field caculation? True/False.
+        urfCon, &             ! Under-relaxation factors.
+        gdsCon, &             ! Deferred correction factor.
+        cSchemeCon, &         ! Convection scheme - default is second order upwind.
+        dSchemeCon, &         ! Difussion scheme, i.e. the method for normal gradient at face skewness/offset.
+        nrelaxCon, &          ! Type of non-orthogonal correction for face gradient minimal/orthogonal/over-relaxed. 1/0/-1.
+        lSolverCon, &         ! Linear algebraic solver.
+        maxiterCon, &         ! Max number of iterations in linear solver.
+        tolAbsCon, &          ! Absolute residual level.
+        tolRelCon, &          ! Relative drop in residual to exit linear solver.
+        sigCon, &             ! Prandtl-Schmidt
+        !
+        ! Physical model: Magnetohydrodynamics using Electric potential: Activation and solution details
+        !
+        calcEpot, &           ! Activate Electric potential field caculation? True/False.
+        urfEpot, &            ! Under-relaxation factor.
+        gdsEpot, &            ! Deferred correction factor.
+        lSolverEpot, &        ! Linear algebraic solver.
+        maxiterEpot, &        ! Max number of iterations in linear solver.
+        tolAbsEpot, &         ! Absolute residual level.
+        tolRelEpot, &         ! Relative drop in residual to exit linear solver.
+        !
+        ! Definition of physical properties of fluid.
+        !
+        densit, &             ! Fluid density [kg/m3]
+        viscos, &             ! Molecular dynamic viscosity [Pa.s]       
+        pranl, &              ! Prandtl coefficient for specific fluid
+        beta, &               ! Thermal expansion coefficient
+        !
+        ! Turbulent Heat flux model and underrelaxation for turb heat fluxes and RST.
+        !
+        lsgdh, &              !h Simple gradient hypothesis for heat-fluxes, or...
+        lggdh, &              !h Generalized gradient hypothesis for heat fluxes, or...
+        lafm, &               !h Algebraic flux modelling for heat fluxes.
+        facflx, &             !h Underrelaxation factor for heat fluxes
+        facnap, &             ! Underrelaxation factor for Reynolds stress tensor calculation.
+        !
+        ! Unsteady simulation
+        !
+        ltransient, &         !% |Unsteady simulation True/False and chose ONE algorithm  below
+        bdf, &                !% |Backward-Euler; First-Order Implicit, or...
+        bdf2, &               !% |Second-Order Backward Euler; Second-Order Implicit, or...
+        bdf3, &               !% |Third-order backard, or...
+        CN, &                 !% |Crank-Nicolson.
+        !
+        ! Numerical approximation: Gradient approximation and limiting
+        !
+        lstsq, &              !@ |Gradient approximation, chose ONE: Unweighted Least-Square gradient approximation, or...
+        lstsq_qr, &           !@ |Least square gradients based on thin QR decomposition, or...
+        lstsq_dm, &           !@ |Distance-square weighted version of Least-Square Gradient, or...
+        gauss, &              !@ |Cell based Gauss gradient with simple linear interpolation.
+        nigrad, &             ! Number of iterations for Gauss gradient approximation.   
+        limiter, &            ! Gradient limiter - used for all fields
+        !
+        ! Solution method: pressure-velocity coupling
+        !             
+        SIMPLE, &             !# |Pressure-velocity coupling method - SIMPLE, or...
+        PISO, &               !# |Pressure-velocity coupling method - PISO.
+        AllSpeedsSIMPLE, &    !# SIMPLE for compressible flows. Activate Energy eqn.
+        ncorr, &              ! Number of PISO corrections - only relevant for PISO.
+        npcor, &              ! Number of iterations for pressure/pressure correction equation, i.e. Number of Nonorthogonal corrections.
+        pRefCell, &           ! Reference cell for setting pressure level (since we have pure Neumann problem)
+        tolerance, &          ! Lower tolerance bound for outer (SIMPLE/PISO) iterations
+        !
+        ! Simulation run details
+        !
+        numstep, &            ! Total number of timesteps or (SIMPLE steps if steady case).                   
+        timestep, &           ! Timestep size  - also known as dt. 
+        nzapis, &             ! Program writes output files every NZAPIS timesteps.
+        maxit, &              ! Number of SIMPLE/PISO iterations in every timestep (SIMPLE steps if steady case and numstep=1).
+        CoNumFix, &           !Co  |Adaptive timestep size based on target Courant number, True/False.
+        CoNumFixValue,&       !Co  |If CoNumFix=True then set target maximum Courant number here.
+        !
+        ! Constant-mass flux: Activation and prescription of target bulk velocity.
+        !
+        const_mflux, &        !mdot | Do we have constant mass flow in the domain True/False.
+        magUbar               !mdot | Target bulk velocity for constant mass flow situation.
+
+
+!
+! > Read the input parameters, defined in the file named as eg. 'input.nml'.
+!
+
+  write(*,*) "**************************************************************"
+  write(*,*) " List of simulation control parameters and their values"
+  write(*,*)
+
+  open(unit=10,file=input_file,form='formatted',status='old',iostat=os)
+  read(unit=10,nml=input_parameters)
+
+  write(*,nml=input_parameters) ! Print the namelist variables.
+  close(10)
+  write(*,*)
+
+
   ! Turbulent flow computation condition:
-  !
-  lturb = levm.or.lasm.or.lles
-
-  !
-  ! Convective scheme:
-  !
-  call set_convective_scheme(convective_scheme)  
-
-  write(*,'(a)') ' '
-  write(*,'(2a)') '  Convective scheme: ', adjustl(convective_scheme)
-  write(*,'(a)') ' '
-
-  !
-  ! Gradient limiter:
-  !
-  write(*,'(a)') ' '
-  write(*,'(2a)') '  Gradient limiter: ', adjustl(limiter)
-  write(*,'(a)') ' '
-
-  
-  !
-  ! Time stepping algorithm:
-  !
-  if ( bdf ) then
-    dt_scheme = 'Backward-Differentiation of 1st order - BDF'
-
-  elseif( bdf2 ) then
-    dt_scheme = 'Backward-Differentiation of 2nd order - BDF2'
-
-  elseif( bdf3 ) then
-    dt_scheme = 'Backward-Differentiation of 3nd order - BDF3'
-
-  elseif( cn ) then
-    dt_scheme = 'Crank-Nicolson'
-
-  else
-    dt_scheme = 'None'
-
+  lturb =  .False.
+  if( TurbModel /= 'none') then
+    lturb = .True. 
+    call  set_turb_scalar_solution_flags
   endif
 
-  write(*,'(a)') ' '
-  write(*,'(2a)') '  Time stepping method: ', adjustl(dt_scheme)
-  write(*,'(a)') ' '
-  
 
-  !
-  ! Open files for data at monitoring points 
-  !
-  if( ltransient .and. mpoints>0 ) then
-    open(unit=89,file='transient_monitoring_points')
-    rewind 89
-    do imon=1,mpoints
-      write(trpn,'(i2)') imon
-      open(91+imon,file="transient_monitor_point_"//trpn, access='append')
-      if(.not.lread) rewind(91+imon)
-    end do
-  end if
+  ! ! > Open files for data at monitoring points // this funtionality is now based on function from 'monitors' module.
+  ! call define_monitors
+
 
 end subroutine

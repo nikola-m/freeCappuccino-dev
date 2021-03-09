@@ -258,6 +258,7 @@ subroutine vtu_write_XML_vector_field_boundary ( output_unit, field_name, u, v, 
 
 end subroutine vtu_write_XML_vector_field_boundary
 
+
 subroutine vtm_write_scalar_field ( scalar_name, scalar_field, timechar )
 !
 ! Writes scalar field data to Paraview XML, unstructured, ".vtu" file.

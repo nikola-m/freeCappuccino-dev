@@ -6,7 +6,7 @@ use types
 use geometry
 use sparse_matrix
 use tensorFields
-use linear_solver, only: spsolve
+use linear_solver
 
 implicit none
 
@@ -431,7 +431,7 @@ subroutine solve_fvEqn( fvEqn )
 !
   type fvEquation :: fvEqn 
 
-  call spsolve(fvEqn%solver, fvEqn%phi%mag, fvEqn%su, fvEqn%itr_max, fvEqn%tol_abs, fvEqn%tol_rel, fvEqn%phi%field_name)
+  call csrsolve(fvEqn%solver, fvEqn%phi%mag, fvEqn%su, fvEqn%itr_max, fvEqn%tol_abs, fvEqn%tol_rel, fvEqn%phi%field_name)
 
 end subroutine
 

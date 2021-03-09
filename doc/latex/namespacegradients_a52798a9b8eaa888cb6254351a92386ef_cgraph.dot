@@ -1,0 +1,42 @@
+digraph "gradients::grad_scalar_field"
+{
+ // LATEX_PDF_SIZE
+  edge [fontname="Helvetica",fontsize="10",labelfontname="Helvetica",labelfontsize="10"];
+  node [fontname="Helvetica",fontsize="10",shape=record];
+  rankdir="LR";
+  Node1 [label="gradients::grad_scalar\l_field",height=0.2,width=0.4,color="black", fillcolor="grey75", style="filled", fontcolor="black",tooltip=" "];
+  Node1 -> Node2 [color="midnightblue",fontsize="10",style="solid"];
+  Node2 [label="exchange",height=0.2,width=0.4,color="black", fillcolor="white", style="filled",URL="$exchange_8f90.html#a5fc820a1936a17b779afe691729f2e84",tooltip=" "];
+  Node1 -> Node3 [color="midnightblue",fontsize="10",style="solid"];
+  Node3 [label="gradients::grad_gauss",height=0.2,width=0.4,color="black", fillcolor="white", style="filled",URL="$namespacegradients.html#a79da9651b35bd925b488cb7cff3abb7f",tooltip=" "];
+  Node3 -> Node4 [color="midnightblue",fontsize="10",style="solid"];
+  Node4 [label="gradients::gradbc",height=0.2,width=0.4,color="black", fillcolor="white", style="filled",URL="$namespacegradients.html#abd2236c107f7c7c31c3f7fb638bb7b21",tooltip=" "];
+  Node3 -> Node5 [color="midnightblue",fontsize="10",style="solid"];
+  Node5 [label="gradients::gradco",height=0.2,width=0.4,color="black", fillcolor="white", style="filled",URL="$namespacegradients.html#a437864d9f0535f851ceb4272b256f4ea",tooltip=" "];
+  Node1 -> Node6 [color="midnightblue",fontsize="10",style="solid"];
+  Node6 [label="gradients::grad_gauss\l_corrected",height=0.2,width=0.4,color="black", fillcolor="white", style="filled",URL="$namespacegradients.html#a01a46b4478e35c25121d4ad506c757fc",tooltip=" "];
+  Node6 -> Node4 [color="midnightblue",fontsize="10",style="solid"];
+  Node6 -> Node5 [color="midnightblue",fontsize="10",style="solid"];
+  Node1 -> Node7 [color="midnightblue",fontsize="10",style="solid"];
+  Node7 [label="gradients::grad_lsq",height=0.2,width=0.4,color="black", fillcolor="white", style="filled",URL="$namespacegradients.html#a38bb77fa9833da1c198aac2e7ea7c946",tooltip=" "];
+  Node1 -> Node8 [color="midnightblue",fontsize="10",style="solid"];
+  Node8 [label="gradients::grad_lsq_dm",height=0.2,width=0.4,color="black", fillcolor="white", style="filled",URL="$namespacegradients.html#abf08289bb8d57d8177f75a1028008906",tooltip=" "];
+  Node1 -> Node9 [color="midnightblue",fontsize="10",style="solid"];
+  Node9 [label="gradients::grad_lsq_qr",height=0.2,width=0.4,color="black", fillcolor="white", style="filled",URL="$namespacegradients.html#a524feb6c9302fc86d0189ad33cf7485c",tooltip=" "];
+  Node9 -> Node10 [color="midnightblue",fontsize="10",style="solid"];
+  Node10 [label="matrix_module::eye",height=0.2,width=0.4,color="black", fillcolor="white", style="filled",URL="$namespacematrix__module.html#a5d18b03838a0ba41d729284188c492cb",tooltip=" "];
+  Node9 -> Node11 [color="midnightblue",fontsize="10",style="solid"];
+  Node11 [label="matrix_module::rank\l_one_update",height=0.2,width=0.4,color="black", fillcolor="white", style="filled",URL="$namespacematrix__module.html#a8bf812de99eb57e458068660b1f18489",tooltip=" "];
+  Node1 -> Node12 [color="midnightblue",fontsize="10",style="solid"];
+  Node12 [label="gradients::slope_limiter\l_barth_jespersen",height=0.2,width=0.4,color="black", fillcolor="white", style="filled",URL="$namespacegradients.html#ab7860442796eb435f5c34667b8c7c008",tooltip=" "];
+  Node12 -> Node13 [color="midnightblue",fontsize="10",style="solid"];
+  Node13 [label="global_max",height=0.2,width=0.4,color="black", fillcolor="white", style="filled",URL="$global__max__mpi_8f90.html#a3969dba31b39f0efc28bf16a22bb0f63",tooltip=" "];
+  Node12 -> Node14 [color="midnightblue",fontsize="10",style="solid"];
+  Node14 [label="global_min",height=0.2,width=0.4,color="black", fillcolor="white", style="filled",URL="$global__min__mpi_8f90.html#a8d3f5ccc1e5e38338c50893c1b241b98",tooltip=" "];
+  Node1 -> Node15 [color="midnightblue",fontsize="10",style="solid"];
+  Node15 [label="gradients::slope_limiter\l_multidimensional",height=0.2,width=0.4,color="black", fillcolor="white", style="filled",URL="$namespacegradients.html#a5392f6682ac037eae87dbe5f20d1205f",tooltip=" "];
+  Node1 -> Node16 [color="midnightblue",fontsize="10",style="solid"];
+  Node16 [label="gradients::slope_limiter\l_venkatakrishnan",height=0.2,width=0.4,color="black", fillcolor="white", style="filled",URL="$namespacegradients.html#a19b76f98ae2657d4f6c3710bd2d8d0be",tooltip=" "];
+  Node16 -> Node13 [color="midnightblue",fontsize="10",style="solid"];
+  Node16 -> Node14 [color="midnightblue",fontsize="10",style="solid"];
+}

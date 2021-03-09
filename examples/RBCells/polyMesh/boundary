@@ -1,5 +1,0 @@
-# bcName bcType nFaces startFace
-floor               wall                 90 1700
-ceiling             wall                 90 1790
-sideWalls           wall                 20 1880
-frontAndBack        symmetry             1800 1900

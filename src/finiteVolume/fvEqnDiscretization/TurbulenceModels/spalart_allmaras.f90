@@ -13,7 +13,7 @@ module Spalart_Allmaras
   use parameters
   use geometry
   use variables
-  ! use scalar_fluxes, only: facefluxsc
+  use turbulence
 
   implicit none
 
@@ -29,7 +29,7 @@ module Spalart_Allmaras
   real(dp), parameter :: Ct3 = 1.2_dp
   real(dp), parameter :: Ct4 = 0.5_dp
 
-  real(dp), parameter :: one_sixth = 1.0_dp/6.0_dp
+  real(dp), parameter :: one_sixth = 1._dp/6._dp
   logical :: notf2 = .false. ! Set to .true. for SA model without f_t2 term. Also for DES and DDES.
   
 
@@ -53,6 +53,7 @@ subroutine modify_viscosity_spalart_allmaras()
   use parameters
   use variables
   use gradients
+
   implicit none
 
   call calcsc(TE,dTEdxi,ite) ! Assemble and solve nu_tilda eq.
@@ -84,8 +85,8 @@ subroutine calcsc(Fi,dFidxi,ifi)
   use variables
   use sparse_matrix
   use gradients
-  use title_mod
-
+  use linear_solvers
+  
   implicit none
 
   integer, intent(in) :: ifi
@@ -125,7 +126,7 @@ subroutine calcsc(Fi,dFidxi,ifi)
   do inp=1,numCells
 
     nu_tilda = te(inp)   ! we store nu_tilda in tke field.
-    nu = viscos/densit   ! kinematic viscosity
+    nu = viscos/den(inp)   ! kinematic viscosity
     xi = nu_tilda / nu   ! xi parameter
     fv1 = xi**3 / (xi**3 + Cv1**3) ! parameter
     fv2 = 1.0_dp - xi / (1.0_dp + xi*fv1) ! parameter
@@ -157,7 +158,7 @@ subroutine calcsc(Fi,dFidxi,ifi)
 
     ! > Add destruction term to the lhs:
 
-    r = min(nu_tilda/(strain_tilda*(cappa*wallDistance(inp))**2 + small),10.0_dp) ! r parameter
+    r = min(nu_tilda/(strain_tilda*(cappa*wallDistance(inp))**2 + small), 10.0_dp) ! r parameter
 
     g = r + Cw2*(r**6-r) ! g parameter
 
@@ -167,22 +168,23 @@ subroutine calcsc(Fi,dFidxi,ifi)
     sp(inp) = (Cw1*fw-(Cb1/cappa**2)*ft2)*(nu_tilda/wallDistance(inp))**2 * den(inp)*vol(inp)/(nu_tilda+small)
 
     ! > If production negative move it to the lhs:
-    ! sp(inp) = sp(inp)-genn*vol(inp)/(nu_tilda+small)
+    sp(inp) = sp(inp)-genn*vol(inp)/(nu_tilda+small)
 
     ! > UNSTEADY TERM
-    if( bdf .or. cn ) then
-      apotime = den(inp)*vol(inp)/timestep
-      su(inp) = su(inp) + apotime*teo(inp)
-      sp(inp) = sp(inp) + apotime
-    elseif( bdf2 ) then
-      apotime=den(inp)*vol(inp)/timestep
-      su(inp) = su(inp) + apotime*( 2*teo(inp) - 0.5_dp*teoo(inp) )
-      sp(inp) = sp(inp) + 1.5_dp*apotime
+    if (ltransient) then
+      if ( bdf .or. cn ) then
+        apotime = den(inp)*vol(inp)/timestep
+        su(inp) = su(inp) + apotime*teo(inp)
+        sp(inp) = sp(inp) + apotime
+      elseif( bdf2 ) then
+        apotime=den(inp)*vol(inp)/timestep
+        su(inp) = su(inp) + apotime*( 2*teo(inp) - 0.5_dp*teoo(inp) )
+        sp(inp) = sp(inp) + 1.5_dp*apotime
+      endif
     endif
 
   ! End of volume source terms
   enddo
-
 
 
 !
@@ -263,9 +265,6 @@ subroutine calcsc(Fi,dFidxi,ifi)
         ijb = iBndValueStart(ib) + i
         iWall = iWall + 1
 
-        ! Condition for nu_tilda at wall
-        te(ijb) = 0.0_dp
-
         call facefluxsc_boundary( ijp, ijb, &
                                   xf(iface), yf(iface), zf(iface), arx(iface), ary(iface), arz(iface), &
                                   flmass(iface), &
@@ -310,8 +309,8 @@ subroutine calcsc(Fi,dFidxi,ifi)
   endif
 
   ! Underrelaxation factors
-  urfrs=urfr(ifi)
-  urfms=urfm(ifi)
+  urfrs=1.0_dp/urf(ifi)
+  urfms=1.0_dp-urf(ifi)
 
   ! Main diagonal term assembly:
   do inp = 1,numCells
@@ -330,7 +329,7 @@ subroutine calcsc(Fi,dFidxi,ifi)
   enddo
 
   ! Solve linear system:
-  call bicgstab(fi,ifi)
+  call csrsolve(lSolver, fi, su, resor(5), maxiter, tolAbs, tolRel, 'nutilda' )
 
 
   !
@@ -358,7 +357,7 @@ subroutine calcsc(Fi,dFidxi,ifi)
   fimin = minval(fi)
   fimax = maxval(fi)
   
-  write(6,'(2x,es11.4,3a,es11.4)') fimin,' <= ',chvar(ifi),' <= ',fimax
+  write(6,'(2x,es11.4,a,es11.4)') fimin,' <= nutilda <= ',fimax
 
 ! These field values cannot be negative
   if(fimin.lt.0.0_dp) fi = max(fi,small)
@@ -394,7 +393,7 @@ subroutine modify_mu_eff()
     visold=vis(inp)
 
     nu_tilda = te(inp)
-    nu = viscos/densit
+    nu = viscos/den(inp)
     xi = nu_tilda / nu 
     fv1 = xi**3 / (xi**3 + Cv1**3)
     ! Update effective viscosity:
@@ -543,7 +542,7 @@ subroutine modify_mu_eff_inlet()
         ijb = iBndValueStart(ib) + i
 
         nu_tilda = te(ijb) ! nu_tilda stored in TKE array..
-        nu = viscos/densit
+        nu = viscos/den(ijb)
         xi = nu_tilda / nu 
         fv1 = xi**3 / (xi**3 + Cv1**3)
 
@@ -591,8 +590,6 @@ subroutine facefluxsc(ijp, ijn, xf, yf, zf, arx, ary, arz, &
 
 
 ! Local variables
-  integer  :: nrelax
-  character(len=12) :: approach
   real(dp) :: are
   real(dp) :: xpn,ypn,zpn!, xi,yi,zi,r1,r2,psie,psiw
   real(dp) :: dpn
@@ -624,7 +621,7 @@ subroutine facefluxsc(ijp, ijn, xf, yf, zf, arx, ary, arz, &
 
 
   ! Cell face diffussion coefficient
-  nu = viscos/densit   
+  nu = viscos/den(ijp) 
   nu_tilda = fi(ijp)*fxp+fi(ijn)*fxn
   game = prtr*(nu+nu_tilda) ! prtr is 1/sigma, is set in calcsc above
 
@@ -648,12 +645,8 @@ subroutine facefluxsc(ijp, ijn, xf, yf, zf, arx, ary, arz, &
   ! Explicit part of diffusion
   !-------------------------------------------------------
 
-  nrelax = 0
-  approach  = 'skewness'
-  ! approach = 'offset'
-
   call sngrad(ijp, ijn, xf, yf, zf, arx, ary, arz, lambda, &
-              Fi, dFidxi, nrelax, approach, dfixi, dfiyi, dfizi, &
+              Fi, dFidxi, nrelax, dScheme, dfixi, dfiyi, dfizi, &
               dfixii, dfiyii, dfizii)
   
 
@@ -665,14 +658,14 @@ subroutine facefluxsc(ijp, ijn, xf, yf, zf, arx, ary, arz, &
 
 
   !-------------------------------------------------------
-  ! Explicit higher order convection
+  ! Explicit higher order convection; cScheme set in input
   !-------------------------------------------------------
   if( fm .ge. zero ) then 
     ! Flow goes from p to pj - > p is the upwind node
-    fii = face_value(ijp, ijn, xf, yf, zf, fxp, fi, dFidxi)
+    fii = face_value(ijp, ijn, xf, yf, zf, fxp, fi, dFidxi, cScheme)
   else
     ! Other way, flow goes from pj, to p -> pj is the upwind node.
-    fii = face_value(ijn, ijp, xf, yf, zf, fxn, fi, dFidxi)
+    fii = face_value(ijn, ijp, xf, yf, zf, fxn, fi, dFidxi, cScheme)
   endif
 
   fcfie = fm*fii
@@ -783,7 +776,7 @@ subroutine facefluxsc_boundary(ijp, ijn, xf, yf, zf, arx, ary, arz, fm, FI, dFid
 
 
   ! Cell face diffussion coefficient
-  nu = viscos/densit   
+  nu = viscos/den(ijp)
   nu_tilda = fi(ijp)*fxp+fi(ijn)*fxn
   game = prtr*(nu+nu_tilda) ! prtr is 1/sigma, is set in calcsc above
 

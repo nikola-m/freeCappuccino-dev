@@ -1,20 +1,498 @@
-\hypertarget{modules__allocatable_8f90}{\section{src-\/par/modules\-\_\-allocatable.f90 File Reference}
-\label{modules__allocatable_8f90}\index{src-\/par/modules\-\_\-allocatable.\-f90@{src-\/par/modules\-\_\-allocatable.\-f90}}
-}
-\subsection*{Data Types}
+\hypertarget{modules__allocatable_8f90}{}\doxysection{src-\/par/modules\+\_\+allocatable.f90 File Reference}
+\label{modules__allocatable_8f90}\index{src-\/par/modules\_allocatable.f90@{src-\/par/modules\_allocatable.f90}}
+\doxysubsection*{Modules}
 \begin{DoxyCompactItemize}
 \item 
-module \hyperlink{classtypes}{types}
+module \mbox{\hyperlink{namespacetypes}{types}}
 \item 
-module \hyperlink{classparameters}{parameters}
+module \mbox{\hyperlink{namespaceparameters}{parameters}}
 \item 
-module \hyperlink{classhcoef}{hcoef}
+module \mbox{\hyperlink{namespacehcoef}{hcoef}}
 \item 
-module \hyperlink{classvariables}{variables}
+module \mbox{\hyperlink{namespacevariables}{variables}}
 \item 
-module \hyperlink{classtitle__mod}{title\-\_\-mod}
+module \mbox{\hyperlink{namespacetitle__mod}{title\+\_\+mod}}
 \item 
-module \hyperlink{classstatistics}{statistics}
+module \mbox{\hyperlink{namespacestatistics}{statistics}}
 \item 
-module \hyperlink{classmy__mpi__module}{my\-\_\-mpi\-\_\-module}
+module \mbox{\hyperlink{namespacemy__mpi__module}{my\+\_\+mpi\+\_\+module}}
+\end{DoxyCompactItemize}
+\doxysubsection*{Variables}
+\begin{DoxyCompactItemize}
+\item 
+integer, parameter \mbox{\hyperlink{namespacetypes_ae06c1dae43e034bf356efed296ae430a}{types\+::dp}} = kind(1.\+0d0)
+\item 
+integer, parameter \mbox{\hyperlink{namespaceparameters_afdf22cfea1387cd3b96e7e05639e748e}{parameters\+::nphi}} =10
+\item 
+integer, parameter \mbox{\hyperlink{namespaceparameters_a48e8a3b2787d19bee6b9c5f65f8cfb02}{parameters\+::iu}} =1
+\item 
+integer, parameter \mbox{\hyperlink{namespaceparameters_ab4866f04b22e8c72f3f95e3f46b5d8ae}{parameters\+::iv}} =2
+\item 
+integer, parameter \mbox{\hyperlink{namespaceparameters_adb764e48acf52e00f7be49f496487136}{parameters\+::iw}} =3
+\item 
+integer, parameter \mbox{\hyperlink{namespaceparameters_a61bc7960e40d93539b7583a31b279611}{parameters\+::ip}} =4
+\item 
+integer, parameter \mbox{\hyperlink{namespaceparameters_abd4387e202c0151aa8a34f5e3503ed0b}{parameters\+::ite}} =5
+\item 
+integer, parameter \mbox{\hyperlink{namespaceparameters_ac77a69b8a24a91643db10d9f435aefa0}{parameters\+::ied}} =6
+\item 
+integer, parameter \mbox{\hyperlink{namespaceparameters_a590abeddce862e6864b5fbe42c02859e}{parameters\+::ien}} =7
+\item 
+integer, parameter \mbox{\hyperlink{namespaceparameters_a2c48c4814b16d64e233b7475c0007051}{parameters\+::ivis}} =8
+\item 
+integer, parameter \mbox{\hyperlink{namespaceparameters_a16d579983b52d8fe11efc1c5374cc262}{parameters\+::ivart}} =9
+\item 
+integer, parameter \mbox{\hyperlink{namespaceparameters_a328601eb15a83d809d9e1bfafe85411d}{parameters\+::icon}} =10
+\item 
+real(dp), parameter \mbox{\hyperlink{namespaceparameters_ad200e8f8acd12afc12f7b019a982db1c}{parameters\+::one}} = 1.\+0d0
+\item 
+real(dp), parameter \mbox{\hyperlink{namespaceparameters_a623b51a825739232a4efb904450ffe78}{parameters\+::zero}} = 0.\+0d0
+\item 
+real(dp), parameter \mbox{\hyperlink{namespaceparameters_ad6b372045d519a445dc3962d56b6da22}{parameters\+::small}} = 1e-\/20
+\item 
+real(dp), parameter \mbox{\hyperlink{namespaceparameters_a0661d83c6bd642cf4b90d65de20ada6d}{parameters\+::great}} = 1e+20
+\item 
+real(dp), parameter \mbox{\hyperlink{namespaceparameters_aa08e5ec8fb6453fc72c9291a5a8b73fd}{parameters\+::pi}} = 3.\+1415926535897932384626433832795\+\_\+dp
+\item 
+real(dp), parameter \mbox{\hyperlink{namespaceparameters_aec1690016adeab2f5c099dded961c641}{parameters\+::twothirds}} = 2./3.\+\_\+dp
+\item 
+real(dp), parameter \mbox{\hyperlink{namespaceparameters_aecae38d60a3a6300c7c9a09310d8e505}{parameters\+::onethird}} = 1./3.\+\_\+dp
+\item 
+real(dp), parameter \mbox{\hyperlink{namespaceparameters_a896e84304cf2cdc6706c0c14f606bf18}{parameters\+::cappa}} = 0.\+41\+\_\+dp
+\item 
+real(dp), parameter \mbox{\hyperlink{namespaceparameters_a7bf1896be45b605b6ebe6d8e0fdc9362}{parameters\+::elog}} = 8.\+432\+\_\+dp
+\item 
+real(dp), parameter \mbox{\hyperlink{namespaceparameters_a85e28e166485a3b69202b759d467b578}{parameters\+::ctrans}} = 11.\+63
+\item 
+integer \mbox{\hyperlink{namespaceparameters_a56007b199efcf9e04f4073797fa63053}{parameters\+::moncell}}
+\item 
+integer \mbox{\hyperlink{namespaceparameters_a7ec8b3b9060f6ad89851c62bf569b526}{parameters\+::prefcell}}
+\item 
+integer \mbox{\hyperlink{namespaceparameters_a5957a9f734a0f3f197192418d8df0cf2}{parameters\+::mpoints}}
+\item 
+real(dp) \mbox{\hyperlink{namespaceparameters_a020bff406c99131c634aa00296ef0217}{parameters\+::flomas}}
+\item 
+real(dp) \mbox{\hyperlink{namespaceparameters_a9eccb267889b2a7e1569336f7c554b88}{parameters\+::flomom}}
+\item 
+real(dp) \mbox{\hyperlink{namespaceparameters_abe40f00e086c94a111f5dadda7649d5c}{parameters\+::prt1}}
+\item 
+real(dp) \mbox{\hyperlink{namespaceparameters_af5c24dcbc6cbcba3779aef88c86b5256}{parameters\+::densit}}
+\item 
+real(dp) \mbox{\hyperlink{namespaceparameters_acfe414c2740060c74afa99599bdb9680}{parameters\+::viscos}}
+\item 
+real(dp) \mbox{\hyperlink{namespaceparameters_add09215bd00c06360022457248fe7892}{parameters\+::sormax}}
+\item 
+real(dp) \mbox{\hyperlink{namespaceparameters_a9c9d4651cc7b174f44d61b794645fde0}{parameters\+::slarge}}
+\item 
+real(dp) \mbox{\hyperlink{namespaceparameters_a8830b502d3f24fd9f221f61b91de23f9}{parameters\+::facnap}}
+\item 
+real(dp) \mbox{\hyperlink{namespaceparameters_a144a1abc514cf6e4fdafe51631b37801}{parameters\+::facflx}}
+\item 
+real(dp) \mbox{\hyperlink{namespaceparameters_a12b29a4f3770320f45729a36df67fe2d}{parameters\+::uin}}
+\item 
+real(dp) \mbox{\hyperlink{namespaceparameters_a80d24f7ebf459082bd5781e73821782e}{parameters\+::vin}}
+\item 
+real(dp) \mbox{\hyperlink{namespaceparameters_a037dd7329cf60733d4c01e9cb05b423b}{parameters\+::win}}
+\item 
+real(dp) \mbox{\hyperlink{namespaceparameters_abaee788b610f5a4d77a8837420db6c5f}{parameters\+::tein}}
+\item 
+real(dp) \mbox{\hyperlink{namespaceparameters_a32f7fb939e2fb9848883266e78f74156}{parameters\+::edin}}
+\item 
+real(dp) \mbox{\hyperlink{namespaceparameters_a66b5943e5b403ad41f9e19ab68528d85}{parameters\+::tin}}
+\item 
+real(dp) \mbox{\hyperlink{namespaceparameters_a76a598f44d6528b32af1ddbd94d3dae3}{parameters\+::vartin}}
+\item 
+real(dp) \mbox{\hyperlink{namespaceparameters_a7d26dcf88ea12b562501c00df01a69cb}{parameters\+::conin}}
+\item 
+logical \mbox{\hyperlink{namespaceparameters_a03390dcf4125f0279a2337ce864980e7}{parameters\+::lbuoy}}
+\item 
+logical \mbox{\hyperlink{namespaceparameters_a413d8173c9a8a2e2d347abef37428f2c}{parameters\+::boussinesq}}
+\item 
+real(dp) \mbox{\hyperlink{namespaceparameters_ac13d28fd9f8fcb734440292e8cb822f3}{parameters\+::pranl}}
+\item 
+real(dp) \mbox{\hyperlink{namespaceparameters_aedd7ee66b6f6c466b80c39fc69f4be43}{parameters\+::tref}}
+\item 
+real(dp) \mbox{\hyperlink{namespaceparameters_a7f21697b41b2321085587f428da3aae5}{parameters\+::beta}}
+\item 
+real(dp) \mbox{\hyperlink{namespaceparameters_ab8f16b748cf7066342e3c51ec143c6df}{parameters\+::phit}}
+\item 
+real(dp) \mbox{\hyperlink{namespaceparameters_a3fe998691eba6bebbcf6db7bea98e04f}{parameters\+::sksi}}
+\item 
+real(dp) \mbox{\hyperlink{namespaceparameters_a1f5dcfd62c1954a48eb49584295f8e60}{parameters\+::eta}}
+\item 
+real(dp) \mbox{\hyperlink{namespaceparameters_a08012157e86745800e8e5e8ad3dfb51f}{parameters\+::gravx}}
+\item 
+real(dp) \mbox{\hyperlink{namespaceparameters_a1c4c7a835c45fa35247a54b67df693aa}{parameters\+::gravy}}
+\item 
+real(dp) \mbox{\hyperlink{namespaceparameters_a0eaec95bb976c2d04268f81b448339ad}{parameters\+::gravz}}
+\item 
+real(dp) \mbox{\hyperlink{namespaceparameters_a2c41f37466bd1857bf0807f38613e482}{parameters\+::facvis}}
+\item 
+real(dp) \mbox{\hyperlink{namespaceparameters_ad4421fb540d8b3108bcc55b5c2cdb737}{parameters\+::erough}}
+\item 
+real(dp) \mbox{\hyperlink{namespaceparameters_a3a0c2dcba4cf4280ac0122ba50270002}{parameters\+::zzero}}
+\item 
+integer \mbox{\hyperlink{namespaceparameters_aeaa510845dde7f4dc7f917a4ad50869d}{parameters\+::myid}}
+\item 
+integer \mbox{\hyperlink{namespaceparameters_a7f21bebc70eaba4ad593bd189a55867a}{parameters\+::nproc}}
+\item 
+integer \mbox{\hyperlink{namespaceparameters_a5516a3d69b56fa14f63ec7a2909f428b}{parameters\+::ierr}}
+\item 
+integer \mbox{\hyperlink{namespaceparameters_a8192348218e79a6c3fc6d999588ab80e}{parameters\+::this}}
+\item 
+integer \mbox{\hyperlink{namespaceparameters_a2a213735e1ce341ebcaa199d63b4f372}{parameters\+::numstep}}
+\item 
+integer \mbox{\hyperlink{namespaceparameters_ac3fd2b2d6db1ca2089e68402d8d64eef}{parameters\+::itime}}
+\item 
+integer \mbox{\hyperlink{namespaceparameters_a54bcfb1bc32ebc57cd129b4cfbf5ab15}{parameters\+::nzapis}}
+\item 
+integer \mbox{\hyperlink{namespaceparameters_a4f0baeed32fb99420cf168d593553403}{parameters\+::maxit}}
+\item 
+real(dp) \mbox{\hyperlink{namespaceparameters_ad35dcf7aed2b1a4ea8e1097cf5f1d0d7}{parameters\+::timestep}}
+\item 
+real(dp) \mbox{\hyperlink{namespaceparameters_ab755811741695b6f3fd38824a931b4b3}{parameters\+::time}}
+\item 
+real(dp) \mbox{\hyperlink{namespaceparameters_a76fa638958512a751a8bf818471774ac}{parameters\+::btime}}
+\item 
+logical \mbox{\hyperlink{namespaceparameters_a84c9786af35a9874091df85c6af2ec7b}{parameters\+::conumfix}}
+\item 
+real(dp) \mbox{\hyperlink{namespaceparameters_a7005277ef2b439f6eeb289bc45301138}{parameters\+::conumfixvalue}}
+\item 
+real(dp) \mbox{\hyperlink{namespaceparameters_abd548d67fa8e554f370eb11f79ac900e}{parameters\+::conum}}
+\item 
+real(dp) \mbox{\hyperlink{namespaceparameters_a5af225524d565854a9ad22c8e6a1b68e}{parameters\+::meanconum}}
+\item 
+character(len=9) \mbox{\hyperlink{namespaceparameters_a2f04e591ca8173218918ed178afcfd04}{parameters\+::timechar}}
+\item 
+logical \mbox{\hyperlink{namespaceparameters_ae2d36f2ac4fa52583c9d56a205bccb50}{parameters\+::lcds}} = .false.
+\item 
+logical \mbox{\hyperlink{namespaceparameters_aacde0bf1551f1ea26ffc599425a07648}{parameters\+::lcdsc}} = .false.
+\item 
+logical \mbox{\hyperlink{namespaceparameters_a28d8dc4054fc04f3a1ec64ea6639ec20}{parameters\+::lluds}} = .false.
+\item 
+logical \mbox{\hyperlink{namespaceparameters_a7b90e4caa2113b4e7bd5017595b8a3af}{parameters\+::lsmart}} = .false.
+\item 
+logical \mbox{\hyperlink{namespaceparameters_a735b36c63dfe2cda2cf67cb65a4a4e4c}{parameters\+::lavl}} = .false.
+\item 
+logical \mbox{\hyperlink{namespaceparameters_ac472cfbe394381ad9a540824513667bb}{parameters\+::lmuscl}} = .false.
+\item 
+logical \mbox{\hyperlink{namespaceparameters_a9adfd620c1136668b1f1a0943aed3047}{parameters\+::lumist}} = .false.
+\item 
+logical \mbox{\hyperlink{namespaceparameters_af06fe1b78bc52f0f703585f6d2529009}{parameters\+::lkoren}} = .false.
+\item 
+logical \mbox{\hyperlink{namespaceparameters_a9edc983c42d06402160c1965f9de19ef}{parameters\+::lcharm}} = .false.
+\item 
+logical \mbox{\hyperlink{namespaceparameters_a9d1034aed7c54a09d2f7cefdbfc68589}{parameters\+::lospre}} = .false.
+\item 
+logical \mbox{\hyperlink{namespaceparameters_a248c2e616b515c73adc698dcf0abe4d5}{parameters\+::lcds\+\_\+flnt}} = .false.
+\item 
+logical \mbox{\hyperlink{namespaceparameters_a33714dd59ea2866514d6ba30877c0ae6}{parameters\+::l2nd\+\_\+flnt}} = .false.
+\item 
+logical \mbox{\hyperlink{namespaceparameters_a71ca60464c225940e4bc3847b7996417}{parameters\+::lmuscl\+\_\+flnt}} = .false.
+\item 
+logical \mbox{\hyperlink{namespaceparameters_a80cd0a6cf543f250da879f64ac9afebb}{parameters\+::lcubic}} = .false.
+\item 
+logical \mbox{\hyperlink{namespaceparameters_adde0ca892151fbaee52e0b6024c96f57}{parameters\+::flux\+\_\+limiter}} = .false.
+\item 
+logical \mbox{\hyperlink{namespaceparameters_a1e50121d0b48c15ccef9ed7f5873125c}{parameters\+::lturb}}
+\item 
+logical \mbox{\hyperlink{namespaceparameters_a0f741689dbfc01724c2fc9ce6ce11d54}{parameters\+::lread}}
+\item 
+logical \mbox{\hyperlink{namespaceparameters_ae27d6e1c2f59cc8138e9b227bac7e718}{parameters\+::lwrite}}
+\item 
+logical \mbox{\hyperlink{namespaceparameters_a1fd26ff89bde7c0b0eb3d6794bf2ce26}{parameters\+::ltest}}
+\item 
+logical \mbox{\hyperlink{namespaceparameters_a6b87948dda2f569171fa4e51755aa73a}{parameters\+::lreadstat}}
+\item 
+logical \mbox{\hyperlink{namespaceparameters_a4a4095cc702f9834fdb4515a638720c2}{parameters\+::ltransient}}
+\item 
+logical \mbox{\hyperlink{namespaceparameters_abc9929b5c7137ac29bc2448046c10558}{parameters\+::levm}}
+\item 
+logical \mbox{\hyperlink{namespaceparameters_a000fbbafc058baa162d9b5d6451d5527}{parameters\+::lasm}}
+\item 
+logical \mbox{\hyperlink{namespaceparameters_a9cf54281237866a8b15f4ba364b1635f}{parameters\+::lles}}
+\item 
+logical \mbox{\hyperlink{namespaceparameters_aacfddcba3237640f9afec331234aee6e}{parameters\+::ldes}}
+\item 
+logical \mbox{\hyperlink{namespaceparameters_a387d7fbc00037b6914a5469f100f750d}{parameters\+::lsgdh}}
+\item 
+logical \mbox{\hyperlink{namespaceparameters_a1b599778ad03bfd0868f3d0afd36921d}{parameters\+::lggdh}}
+\item 
+logical \mbox{\hyperlink{namespaceparameters_ad19a7858d6ee32ee981bbcf0f1c15277}{parameters\+::lafm}}
+\item 
+logical \mbox{\hyperlink{namespaceparameters_a3eb9bfb234c72de12ef64cdf189eb334}{parameters\+::bdf}}
+\item 
+logical \mbox{\hyperlink{namespaceparameters_a7b4b5b884b0646fdebae149c324efee0}{parameters\+::bdf2}}
+\item 
+logical \mbox{\hyperlink{namespaceparameters_aa8493f6c1a3991dc5c6fe99cd83da8a0}{parameters\+::bdf3}}
+\item 
+logical \mbox{\hyperlink{namespaceparameters_aba97e1d2ea3cabe48d1d4a4d23f45cbd}{parameters\+::cn}}
+\item 
+logical \mbox{\hyperlink{namespaceparameters_ac3884668f4f779949ded0df3b287ff1e}{parameters\+::simple}}
+\item 
+logical \mbox{\hyperlink{namespaceparameters_a6e3814526eb5d4688e786b776e333c68}{parameters\+::piso}}
+\item 
+logical \mbox{\hyperlink{namespaceparameters_ae155d0348d784d1ce8b494e2cc214200}{parameters\+::const\+\_\+mflux}}
+\item 
+logical \mbox{\hyperlink{namespaceparameters_a2e4f568629e8ab4725b082b457ea5e7a}{parameters\+::solveomega}}
+\item 
+logical \mbox{\hyperlink{namespaceparameters_ad3189fd9cd3944a959b2b64836e68ddf}{parameters\+::solveepsilon}}
+\item 
+logical \mbox{\hyperlink{namespaceparameters_ae7747c8e1e1b415e8407c63af7c2f7e2}{parameters\+::solvetke}}
+\item 
+integer \mbox{\hyperlink{namespaceparameters_a29b4860883a45d946a351cf857d64777}{parameters\+::ncorr}}
+\item 
+integer \mbox{\hyperlink{namespaceparameters_ad9c135806011c8d812a818c336ca71ef}{parameters\+::icorr}}
+\item 
+integer \mbox{\hyperlink{namespaceparameters_a7e9a19a3f51eed5371a914ba6dfe80ac}{parameters\+::npcor}}
+\item 
+integer \mbox{\hyperlink{namespaceparameters_ab383635f5e71e0ac5c99b1315172364a}{parameters\+::ipcorr}}
+\item 
+integer \mbox{\hyperlink{namespaceparameters_aa91db57a797a6ddebc34cd969fe8c762}{parameters\+::nigrad}}
+\item 
+integer, parameter \mbox{\hyperlink{namespaceparameters_a65960673b4dcafc001e47eb1a31eac13}{parameters\+::nipgrad}} = 2
+\item 
+integer \mbox{\hyperlink{namespaceparameters_af51c886efc5599880eb47db610a872fb}{parameters\+::turbmodel}}
+\item 
+logical \mbox{\hyperlink{namespaceparameters_a9635e00c308c351a86a27e749d8de6a4}{parameters\+::roughwall}}
+\item 
+integer \mbox{\hyperlink{namespaceparameters_aa0436ce409ef8870aa4a238df3741db4}{parameters\+::iprefprocess}}
+\item 
+real(dp) \mbox{\hyperlink{namespaceparameters_a5ac0c2842a8d2073fe41b63c190dc71e}{parameters\+::magubar}}
+\item 
+real(dp) \mbox{\hyperlink{namespaceparameters_a5a6b774ca58ebb8cbc128e6110c1307a}{parameters\+::gradpcmf}}
+\item 
+real(dp) \mbox{\hyperlink{namespaceparameters_af33b1b18f402bef254de6ed1e8fec11d}{parameters\+::sumlocalconterr}}
+\item 
+real(dp) \mbox{\hyperlink{namespaceparameters_a120613bfe457f5df8d64925d9dfc0980}{parameters\+::globalconterr}}
+\item 
+real(dp) \mbox{\hyperlink{namespaceparameters_ad9be7e2eb2dc1c8bba16c0d460d36d04}{parameters\+::cumulativeconterr}}
+\item 
+logical, dimension(nphi) \mbox{\hyperlink{namespaceparameters_acd72f68b40a546e800f7055da71696c9}{parameters\+::lcal}}
+\item 
+integer, dimension(nphi) \mbox{\hyperlink{namespaceparameters_ac5111fa0cbd2f6dd4958060a0310584a}{parameters\+::nsw}}
+\item 
+real(dp), dimension(nphi) \mbox{\hyperlink{namespaceparameters_affa49113e7431629498f15e1c686eb8f}{parameters\+::sor}}
+\item 
+real(dp), dimension(nphi) \mbox{\hyperlink{namespaceparameters_a4b13bd459ea18434fa50e52b24772415}{parameters\+::resor}}
+\item 
+real(dp), dimension(nphi) \mbox{\hyperlink{namespaceparameters_a8d12835ff66703e6ea56a39f4a76f06b}{parameters\+::prtinv}}
+\item 
+real(dp), dimension(nphi) \mbox{\hyperlink{namespaceparameters_a9dac8e54229c855e6bb271118f1fb28e}{parameters\+::urf}}
+\item 
+real(dp), dimension(nphi) \mbox{\hyperlink{namespaceparameters_a6770f8f79f30a3a3c822094fa25f0ce4}{parameters\+::urfr}}
+\item 
+real(dp), dimension(nphi) \mbox{\hyperlink{namespaceparameters_a9b8aced595d144d6e348de4e7bb28028}{parameters\+::urfm}}
+\item 
+real(dp), dimension(nphi) \mbox{\hyperlink{namespaceparameters_afbde368408f6a43813af0e49d787df6e}{parameters\+::gds}}
+\item 
+real(dp), dimension(\+:), allocatable \mbox{\hyperlink{namespacehcoef_a0fe90253d788ab22a12015d18132d8bf}{hcoef\+::h}}
+\item 
+real(dp), dimension(\+:), allocatable \mbox{\hyperlink{namespacehcoef_aac65983f64ce20a3ddb35933d35cb78b}{hcoef\+::hpr}}
+\item 
+real(dp), dimension(\+:), allocatable \mbox{\hyperlink{namespacehcoef_abff8e220ad240114fdb4775dcf026ca1}{hcoef\+::ru}}
+\item 
+real(dp), dimension(\+:), allocatable \mbox{\hyperlink{namespacehcoef_a817f137e681d7382d4ac542179b85cb2}{hcoef\+::rv}}
+\item 
+real(dp), dimension(\+:), allocatable \mbox{\hyperlink{namespacehcoef_a10cd6a89a20929137ddb8a7a9d29ba2d}{hcoef\+::rw}}
+\item 
+real(dp), dimension(\+:), allocatable \mbox{\hyperlink{namespacevariables_a8dc91b5653cabcfd17192c04c5c90d57}{variables\+::u}}
+\item 
+real(dp), dimension(\+:), allocatable \mbox{\hyperlink{namespacevariables_a86b6b89bf878f32443ca5fec75e65ad3}{variables\+::v}}
+\item 
+real(dp), dimension(\+:), allocatable \mbox{\hyperlink{namespacevariables_a3432b41828f50801593af70692df12f2}{variables\+::w}}
+\item 
+real(dp), dimension(\+:), allocatable \mbox{\hyperlink{namespacevariables_a785014a6b534cef9da96697952e877ea}{variables\+::flmass}}
+\item 
+real(dp), dimension(\+:), allocatable \mbox{\hyperlink{namespacevariables_a8751a3abd1938c8541b57c00a742ec56}{variables\+::p}}
+\item 
+real(dp), dimension(\+:), allocatable \mbox{\hyperlink{namespacevariables_a25e1a833edf25885416779bdf0a8b7e7}{variables\+::pp}}
+\item 
+real(dp), dimension(\+:), allocatable \mbox{\hyperlink{namespacevariables_a6a12c6b89bcd378447b44ba71d496bb5}{variables\+::te}}
+\item 
+real(dp), dimension(\+:), allocatable \mbox{\hyperlink{namespacevariables_aad1b3731d203da8923cd7e6a879d586b}{variables\+::ed}}
+\item 
+real(dp), dimension(\+:), allocatable \mbox{\hyperlink{namespacevariables_ac469ba5672674935b4d3faa619ea51e5}{variables\+::vis}}
+\item 
+real(dp), dimension(\+:), allocatable \mbox{\hyperlink{namespacevariables_aebe58d45baf0e70b27271513dfdb2829}{variables\+::den}}
+\item 
+real(dp), dimension(\+:), allocatable \mbox{\hyperlink{namespacevariables_a7fba6e5562a27808947cabbcbf416a37}{variables\+::gen}}
+\item 
+real(dp), dimension(\+:), allocatable \mbox{\hyperlink{namespacevariables_a29c960024498876d106d12750eae8696}{variables\+::t}}
+\item 
+real(dp), dimension(\+:), allocatable \mbox{\hyperlink{namespacevariables_a00a6536ca0a27051d610b66a2d8d11ac}{variables\+::vart}}
+\item 
+real(dp), dimension(\+:), allocatable \mbox{\hyperlink{namespacevariables_a808a247289d7b02f9569e57fa6df3c2b}{variables\+::utt}}
+\item 
+real(dp), dimension(\+:), allocatable \mbox{\hyperlink{namespacevariables_a446974075a477e4f4311dd2919bd1c3e}{variables\+::vtt}}
+\item 
+real(dp), dimension(\+:), allocatable \mbox{\hyperlink{namespacevariables_a4f678b6d108e9e935a12868acd75d049}{variables\+::wtt}}
+\item 
+real(dp), dimension(\+:), allocatable \mbox{\hyperlink{namespacevariables_a4c205afda65c592ecd9fe704fcabf938}{variables\+::con}}
+\item 
+real(dp), dimension(\+:), allocatable \mbox{\hyperlink{namespacevariables_a2bed25657b0c478dee4913e79bcdb3a7}{variables\+::uu}}
+\item 
+real(dp), dimension(\+:), allocatable \mbox{\hyperlink{namespacevariables_aef6fef20c791c27c3df889f2c9f02b3b}{variables\+::vv}}
+\item 
+real(dp), dimension(\+:), allocatable \mbox{\hyperlink{namespacevariables_a4bda49dd30eadb3c0436d59272fb703f}{variables\+::ww}}
+\item 
+real(dp), dimension(\+:), allocatable \mbox{\hyperlink{namespacevariables_a1be9ac67d728d322ffa4972e03977564}{variables\+::uv}}
+\item 
+real(dp), dimension(\+:), allocatable \mbox{\hyperlink{namespacevariables_a5c939ce1a06535507aa593fc8afdd33e}{variables\+::uw}}
+\item 
+real(dp), dimension(\+:), allocatable \mbox{\hyperlink{namespacevariables_a131da6ae59433fe4b51bb9a849f82f4c}{variables\+::vw}}
+\item 
+real(dp), dimension(\+:,\+:), allocatable \mbox{\hyperlink{namespacevariables_a3ee0f04d3794cce2bc4b94acc2507775}{variables\+::bij}}
+\item 
+real(dp), dimension(\+:), allocatable \mbox{\hyperlink{namespacevariables_a44c130feaa1e773ec5250ba9fd2fe354}{variables\+::visw}}
+\item 
+real(dp), dimension(\+:), allocatable \mbox{\hyperlink{namespacevariables_aa28eada2885d956e6f235e13deeee5f3}{variables\+::ypl}}
+\item 
+real(dp), dimension(\+:), allocatable \mbox{\hyperlink{namespacevariables_accd30c2055bfbb0f309817ff5a7d4359}{variables\+::tau}}
+\item 
+real(dp), dimension(\+:), allocatable \mbox{\hyperlink{namespacevariables_a70dd065a8048b0abfb87a173dc11fe31}{variables\+::uo}}
+\item 
+real(dp), dimension(\+:), allocatable \mbox{\hyperlink{namespacevariables_a8e3c73f60505e097eebbe0a368d08e55}{variables\+::vo}}
+\item 
+real(dp), dimension(\+:), allocatable \mbox{\hyperlink{namespacevariables_a70b466d97bf23be72e5bce7f20689933}{variables\+::wo}}
+\item 
+real(dp), dimension(\+:), allocatable \mbox{\hyperlink{namespacevariables_aba75282f2242d09c60d5f407f42aa8c6}{variables\+::po}}
+\item 
+real(dp), dimension(\+:), allocatable \mbox{\hyperlink{namespacevariables_ab2aeaa8c9334d39e39a8c0830e501759}{variables\+::flmasso}}
+\item 
+real(dp), dimension(\+:), allocatable \mbox{\hyperlink{namespacevariables_a6514ba664210b8f30c32f4c268a78564}{variables\+::teo}}
+\item 
+real(dp), dimension(\+:), allocatable \mbox{\hyperlink{namespacevariables_a4115296d169e26d3ea3a3e03cf798387}{variables\+::edo}}
+\item 
+real(dp), dimension(\+:), allocatable \mbox{\hyperlink{namespacevariables_a77b6b14011022f80505967f9eac4eb4e}{variables\+::to}}
+\item 
+real(dp), dimension(\+:), allocatable \mbox{\hyperlink{namespacevariables_afc0fa9dbdf81c0a52f1559984dc3c4c0}{variables\+::varto}}
+\item 
+real(dp), dimension(\+:), allocatable \mbox{\hyperlink{namespacevariables_abb6179a83e9c5a00689665fafbc348a8}{variables\+::cono}}
+\item 
+real(dp), dimension(\+:), allocatable \mbox{\hyperlink{namespacevariables_aae50fbc08e6752d2b5bd47e821623365}{variables\+::uoo}}
+\item 
+real(dp), dimension(\+:), allocatable \mbox{\hyperlink{namespacevariables_a5822aea71754a3cd7092d949a83b2791}{variables\+::voo}}
+\item 
+real(dp), dimension(\+:), allocatable \mbox{\hyperlink{namespacevariables_adca212df59d44fece82e4874774071ec}{variables\+::woo}}
+\item 
+real(dp), dimension(\+:), allocatable \mbox{\hyperlink{namespacevariables_a2f189f01a368381032270b6c0a9edf2e}{variables\+::poo}}
+\item 
+real(dp), dimension(\+:), allocatable \mbox{\hyperlink{namespacevariables_a947f8f15a029a013d7ec18f0af476c2a}{variables\+::flmassoo}}
+\item 
+real(dp), dimension(\+:), allocatable \mbox{\hyperlink{namespacevariables_abab989916e0b0662f3b34317ef327935}{variables\+::teoo}}
+\item 
+real(dp), dimension(\+:), allocatable \mbox{\hyperlink{namespacevariables_ab301c0d89bffdb529a9c8b09e280744d}{variables\+::edoo}}
+\item 
+real(dp), dimension(\+:), allocatable \mbox{\hyperlink{namespacevariables_ab152916ec1bb4dc1ca22f1463e57a532}{variables\+::too}}
+\item 
+real(dp), dimension(\+:), allocatable \mbox{\hyperlink{namespacevariables_ad3200e0111fea315c6ab22914a587b73}{variables\+::vartoo}}
+\item 
+real(dp), dimension(\+:), allocatable \mbox{\hyperlink{namespacevariables_a603b0ba2a9c45abdf2b52280e6079624}{variables\+::conoo}}
+\item 
+real(dp), dimension(\+:), allocatable \mbox{\hyperlink{namespacevariables_a0adf9388c035f1dd87cb6bad262eec1e}{variables\+::uooo}}
+\item 
+real(dp), dimension(\+:), allocatable \mbox{\hyperlink{namespacevariables_ae37a5baff84f1f71a83c36e78d81a137}{variables\+::vooo}}
+\item 
+real(dp), dimension(\+:), allocatable \mbox{\hyperlink{namespacevariables_aebc14f0f9203bb1e65503d86138e709f}{variables\+::wooo}}
+\item 
+real(dp), dimension(\+:), allocatable \mbox{\hyperlink{namespacevariables_a5150120fa0257c929b9f53ba329697d8}{variables\+::pooo}}
+\item 
+real(dp), dimension(\+:), allocatable \mbox{\hyperlink{namespacevariables_aa647a7a6f42f6b652dcf8c2e61e520cb}{variables\+::flmassooo}}
+\item 
+real(dp), dimension(\+:,\+:), allocatable \mbox{\hyperlink{namespacevariables_adf961b8b4d768b0af149ab314d3fa105}{variables\+::dudxi}}
+\item 
+real(dp), dimension(\+:,\+:), allocatable \mbox{\hyperlink{namespacevariables_a1a0e5852e192a2d1781836fcc07ea35d}{variables\+::dvdxi}}
+\item 
+real(dp), dimension(\+:,\+:), allocatable \mbox{\hyperlink{namespacevariables_a1235eb8caf98213f84ecb70e9c75b21f}{variables\+::dwdxi}}
+\item 
+real(dp), dimension(\+:,\+:), allocatable \mbox{\hyperlink{namespacevariables_af1f54c1cc3dfd9f13d85a48b5e283814}{variables\+::dpdxi}}
+\item 
+real(dp), dimension(\+:,\+:), allocatable \mbox{\hyperlink{namespacevariables_abe283c990e397f1ab1bd22b2c34c4458}{variables\+::dtedxi}}
+\item 
+real(dp), dimension(\+:,\+:), allocatable \mbox{\hyperlink{namespacevariables_ae24355786c27f5a676febe36335e0718}{variables\+::deddxi}}
+\item 
+real(dp), dimension(\+:,\+:), allocatable \mbox{\hyperlink{namespacevariables_ae5589138d3a0b0d28a2bb0ad9fb3e26e}{variables\+::dtdxi}}
+\item 
+real(dp), dimension(\+:,\+:), allocatable \mbox{\hyperlink{namespacevariables_a816ecf2312ba34dbdb000202938da807}{variables\+::dcondxi}}
+\item 
+real(dp), dimension(\+:,\+:), allocatable \mbox{\hyperlink{namespacevariables_aac67db3d7658de3c9bcab981064055dc}{variables\+::dvartdxi}}
+\item 
+real(dp), dimension(\+:), allocatable \mbox{\hyperlink{namespacevariables_a3ba4f7a23c9d0f8c379b4004b2926235}{variables\+::magstrain}}
+\item 
+real(dp), dimension(\+:), allocatable \mbox{\hyperlink{namespacevariables_a9d202bc1b4e97e3af595e8e4baaa9bee}{variables\+::vorticity}}
+\item 
+real(dp), dimension(\+:), allocatable \mbox{\hyperlink{namespacevariables_afe1c9a217b537eb8cef36f9e26e8c789}{variables\+::phimax}}
+\item 
+real(dp), dimension(\+:), allocatable \mbox{\hyperlink{namespacevariables_a73f00dce58a2515ab0c87e5ff205479c}{variables\+::phimin}}
+\item 
+character(len=70) \mbox{\hyperlink{namespacetitle__mod_a16d499c2271f74325813048133f6b947}{title\+\_\+mod\+::title}}
+\item 
+character(19) \mbox{\hyperlink{namespacetitle__mod_a8b3004768211b65f2678ca209f6672ba}{title\+\_\+mod\+::datetime}}
+\item 
+character(len=4), dimension(10) \mbox{\hyperlink{namespacetitle__mod_aab37de0b88867f1916ce8cfc289e98dc}{title\+\_\+mod\+::chvar}} = (/\textquotesingle{} U \textquotesingle{}, \textquotesingle{} V \textquotesingle{}, \textquotesingle{} W \textquotesingle{}, \textquotesingle{} P \textquotesingle{}, \textquotesingle{} TE \textquotesingle{}, \textquotesingle{} ED \textquotesingle{}, \textquotesingle{} T \textquotesingle{}, \textquotesingle{} V\+IS\textquotesingle{}, \textquotesingle{}V\+A\+RT\textquotesingle{}, \textquotesingle{} C\+ON\textquotesingle{} /)
+\item 
+character(len=7), dimension(10) \mbox{\hyperlink{namespacetitle__mod_a9472f9f42179093e161523ad2b634549}{title\+\_\+mod\+::chvarsolver}} = (/\textquotesingle{}U \textquotesingle{}, \textquotesingle{}V \textquotesingle{}, \textquotesingle{}W \textquotesingle{}, \textquotesingle{}p \textquotesingle{}, \textquotesingle{}k \textquotesingle{}, \textquotesingle{}epsilon\textquotesingle{}, \textquotesingle{}Temp \textquotesingle{}, \textquotesingle{}Visc \textquotesingle{}, \textquotesingle{}Var\+Temp\textquotesingle{}, \textquotesingle{}Conc \textquotesingle{} /)
+\item 
+character(len=100) \mbox{\hyperlink{namespacetitle__mod_a64fc03558006dbdf36a10564ba2afc89}{title\+\_\+mod\+::input\+\_\+file}}
+\item 
+character(len=100) \mbox{\hyperlink{namespacetitle__mod_a3e8a85e3cce2b0de36e3f09052cd502c}{title\+\_\+mod\+::inlet\+\_\+file}}
+\item 
+character(len=100) \mbox{\hyperlink{namespacetitle__mod_a998c71ccbb4580eb3b5e1bac6ec581d0}{title\+\_\+mod\+::grid\+\_\+file}}
+\item 
+character(len=100) \mbox{\hyperlink{namespacetitle__mod_a0c25de734abd2098468902978c3b1171}{title\+\_\+mod\+::monitor\+\_\+file}}
+\item 
+character(len=100) \mbox{\hyperlink{namespacetitle__mod_a7994996b990659c9df719ca4ba2aaf5f}{title\+\_\+mod\+::restart\+\_\+file}}
+\item 
+integer \mbox{\hyperlink{namespacestatistics_a485020773672b32291040ca0044fff27}{statistics\+::n\+\_\+sample}}
+\item 
+integer \mbox{\hyperlink{namespacestatistics_ac0feba651e4213ecd0425b1c5a0de80a}{statistics\+::istat}}
+\item 
+integer \mbox{\hyperlink{namespacestatistics_afbce262b53b0ec9ab17f770682b7fb35}{statistics\+::ifreq}}
+\item 
+real(dp), dimension(\+:), allocatable \mbox{\hyperlink{namespacestatistics_ad94122d3cacddedfe42923a3f3b92c69}{statistics\+::u\+\_\+aver}}
+\item 
+real(dp), dimension(\+:), allocatable \mbox{\hyperlink{namespacestatistics_a1b8da3276de56334fdcf742802f8f6e2}{statistics\+::v\+\_\+aver}}
+\item 
+real(dp), dimension(\+:), allocatable \mbox{\hyperlink{namespacestatistics_a15ade1ebbda9ffbf25b906dec9f667fc}{statistics\+::w\+\_\+aver}}
+\item 
+real(dp), dimension(\+:), allocatable \mbox{\hyperlink{namespacestatistics_a79d376e13ed6870a2f592fba0fb90f07}{statistics\+::uu\+\_\+aver}}
+\item 
+real(dp), dimension(\+:), allocatable \mbox{\hyperlink{namespacestatistics_a23adca9074a2f80d8ceb57bbb5edd745}{statistics\+::vv\+\_\+aver}}
+\item 
+real(dp), dimension(\+:), allocatable \mbox{\hyperlink{namespacestatistics_a75fda978d2762d39c1c197b1d63bf786}{statistics\+::ww\+\_\+aver}}
+\item 
+real(dp), dimension(\+:), allocatable \mbox{\hyperlink{namespacestatistics_ab43692704bce4eafd0dccedc12d43dbf}{statistics\+::uv\+\_\+aver}}
+\item 
+real(dp), dimension(\+:), allocatable \mbox{\hyperlink{namespacestatistics_ae392f133c2869e56a9820192215ff81f}{statistics\+::uw\+\_\+aver}}
+\item 
+real(dp), dimension(\+:), allocatable \mbox{\hyperlink{namespacestatistics_aa69a50e52610d5da19a676feade82aaf}{statistics\+::vw\+\_\+aver}}
+\item 
+real(dp), dimension(\+:), allocatable \mbox{\hyperlink{namespacestatistics_a3140050f5b63e50c892d060d942c2f03}{statistics\+::te\+\_\+aver}}
+\item 
+real(dp), dimension(\+:), allocatable \mbox{\hyperlink{namespacestatistics_a19932dbbd083f997879d6ed14d486428}{statistics\+::t\+\_\+aver}}
+\item 
+real(dp), dimension(\+:), allocatable \mbox{\hyperlink{namespacestatistics_aa2089819b01b5d358101abf20ac5789a}{statistics\+::ut\+\_\+aver}}
+\item 
+real(dp), dimension(\+:), allocatable \mbox{\hyperlink{namespacestatistics_a5ae297f67d308ec03226af19b4aff209}{statistics\+::vt\+\_\+aver}}
+\item 
+real(dp), dimension(\+:), allocatable \mbox{\hyperlink{namespacestatistics_aaee710726ddb4e229fff6b5565760bad}{statistics\+::wt\+\_\+aver}}
+\item 
+real(dp), dimension(\+:), allocatable \mbox{\hyperlink{namespacestatistics_adb9d6ed22dab363f8eff806214d98e3a}{statistics\+::tt\+\_\+aver}}
+\item 
+real(dp), dimension(\+:), allocatable \mbox{\hyperlink{namespacestatistics_a0ccee6e815842482a80ed7b8e6173196}{statistics\+::con\+\_\+aver}}
+\item 
+real(dp), dimension(\+:), allocatable \mbox{\hyperlink{namespacestatistics_aafd6c1a4408e2283737b44acfdfd6bf1}{statistics\+::wss\+\_\+aver}}
+\item 
+integer \mbox{\hyperlink{namespacemy__mpi__module_a82789d56a363b94cd7f592ceefb6ad0c}{my\+\_\+mpi\+\_\+module\+::lenbuf}}
+\item 
+integer \mbox{\hyperlink{namespacemy__mpi__module_a077353bce0dd655d563893b0c5f1f824}{my\+\_\+mpi\+\_\+module\+::numconnections}}
+\item 
+integer, dimension(\+:), allocatable \mbox{\hyperlink{namespacemy__mpi__module_af8e0702b35db91cc77e087d3343abbf2}{my\+\_\+mpi\+\_\+module\+::neighbprocno}}
+\item 
+integer, dimension(\+:), allocatable \mbox{\hyperlink{namespacemy__mpi__module_ac50725ae6d52207dc965ada7e693ad7c}{my\+\_\+mpi\+\_\+module\+::neighbprocoffset}}
+\item 
+integer, dimension(\+:), allocatable \mbox{\hyperlink{namespacemy__mpi__module_a5ece5549dad644d94619ce1566b5bbba}{my\+\_\+mpi\+\_\+module\+::bufind}}
+\item 
+real(dp), dimension(\+:), allocatable \mbox{\hyperlink{namespacemy__mpi__module_a04f467db36199e98b0dfc5c72a2f993d}{my\+\_\+mpi\+\_\+module\+::buffer}}
 \end{DoxyCompactItemize}

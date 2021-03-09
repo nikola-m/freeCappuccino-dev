@@ -11,7 +11,7 @@ subroutine calcuvw
   use variables
   use gradients, only: grad
   use faceflux_velocity, only: facefluxuvw
-  use fieldManipulation, only: calcPressDiv
+  use fieldManipulation
   use hcoef
 
   implicit none
@@ -113,7 +113,7 @@ subroutine calcuvw
     !=======================================================================
     ! Buoyancy source terms
     !=======================================================================
-    if(lcal(ien).and.lbuoy) then
+    if(lbuoy) then
 
       if(boussinesq) then
         heat = beta*densit*(t(inp)-tref)*vol(inp)
@@ -493,22 +493,15 @@ subroutine calcuvw
   endif
 
 
-
-  !----------------------------------------------------------------------------
-  ! PRESSURE DIVERGENCE CONTRIBUTION TO SOURCE (using Gauss rule and linear interpolation):
-  !----------------------------------------------------------------------------
-  call calcPressDiv
-  !----------------------------------------------------------------------------
-
-
-  ! Modify coefficients for Crank-Nicolson
-  if (cn) then
-    
+  ! Pressure gradient source:
+  if (CN) then
+    call calcPressDivCrankNicolson
+    ! Modify coefficients for Crank-Nicolson
     a = 0.5_dp*a ! Doesn't affect the main diagonal because it's still zero.
-
     ! Modify coefs resulting from processor boundary faces
     apr = 0.5_dp*apr
-
+  else
+    call calcPressDiv
   endif
 
 
@@ -592,7 +585,8 @@ subroutine calcuvw
     a(diag(inp)) = a(diag(inp))*urfrs
     su(inp) = su(inp) + urfms*a(diag(inp))*u(inp)
 
-    apu(inp) = 1.0_dp/(a(diag(inp))+small)
+    ! apu(inp) = 1.0_dp/(a(diag(inp))+small)
+    apu(inp) = 1.0_dp/(sum( a(ioffset(inp) : ioffset(inp+1)-1) )) ! simplec
 
   enddo
 
@@ -682,7 +676,9 @@ subroutine calcuvw
     a(diag(inp)) = a(diag(inp))*urfrs
     su(inp) = sv(inp) + urfms*a(diag(inp))*v(inp)
 
-    apv(inp) = 1.0_dp/(a(diag(inp))+small)
+    ! apv(inp) = 1.0_dp/(a(diag(inp))+small)
+    apv(inp) = 1.0_dp/(sum( a(ioffset(inp) : ioffset(inp+1)-1) )) ! simplec
+
   enddo
 
   ! Solve fvm equations
@@ -770,7 +766,8 @@ subroutine calcuvw
     a(diag(inp)) = a(diag(inp))*urfrs
     su(inp) = sw(inp) + urfms*a(diag(inp))*w(inp)
 
-    apw(inp) = 1.0_dp/(a(diag(inp))+small)
+    ! apw(inp) = 1.0_dp/(a(diag(inp))+small)
+    apw(inp) = 1.0_dp/(sum( a(ioffset(inp) : ioffset(inp+1)-1) )) ! simplec
 
   enddo
 

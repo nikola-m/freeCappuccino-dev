@@ -8,9 +8,10 @@ subroutine create_fields
   use geometry
   use sparse_matrix
   use variables
-  use hcoef
-  use title_mod
   use statistics
+  use temperature, only: calct
+  use energy, only: calcen
+  use concentration, only: calccon
   use mhd
 
   implicit none 
@@ -73,6 +74,7 @@ subroutine create_fields
   allocate(dWdxi(3,numTotal),stat=ierr) 
     if(ierr /= 0)write(*,*)"allocation error: dWdxi"
 
+
   if (ltransient) then
     allocate(u_aver(numTotal),stat=ierr) 
       if(ierr /= 0)write(*,*)"allocation error: u_aver" 
@@ -94,23 +96,25 @@ subroutine create_fields
  
   allocate(dPdxi(3,numTotal),stat=ierr) 
     if(ierr /= 0)write(*,*)"allocation error: dPdxi"
-    
-  if ( piso ) then
-    
+  
+  if ( piso .or. CN ) then
     allocate(po(numTotal),stat=ierr) 
-    if(ierr /= 0)write(*,*)"allocation error: po" 
+      if(ierr /= 0)write(*,*)"allocation error: po" 
+  endif
 
-    if ( bdf2 .or. bdf3 ) then
-    allocate(poo(numTotal),stat=ierr) 
-    if(ierr /= 0)write(*,*)"allocation error: poo" 
-    endif
+  ! if ( piso ) then
+    
+  !   if ( bdf2 .or. bdf3 ) then
+  !   allocate(poo(numTotal),stat=ierr) 
+  !   if(ierr /= 0)write(*,*)"allocation error: poo" 
+  !   endif
 
-    if (bdf3 ) then
-      allocate(pooo(numTotal),stat=ierr) 
-      if(ierr /= 0)write(*,*)"allocation error: poo" 
-    endif
+  !   if (bdf3 ) then
+  !     allocate(pooo(numTotal),stat=ierr) 
+  !     if(ierr /= 0)write(*,*)"allocation error: poo" 
+  !   endif
 
-  endif 
+  ! endif 
 
 
   ! Turbulent K.E. and dissipation or any other turbulent scalar taking its place
@@ -151,7 +155,7 @@ subroutine create_fields
 
 
   ! Temperature
-  if(lcal(ien)) then
+  if( calcT .or. calcEn ) then
 
     allocate(t(numTotal),stat=ierr) 
       if(ierr /= 0)write(*,*)"allocation error: t"
@@ -175,7 +179,7 @@ subroutine create_fields
   endif
 
   ! Concentration
-  if(lcal(icon)) then
+  if( calcCon ) then
 
     allocate(con(numTotal),stat=ierr) 
       if(ierr /= 0)write(*,*)"allocation error: con"
@@ -193,37 +197,10 @@ subroutine create_fields
 
   endif
 
-  ! Temperature variance and dissipation of temperature variance
-  if(lcal(ivart)) then
-
-    allocate(vart(numTotal),stat=ierr) 
-      if(ierr /= 0)write(*,*)"allocation error: vart" 
-
-    allocate(varto(numTotal),stat=ierr) 
-      if(ierr /= 0)write(*,*)"allocation error: varto" 
-
-    if( bdf2 ) then
-      allocate(vartoo(numTotal),stat=ierr) 
-        if(ierr /= 0)write(*,*)"allocation error: vartoo" 
-    endif
-
-    allocate(dVartdxi(3,numTotal),stat=ierr) 
-      if(ierr /= 0)write(*,*)"allocation error: dVartdxi"
-
-    if (ltransient) then
-      allocate(tt_aver(numTotal),stat=ierr) 
-        if(ierr /= 0)write(*,*)"allocation error: tt_aver" 
-    endif
-
-    ! allocate(edd(numTotal),stat=ierr) 
-    !   if(ierr /= 0)write(*,*)"allocation error: edd"
-
-  endif
-
 
   ! Turbulent heat fluxes
 
-  if(lcal(ien).and.lbuoy) then
+  if( lturb .and. lbuoy ) then
 
     allocate(utt(numCells),stat=ierr) 
       if(ierr /= 0)write(*,*)"allocation error: utt" 
@@ -252,6 +229,10 @@ subroutine create_fields
   ! Density
   allocate(den(numTotal),stat=ierr) 
     if(ierr /= 0)write(*,*)"allocation error: den" 
+
+  allocate(deno(numTotal),stat=ierr) 
+    if(ierr /= 0)write(*,*)"allocation error: den" 
+    
 
   ! Mass flows trough cell faces
   allocate(flmass(numFaces),stat=ierr) 
@@ -290,12 +271,6 @@ subroutine create_fields
 
   allocate(Vorticity(numCells),stat=ierr) 
     if(ierr /= 0)write(*,*)"allocation error: Vorticity" 
-
-
-
-  ! Re_t used in low-re turbulent models
-  ! allocate(ret(numCells),stat=ierr) 
-  !   if(ierr /= 0)write(*,*)"allocation error: ret" 
 
 
   ! Reynolds stresses
@@ -366,7 +341,7 @@ subroutine create_fields
 
   endif
 
-  if (lcal(iep)) then
+  if ( calcEpot ) then
 
   allocate(BMAGX(numTotal),stat=ierr) 
     if(ierr /= 0)write(*,*)"allocation error: bmagx" 

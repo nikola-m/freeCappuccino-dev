@@ -8,6 +8,7 @@ module k_eqn_eddy
   use parameters
   use geometry
   use variables
+  use turbulence
   use scalar_fluxes, only: facefluxsc
 
   implicit none
@@ -32,7 +33,7 @@ contains
 
 !***********************************************************************
 !
-subroutine modify_viscosity_k_eqn_eddy()
+subroutine modify_viscosity_k_eqn_eddy
 !
 !***********************************************************************
 !
@@ -53,7 +54,7 @@ end subroutine
 
 !***********************************************************************
 !
-subroutine modify_viscosity_inlet_k_eqn_eddy()
+subroutine modify_viscosity_inlet_k_eqn_eddy
 !
 !***********************************************************************  
 !
@@ -81,8 +82,8 @@ subroutine calcsc(Fi,dFidxi,ifi)
   use variables
   use sparse_matrix
   use gradients
-  use title_mod
-
+  use linear_solvers
+  
   implicit none
 
   integer, intent(in) :: ifi
@@ -92,7 +93,7 @@ subroutine calcsc(Fi,dFidxi,ifi)
 !
 ! Local variables
 !
-  integer ::  i, k, inp, ijp, ijn, ijb, ib, iface, iwall
+  integer ::  i, k, l, inp, ijp, ijn, ijb, ib, iface, iwall, iper, iftwin
   real(dp) :: gam, prtr, apotime, urfrs, urfms
   real(dp) :: utp, vtp, wtp, utn, vtn, wtn
   real(dp) :: genp, genn
@@ -178,7 +179,7 @@ subroutine calcsc(Fi,dFidxi,ifi)
     !=====================================
     ! VOLUME SOURCE TERMS: buoyancy
     !=====================================
-      if(lcal(ien).and.lbuoy) then
+      if(lbuoy) then
         
         ! When bouy activated we need the freshest utt,vtt,wtt - turbulent heat fluxes
         call calcheatflux 
@@ -188,9 +189,9 @@ subroutine calcsc(Fi,dFidxi,ifi)
            vttbuoy=-gravy*den(inp)*vtt(inp)*vol(inp)*beta
            wttbuoy=-gravz*den(inp)*wtt(inp)*vol(inp)*beta
         else
-           uttbuoy=-gravx*den(inp)*utt(inp)*vol(inp)/(t(inp)+273.15)
-           vttbuoy=-gravy*den(inp)*vtt(inp)*vol(inp)/(t(inp)+273.15)
-           wttbuoy=-gravz*den(inp)*wtt(inp)*vol(inp)/(t(inp)+273.15)
+           uttbuoy=-gravx*den(inp)*utt(inp)*vol(inp)/(t(inp)+small)
+           vttbuoy=-gravy*den(inp)*vtt(inp)*vol(inp)/(t(inp)+small)
+           wttbuoy=-gravz*den(inp)*wtt(inp)*vol(inp)/(t(inp)+small)
         end if
 
         utp=max(uttbuoy,zero)
@@ -233,7 +234,7 @@ subroutine calcsc(Fi,dFidxi,ifi)
 
     call facefluxsc( ijp, ijn, &
                      xf(i), yf(i), zf(i), arx(i), ary(i), arz(i), &
-                     flmass(i), facint(i), gam, &
+                     flmass(i), facint(i), gam, cScheme, dScheme, nrelax, &
                      fi, dFidxi, prtr, cap, can, suadd )
 
     ! > Off-diagonal elements:
@@ -268,10 +269,12 @@ subroutine calcsc(Fi,dFidxi,ifi)
   !
 
   iWall = 0
+  iPer = 0
+  l = numInnerFaces
 
   do ib=1,numBoundaries
 
-    if ( bctype(ib) == 'inlet' ) then
+    if ( bctype(ib) == 'inlet' .or.  bctype(ib) == 'outlet' ) then
 
       do i=1,nfaces(ib)
 
@@ -291,26 +294,6 @@ subroutine calcsc(Fi,dFidxi,ifi)
 
       end do
 
-
-    elseif ( bctype(ib) == 'outlet' ) then
-
-      do i=1,nfaces(ib)
-
-        iface = startFace(ib) + i
-        ijp = owner(iface)
-        ijb = iBndValueStart(ib) + i
-
-
-        call facefluxsc( ijp, ijb, &
-                         xf(iface), yf(iface), zf(iface), arx(iface), ary(iface), arz(iface), &
-                         flmass(iface), &
-                         FI, dFidxi, prtr, cap, can, suadd )
-
-        Sp(ijp) = Sp(ijp)-can
-
-        Su(ijp) = Su(ijp) - can*fi(ijb) + suadd
-
-      end do
 
     elseif ( bctype(ib) == 'wall') then
 
@@ -365,6 +348,58 @@ subroutine calcsc(Fi,dFidxi,ifi)
 
       enddo
 
+
+    elseif (  bctype(ib) == 'periodic' ) then
+
+      iPer = iPer + 1 ! count periodic boundary pairs
+
+      ! Faces trough periodic boundaries
+      do i=1,nfaces(ib)
+
+        iface = startFace(ib) + i
+        ijp = owner(iface)
+
+        iftwin = startFaceTwin(iPer) + i ! Where does the face data for twin start, looking at periodic bnd pair with index iPer.
+        ijn = owner(iftwin)              ! Owner cell of the twin peridoic face
+
+
+        call facefluxsc( ijp, ijn, &
+                         xf(iface), yf(iface), zf(iface), arx(iface), ary(iface), arz(iface), &
+                         flmass(iface), gam, &
+                         fi, dfidxi, prtr, cap, can, suadd )
+
+        ! > Off-diagonal elements:
+
+        ! l is in interval [numInnerFaces+1, numInnerFaces+numPeriodic]
+        l = l + 1
+
+        ! (icell,jcell) matrix element:
+        k = icell_jcell_csr_index(l)
+        a(k) = can
+
+        ! (jcell,icell) matrix element:
+        k = jcell_icell_csr_index(l)
+        a(k) = cap
+
+        ! > Elements on main diagonal:
+
+        ! ! (icell,icell) main diagonal element
+        k = diag(ijp)
+        a(k) = a(k) - can
+
+        ! ! (jcell,jcell) main diagonal element
+        k = diag(ijn)
+        a(k) = a(k) - cap
+
+        ! > Sources:
+
+        su(ijp) = su(ijp) + suadd
+        su(ijn) = su(ijn) - suadd 
+
+
+      end do 
+
+
     endif
 
   enddo
@@ -396,35 +431,35 @@ subroutine calcsc(Fi,dFidxi,ifi)
   endif
 
   ! Underrelaxation factors
-  urfrs=urfr(ifi)
-  urfms=urfm(ifi)
+  urfrs=1.0_dp/urf(ifi)
+  urfms=1.0_dp-urf(ifi)
 
   ! Main diagonal term assembly:
   do inp = 1,numCells
 
-        ! Main diagonal term assembly:
+    ! Main diagonal term assembly:
     a(diag(inp)) = sp(inp) - sum( a(ioffset(inp) : ioffset(inp+1)-1) ) - a(diag(inp))
-        ! a(diag(inp)) = sp(inp) 
-        ! do k = ioffset(inp),ioffset(inp+1)-1
-        !   if (k.eq.diag(inp)) cycle
-        !   a(diag(inp)) = a(diag(inp)) -  a(k)
-        ! enddo
+    ! a(diag(inp)) = sp(inp) 
+    ! do k = ioffset(inp),ioffset(inp+1)-1
+    !   if (k.eq.diag(inp)) cycle
+    !   a(diag(inp)) = a(diag(inp)) -  a(k)
+    ! enddo
 
-        ! Underelaxation:
-        a(diag(inp)) = a(diag(inp))*urfrs
-        su(inp) = su(inp) + urfms*a(diag(inp))*fi(inp)
+    ! Underelaxation:
+    a(diag(inp)) = a(diag(inp))*urfrs
+    su(inp) = su(inp) + urfms*a(diag(inp))*fi(inp)
                     
   enddo
 
   ! Solve linear system:
-  call bicgstab(fi,ifi)
+  call csrsolve(lSolver, te, su, resor(5), maxiter, tolAbs, tolRel, 'k' )
 
   !
   ! Update symmetry and outlet boundaries
   !
   do ib=1,numBoundaries
 
-    if ( bctype(ib) == 'outlet' .or. bctype(ib) == 'symmetry' ) then
+    if ( bctype(ib) /= 'wall' ) then
 
       do i=1,nfaces(ib)
 
@@ -444,7 +479,7 @@ subroutine calcsc(Fi,dFidxi,ifi)
   fimin = minval(fi)
   fimax = maxval(fi)
 
-  write(6,'(2x,es11.4,3a,es11.4)') fimin,' <= ',chvar(ifi),' <= ',fimax
+  write(6,'(2x,es11.4,a,es11.4)') fimin,' <= k <= ',fimax
 
 ! These field values cannot be negative
   if(fimin.lt.0.0_dp) fi = max(fi,small)
@@ -477,14 +512,14 @@ subroutine modify_mu_eff()
   !
 
   do inp=1,numCells
-        ! Store old value
-        visold=vis(inp)
-        delta = vol(inp)**third
-        ! Update effective viscosity:
-        ! \mu_{eff}=\mu+\mu_t; \mu_t = C_k * k^{0.5} * Delta
-        vis(inp)=viscos + den(inp)*ck*sqrt(te(inp))*delta
-        ! Underelaxation
-        vis(inp)=urf(ivis)*vis(inp)+(1.0_dp-urf(ivis))*visold
+    ! Store old value
+    visold=vis(inp)
+    delta = vol(inp)**third
+    ! Update effective viscosity:
+    ! \mu_{eff}=\mu+\mu_t; \mu_t = C_k * k^{0.5} * Delta
+    vis(inp)=viscos + den(inp)*ck*sqrt(te(inp))*delta
+    ! Underelaxation
+    vis(inp)=urf(ivis)*vis(inp)+(1.0_dp-urf(ivis))*visold
   enddo
 
   !
@@ -495,7 +530,7 @@ subroutine modify_mu_eff()
 
   do ib=1,numBoundaries
 
-    if ( bctype(ib) == 'inlet' ) then
+    if ( bctype(ib) /= 'wall' ) then
 
       do i=1,nfaces(ib)
 
@@ -507,30 +542,6 @@ subroutine modify_mu_eff()
 
       end do
 
-    elseif ( bctype(ib) == 'outlet' ) then
-
-      do i=1,nfaces(ib)
-
-        iface = startFace(ib) + i
-        ijp = owner(iface)
-        ijb = iBndValueStart(ib) + i
-
-        Vis(ijb) = Vis(ijp)
-
-      enddo
-
-    elseif ( bctype(ib) == 'symmetry') then
-
-      ! Symmetry
-      do i=1,nfaces(ib)
-
-        iface = startFace(ib) + i
-        ijp = owner(iface)
-        ijb = iBndValueStart(ib) + i
-
-        Vis(ijb) = Vis(ijp)
-
-      end do
 
     elseif ( bctype(ib) == 'wall') then
 

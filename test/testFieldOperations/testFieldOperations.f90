@@ -13,10 +13,10 @@
 ! Locals
   !integer :: ierr
 
-  type(volVectorField) :: vec1, vec2
+  type(volVectorField) :: vec1, vec2, vec3
   type(volScalarField) :: phi,psi
   type(volVectorField) :: resVec
-  type(volTensorField) :: T
+  type(volTensorField) :: T,D
   type(surfaceScalarField) :: sf
 
 
@@ -31,7 +31,7 @@
 
   call read_mesh_openFoam
 
-  ! Creation and manipulation fo tensor fields
+  ! Creation and manipulation of tensor fields
 !+-----------------------------------------------------------------------------+
 
 
@@ -121,24 +121,23 @@ vec2 = volVectorField("Vector2", &
   ! First set up the linear field
   ! psi = volScalarField("linear_field", xc + yc + zc )
   psi = new_volScalarField( numTotal )
-  ! psi%mag = 1.0
+
   psi%mag(1:numCells)  = xc(1:numCells) + yc(1:numCells) + zc(1:numCells)
-  psi%mag(numCells+1:) = xf(numInnerFaces+1:)+yf(numInnerFaces+1:)+zf(numInnerFaces+1:)
+  psi%mag(numCells+1: ) = xf(numInnerFaces+1: )+yf(numInnerFaces+1: )+zf(numInnerFaces+1: )
 
 
   ! Now call the explicit gradient operation
-  gauss = .true.
   resVec = Grad( psi )
 
   ! This is useful for book-keeping, lets give it a name:
   ! resVec%field_name = 'gradient_field'
 
   write(*,'(a)') ' Magnitude of a linear field'
-  write(*,'(e15.8)') psi%mag(1:440)
+  write(*,'(e15.8)') psi%mag(1:400)
   write(*,'(a)') ' '
   write(*,'(a)') ' Gradient of a scalar field - fvx operation: '
   write(*,'(1x,a)') resVec%field_name
-  do i=1,440
+  do i=1,400
     write(*,'(i0,1x,3(e15.8,1x))') i,resVec%x(i),resVec%y(i),resVec%z(i)
   enddo
   write(*,'(a)') ' '
@@ -149,19 +148,62 @@ vec2 = volVectorField("Vector2", &
   sf = fvxInterpolate( psi )
 
   write(*,'(a)') ' Interpolated scalar field to cell faces'
-  write(*,'(e15.8)') sf%mag(1:40)
+  do i=1,400
+    write(*,'(e15.8)') sf%mag(i)
+  enddo
   write(*,'(a)') ' '
+
+!
+! The traceless symmetric part of the square of the velocity gradient tensor
+!
+  vec3 = new_volVectorField( numTotal )
+  vec3%x(:) = 1.0_dp
+  vec3%y(:) = 2.0_dp
+  vec3%z(:) = 3.0_dp  
+
+  vec3%x( 1:numCells ) = xc(1:numCells)
+  vec3%y( 1:numCells ) = yc(1:numCells)
+  vec3%z( 1:numCells ) = zc(1:numCells)
+
+  D = Grad( vec3 )
+  T = .dev.(.symm.(D.o.D))
+
+  write(*,'(a)') ' Traceless symmetric part of the square of the velocity gradient tensor D (at one point): '
+  do i=1,20
+    write(*,'(i0,1x,3(e15.8,1x))') i
+    write(*,'(3(e13.6,1x))') T%xx(i),T%xy(i),T%xz(i)
+    write(*,'(3(e13.6,1x))') T%yx(i),T%yy(i),T%yz(i)
+    write(*,'(3(e13.6,1x))') T%zx(i),T%zy(i),T%zz(i)
+    write(*,'(a)') ' '
+  enddo
+
+  psi = .magSq.T
+  write(*,'(a)') ' Magnitude square of that tensor field (this is a scalar field)'
+  do i=1,20
+    write(*,'(e15.8)') psi%mag(i)
+  enddo
+  write(*,'(a)') ' '
+
+!
+! This is how we get Q-criteria field for vortex identification,
+! if we suppose that velocity gradient tensor is stored in D.
+!
+  ! D = Grad( vec1 )
+  ! psi = 0.5_dp *( .sq.(.tr.D)  - .tr.( D.o.D ) )
+  ! write(*,'(a)') ' Q criteria'
+  ! do i=1,20
+  !   write(*,'(e15.8)') psi%mag(i)
+  ! enddo
+  ! write(*,'(a)') ' '
 
 !
 ! Now test vector identities: divergence of the curl is zero
 !
 
-  ! Vec3 = new_volVectorField( numTotal )
-  ! Vec3%x = 1.0; Vec3%y = 1.0; Vec3%z = 1.0
-  ! phi = fvxDiv( Vec3 )
+  ! phi = fvxDiv( .curl.( ... ) )
 
   ! write(*,'(a)') ' Divergence of a curl is zero'
-  !  do i=1,1280
+  !  do i=1,400
   !   write(*,'(i0,1x,e15.8)') i,phi%mag(i)
   !  enddo
   ! write(*,'(a)') ' '

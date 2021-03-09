@@ -77,7 +77,7 @@ subroutine forcesAtWall(fshearx,fsheary,fshearz,fprx,fpry,fprz)
         ! Shear forces at wall in x, y and z direction.
         fshearx(iWall) = vsol*( (u(ijb)-u(ijp))*(1.-nxf**2) + vpb*nyf*nxf                  + wpb*nzf*nxf )
         fsheary(iWall) = vsol*( upb*nxf*nyf                 + (v(ijb)-v(ijp))*(1.-nyf**2)  + wpb*nzf*nyf )
-        fahearz(iWall) = vsol*( upb*nxf*nzf                 + vpb*nyf*nzf                  + (w(ijb)-w(ijp)*(1.-nzf**2) )
+        fshearz(iWall) = vsol*( upb*nxf*nzf                 + vpb*nyf*nzf                  + (w(ijb)-w(ijp))*(1.-nzf**2) )
 
         ! Pressure forces ( NOTE: we assume that boundary face normals point outwards ,away from the fluid region)
         fprx(iWall) = p(ijb)*arx(iface)

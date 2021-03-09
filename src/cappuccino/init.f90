@@ -17,14 +17,17 @@ subroutine init
   use parameters
   use geometry
   use variables
-  use title_mod
   use gradients
   use sparse_matrix
   use utils, only: get_unit
-  ! use LIS_linear_solver_library
   use field_initialization
   use output
+  use temperature, only: calcT
+  use energy, only: calcEn
+  use turbulence
   use mhd
+  use wall_distance
+  use fieldManipulation, only: add_random_noise_to_field
 
   implicit none
 
@@ -32,12 +35,11 @@ subroutine init
   ! Local variables 
   !
 
-  ! character(len=5)  :: maxno
-  ! character(10) :: tol
-  integer :: i, ijp, ijn, iface, ijb, ib
-  integer :: nsw_backup
+  integer :: i, ijp, ijn
   real(dp) :: fxp, fxn, ui, vi, wi
-  real(dp) :: sor_backup
+
+  ! integer :: ib, iface
+  ! real(dp) :: cosa,sina,velmag,distance,xvel,zvel
 
 !
 !***********************************************************************
@@ -46,59 +48,6 @@ subroutine init
 !
 ! Various initialisations
 !
-
-  ! Parameter Initialisation
-
-  ! Parameters used in postprocessing phase
-  if (lturb) then
-
-    select case (TurbModel)
-
-      case (1)
-        solveTKE = .true.
-        solveEpsilon = .true.
-
-      case (2)
-        solveTKE = .true.
-        solveEpsilon = .true.
-
-      case (3) 
-        solveTKE = .true.
-        solveOmega = .true.
-
-      case (4)
-        solveTKE = .true.
-        solveOmega = .true.
-
-      case (6)
-        solveTKE = .true.
-
-      case (7)
-        solveTKE = .true.
-        solveEpsilon = .true.
-
-      case (8)
-        solveTKE = .true.
-        solveEpsilon = .true.
-
-      case (9)
-        solveTKE = .true.
-        solveEpsilon = .true.
-
-      case default
-          
-      end select
-    
-  endif
-
-  if ( solveOmega ) chvarSolver(6) = 'Omega  '
-
-
-  ! Reciprocal values of underrelaxation factors
-  do i=1,nphi
-    urfr(i)=1.0_dp / urf(i)
-    urfm(i)=1.0_dp - urf(i)
-  enddo
 
   ! Initial time iz zero.
   if(.not.lread) time = 0.0_dp
@@ -109,41 +58,82 @@ subroutine init
 
 ! 1.2)  Field Initialisation
 
-  call initialize_vector_field(u,v,w,dUdxi,iu,'U')
+  call initialize_vector_field(u,v,w,dUdxi,1,'U')
 
-  if (levm) then
-  ! 
-  ! > TE Turbulent kinetic energy.
-  !   
-  call initialize_scalar_field(te,dTEdxi,ite,'k')
 
-  ! 
+    ! > Rotating lid - velocitiesa at boundary faces for constant angular velocity.
+    ! ! Loop over inlet boundaries
+    ! do ib=1,numBoundaries
+      
+    !   if ( bcname(ib) == 'lid' ) then
+
+    !     do i=1,nfaces(ib)
+
+    !       iface = startFace(ib) + i
+    !       ijp = owner(ib)
+    !       ijn = iBndValueStart(ib) + i
+
+    !       distance = sqrt(xf(iface)**2 + zf(iface)**2)
+    !       cosa = xf(iface)/(distance+1e-20)
+    !       sina = zf(iface)/(distance+1e-20)
+    !       velmag = distance
+    !       xvel = velmag*sina
+    !       zvel = -velmag*cosa
+
+    !       write(*,*) xvel, 0.0, zvel
+
+    !     end do
+
+    !   endif 
+
+    ! enddo
+
+  ! ! > Initialize inner cells for turbulent channel flow
+  ! do inp=1,numCells
+  ! U(inp) = magUbar*(1.2*(1-yc(inp)**6))  
+  ! enddo
+  ! call add_random_noise_to_field(U,20)
+  !***
+  !Create initial disturbances
+  ! do inp = 1,numCells
+  !   call channel_disturbances(xc(inp),yc(inp),zc(inp),u(inp),v(inp),w(inp))
+  ! enddo  
+  !\***
+
+  ! > Pressure
+  if(AllSpeedsSIMPLE) call initialize_scalar_field(p,dPdxi,4,'p')
+
+  ! > TE Turbulent kinetic energy, 
+  if(solveTKE) call initialize_scalar_field(te,dTEdxi,5,'k')
+
+  ! > Nutilda - for Spallart-Allmaras,
+  if (solveNuTilda) call initialize_scalar_field(te,dTEdxi,5,'nutilda')
+
   ! > ED Specific turbulent kinetic energy dissipation rate, also turbulence frequency - omega
-  !  
-  if(solveOmega) then   
-    call initialize_scalar_field(ed,dEDdxi,ied,'omega')
-  else
-    call initialize_scalar_field(ed,dEDdxi,ied,'epsilon')
-  endif
+  if (solveOmega) call initialize_scalar_field(ed,dEDdxi,6,'omega')
+  if (solveEpsilon) call initialize_scalar_field(ed,dEDdxi,6,'epsilon')
 
-  endif
 
   ! 
   ! > Temperature
   !
-  if( lcal(ien) )   call initialize_scalar_field(t,dTdxi,ien,'T')
+  if( calcT )   call initialize_scalar_field(t,dTdxi,7,'T')
+
+  if( calcEn )   call initialize_scalar_field(t,dTdxi,7,'Energy')
 
   ! 
   ! > Magnetic field
   ! 
-  if ( lcal(iep) ) call initialize_vector_field(bmagx,bmagy,bmagz,dEpotdxi,ibmag,'B')
+  if ( calcEpot ) call initialize_vector_field(bmagx,bmagy,bmagz,dEpotdxi,10,'B')
 
   ! Density
   den = densit
 
   ! Effective viscosity
   vis = viscos
+  ! if ( lturb ) call initialize_scalar_field(vis,8,'mueff') ! no gradient, it should be optional argument
   visw = viscos  
+  
 
   ! Initialize mass flow on inner faces
   do i=1,numInnerFaces
@@ -166,7 +156,6 @@ subroutine init
 !
   if(lread) call readfiles
 
-
 !
 ! Initial Gradient Calculation
 !
@@ -182,82 +171,11 @@ subroutine init
   call grad(W,dWdxi)
 
 
-
 !
 ! Distance to the nearest wall (needed for some turbulence models) for all cells via Poisson equation.
 !
 
-  if( TurbModel == 3 .or. TurbModel == 4 ) then
+  if (lturb) call wall_distance_poisson
 
-    write(*,*) ' '
-    write(*,*) ' Calculate distance to the nearest wall:'
-    write(*,*) ' '
-
-    ! Source term
-    su(1:numCells) = -Vol(1:numCells)
-
-    ! Initialize solution
-    pp = 0.0_dp
-
-    !  Coefficient array for Laplacian
-    sv = 1.0_dp       
-
-    ! Laplacian operator and BCs         
-    call laplacian(sv,pp) 
-
-    sor_backup = sor(ip)
-    nsw_backup = nsw(ip)
-
-    sor(ip) = 1e-10
-    nsw(ip) = 500
-
-    ! Solve system
-    call iccg(pp,ip) 
-    ! call bicgstab(p,ip) 
-    ! call pmgmres_ilu ( numCells, nnz, ioffset, ja, a, diag, p(1:numCells), ip, su, 100, 4, 1e-8, sor(ip) )
-    ! write(maxno,'(i5)') nsw(ip)
-    ! write(tol,'(es9.2)') sor(ip)
-    ! ! write(options,'(a)') "-i gmres -restart [20] -p ilut -maxiter "//adjustl(maxno)//"-tol "//adjustl(tol)
-    ! write(options,'(a)') "-i cg -p ilu -ilu_fill 1 -maxiter "//adjustl(maxno)//"-tol "//adjustl(tol)
-    ! call solve_csr( numCells, nnz, ioffset, ja, a, su, p )
-
-
-    ! Update values at constant gradient bc faces - we need these values for correct gradients
-
-    do ib=1,numBoundaries
-
-      if ( bctype(ib) /= 'wall' ) then
-      ! All other boundary faces besides wall which has to be zero.
-
-        do i=1,nfaces(ib)
-
-          iface = startFace(ib) + i
-          ijp = owner(iface)
-          ijb = iBndValueStart(ib) + i
-
-          pp(ijb) = pp(ijp)
-
-        enddo
-
-      endif
-    enddo
-
-    sor(ip) = sor_backup
-    nsw(ip) = nsw_backup
-
-    ! Gradient of solution field stored in p (gradient stored in dPdxi) :
-    call grad(pp,dPdxi)
-
-    ! Wall distance computation from Poisson eq. solution stored in pp:
-    wallDistance = -sqrt(  dPdxi(1,:)*dPdxi(1,:)+dPdxi(2,:)*dPdxi(2,:)+dPdxi(3,:)*dPdxi(3,:) ) + &
-                    sqrt(  dPdxi(1,:)*dPdxi(1,:)+dPdxi(2,:)*dPdxi(2,:)+dPdxi(3,:)*dPdxi(3,:) + 2*pp(1:numCells) )
-
-    ! Clear arrays
-    su = 0.0_dp
-    sv = 0.0_dp 
-    dPdxi = 0.0_dp
-    pp = p
-
-  end if
 
 end subroutine

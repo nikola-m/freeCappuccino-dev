@@ -1,64 +1,191 @@
-\hypertarget{tensor__fields_8f90}{\section{src-\/par/tensor\-\_\-fields.f90 File Reference}
-\label{tensor__fields_8f90}\index{src-\/par/tensor\-\_\-fields.\-f90@{src-\/par/tensor\-\_\-fields.\-f90}}
-}
-\subsection*{Data Types}
+\hypertarget{tensor__fields_8f90}{}\doxysection{src-\/par/tensor\+\_\+fields.f90 File Reference}
+\label{tensor__fields_8f90}\index{src-\/par/tensor\_fields.f90@{src-\/par/tensor\_fields.f90}}
+\doxysubsection*{Data Types}
 \begin{DoxyCompactItemize}
 \item 
-module \hyperlink{classtensor__fields}{tensor\-\_\-fields}
+type \mbox{\hyperlink{structtensor__fields_1_1volscalarfield}{tensor\+\_\+fields\+::volscalarfield}}
 \item 
-type \hyperlink{structtensor__fields_1_1volscalarfield}{tensor\-\_\-fields\-::volscalarfield}
+type \mbox{\hyperlink{structtensor__fields_1_1volvectorfield}{tensor\+\_\+fields\+::volvectorfield}}
 \item 
-type \hyperlink{structtensor__fields_1_1volvectorfield}{tensor\-\_\-fields\-::volvectorfield}
+type \mbox{\hyperlink{structtensor__fields_1_1volsymmetrictensorfield}{tensor\+\_\+fields\+::volsymmetrictensorfield}}
 \item 
-type \hyperlink{structtensor__fields_1_1volsymmetrictensorfield}{tensor\-\_\-fields\-::volsymmetrictensorfield}
+type \mbox{\hyperlink{structtensor__fields_1_1voltensorfield}{tensor\+\_\+fields\+::voltensorfield}}
 \item 
-type \hyperlink{structtensor__fields_1_1voltensorfield}{tensor\-\_\-fields\-::voltensorfield}
+type \mbox{\hyperlink{structtensor__fields_1_1surfacescalarfield}{tensor\+\_\+fields\+::surfacescalarfield}}
 \item 
-type \hyperlink{structtensor__fields_1_1surfacescalarfield}{tensor\-\_\-fields\-::surfacescalarfield}
+type \mbox{\hyperlink{structtensor__fields_1_1surfacevectorfield}{tensor\+\_\+fields\+::surfacevectorfield}}
 \item 
-type \hyperlink{structtensor__fields_1_1surfacevectorfield}{tensor\-\_\-fields\-::surfacevectorfield}
+type \mbox{\hyperlink{structtensor__fields_1_1surfacesymmetrictensorfield}{tensor\+\_\+fields\+::surfacesymmetrictensorfield}}
 \item 
-type \hyperlink{structtensor__fields_1_1surfacesymmetrictensorfield}{tensor\-\_\-fields\-::surfacesymmetrictensorfield}
+type \mbox{\hyperlink{structtensor__fields_1_1surfacetensorfield}{tensor\+\_\+fields\+::surfacetensorfield}}
 \item 
-type \hyperlink{structtensor__fields_1_1surfacetensorfield}{tensor\-\_\-fields\-::surfacetensorfield}
+interface \mbox{\hyperlink{interfacetensor__fields_1_1operator_07_5_08}{tensor\+\_\+fields\+::operator($\ast$)}}
 \item 
-interface \hyperlink{interfacetensor__fields_1_1operator_07_8dot_8_08}{tensor\-\_\-fields\-::operator(.\-dot.)}
+interface \mbox{\hyperlink{interfacetensor__fields_1_1operator_07_8x_8_08}{tensor\+\_\+fields\+::operator(.\+x.)}}
 \item 
-interface \hyperlink{interfacetensor__fields_1_1operator_07_8cross_8_08}{tensor\-\_\-fields\-::operator(.\-cross.)}
+interface \mbox{\hyperlink{interfacetensor__fields_1_1operator_07_8o_8_08}{tensor\+\_\+fields\+::operator(.\+o.)}}
 \item 
-interface \hyperlink{interfacetensor__fields_1_1operator_07_8tensor_8_08}{tensor\-\_\-fields\-::operator(.\-tensor.)}
+interface \mbox{\hyperlink{interfacetensor__fields_1_1operator_07_5_5_08}{tensor\+\_\+fields\+::operator($\ast$$\ast$)}}
 \item 
-interface \hyperlink{interfacetensor__fields_1_1operator_07_8ddot_8_08}{tensor\-\_\-fields\-::operator(.\-ddot.)}
+interface \mbox{\hyperlink{interfacetensor__fields_1_1operator_07_8trans_8_08}{tensor\+\_\+fields\+::operator(.\+trans.)}}
 \item 
-interface \hyperlink{interfacetensor__fields_1_1operator_07_8transposed_8_08}{tensor\-\_\-fields\-::operator(.\-transposed.)}
+interface \mbox{\hyperlink{interfacetensor__fields_1_1operator_07_8tr_8_08}{tensor\+\_\+fields\+::operator(.\+tr.)}}
 \item 
-interface \hyperlink{interfacetensor__fields_1_1operator_07_8trace_8_08}{tensor\-\_\-fields\-::operator(.\-trace.)}
+interface \mbox{\hyperlink{interfacetensor__fields_1_1operator_07_8sq_8_08}{tensor\+\_\+fields\+::operator(.\+sq.)}}
 \item 
-interface \hyperlink{interfacetensor__fields_1_1operator_07_8det_8_08}{tensor\-\_\-fields\-::operator(.\-det.)}
+interface \mbox{\hyperlink{interfacetensor__fields_1_1operator_07_8det_8_08}{tensor\+\_\+fields\+::operator(.\+det.)}}
 \item 
-interface \hyperlink{interfacetensor__fields_1_1operator_07_8diagonal_8_08}{tensor\-\_\-fields\-::operator(.\-diagonal.)}
+interface \mbox{\hyperlink{interfacetensor__fields_1_1operator_07_8diagonal_8_08}{tensor\+\_\+fields\+::operator(.\+diagonal.)}}
 \item 
-interface \hyperlink{interfacetensor__fields_1_1operator_07_8hodge_8_08}{tensor\-\_\-fields\-::operator(.\-hodge.)}
+interface \mbox{\hyperlink{interfacetensor__fields_1_1operator_07_8hodge_8_08}{tensor\+\_\+fields\+::operator(.\+hodge.)}}
 \item 
-interface \hyperlink{interfacetensor__fields_1_1operator_07_8curl_8_08}{tensor\-\_\-fields\-::operator(.\-curl.)}
+interface \mbox{\hyperlink{interfacetensor__fields_1_1operator_07_8curl_8_08}{tensor\+\_\+fields\+::operator(.\+curl.)}}
 \item 
-interface \hyperlink{interfacetensor__fields_1_1operator_07_8symm_8_08}{tensor\-\_\-fields\-::operator(.\-symm.)}
+interface \mbox{\hyperlink{interfacetensor__fields_1_1operator_07_8symm_8_08}{tensor\+\_\+fields\+::operator(.\+symm.)}}
 \item 
-interface \hyperlink{interfacetensor__fields_1_1operator_07_8skew_8_08}{tensor\-\_\-fields\-::operator(.\-skew.)}
+interface \mbox{\hyperlink{interfacetensor__fields_1_1operator_07_8skew_8_08}{tensor\+\_\+fields\+::operator(.\+skew.)}}
 \item 
-interface \hyperlink{interfacetensor__fields_1_1operator_07_8magsq_8_08}{tensor\-\_\-fields\-::operator(.\-magsq.)}
+interface \mbox{\hyperlink{interfacetensor__fields_1_1operator_07_8magsq_8_08}{tensor\+\_\+fields\+::operator(.\+magsq.)}}
 \item 
-interface \hyperlink{interfacetensor__fields_1_1operator_07_8mag_8_08}{tensor\-\_\-fields\-::operator(.\-mag.)}
+interface \mbox{\hyperlink{interfacetensor__fields_1_1operator_07_8mag_8_08}{tensor\+\_\+fields\+::operator(.\+mag.)}}
 \item 
-interface \hyperlink{interfacetensor__fields_1_1operator_07_8dev_8_08}{tensor\-\_\-fields\-::operator(.\-dev.)}
+interface \mbox{\hyperlink{interfacetensor__fields_1_1operator_07_8dev_8_08}{tensor\+\_\+fields\+::operator(.\+dev.)}}
 \item 
-interface \hyperlink{interfacetensor__fields_1_1operator_07_8devtwo_8_08}{tensor\-\_\-fields\-::operator(.\-devtwo.)}
+interface \mbox{\hyperlink{interfacetensor__fields_1_1operator_07_8devtwo_8_08}{tensor\+\_\+fields\+::operator(.\+devtwo.)}}
 \item 
-interface \hyperlink{interfacetensor__fields_1_1operator_07_8hyd_8_08}{tensor\-\_\-fields\-::operator(.\-hyd.)}
+interface \mbox{\hyperlink{interfacetensor__fields_1_1operator_07_8hyd_8_08}{tensor\+\_\+fields\+::operator(.\+hyd.)}}
 \item 
-interface \hyperlink{interfacetensor__fields_1_1operator_07_09_08}{tensor\-\_\-fields\-::operator(+)}
+interface \mbox{\hyperlink{interfacetensor__fields_1_1power}{tensor\+\_\+fields\+::power}}
 \item 
-interface \hyperlink{interfacetensor__fields_1_1operator_07-_08}{tensor\-\_\-fields\-::operator(-\/)}
+interface \mbox{\hyperlink{interfacetensor__fields_1_1operator_07_09_08}{tensor\+\_\+fields\+::operator(+)}}
 \item 
-interface \hyperlink{interfacetensor__fields_1_1operator_07_5_08}{tensor\-\_\-fields\-::operator($\ast$)}
+interface \mbox{\hyperlink{interfacetensor__fields_1_1operator_07-_08}{tensor\+\_\+fields\+::operator(-\/)}}
+\item 
+interface \mbox{\hyperlink{interfacetensor__fields_1_1operator_07_5_08}{tensor\+\_\+fields\+::operator($\ast$)}}
+\item 
+interface \mbox{\hyperlink{interfacetensor__fields_1_1operator_07_2_08}{tensor\+\_\+fields\+::operator(/)}}
+\end{DoxyCompactItemize}
+\doxysubsection*{Modules}
+\begin{DoxyCompactItemize}
+\item 
+module \mbox{\hyperlink{namespacetensor__fields}{tensor\+\_\+fields}}
+\end{DoxyCompactItemize}
+\doxysubsection*{Functions/\+Subroutines}
+\begin{DoxyCompactItemize}
+\item 
+type(volscalarfield) function \mbox{\hyperlink{namespacetensor__fields_a596d7733e2f19fb55fe7f09b704d4a16}{tensor\+\_\+fields\+::new\+\_\+volscalarfield}} (num)
+\item 
+type(volvectorfield) function \mbox{\hyperlink{namespacetensor__fields_a664e85f0e946cc3941933db9794fefe5}{tensor\+\_\+fields\+::new\+\_\+volvectorfield}} (num)
+\item 
+type(volsymmetrictensorfield) function \mbox{\hyperlink{namespacetensor__fields_a6b2a7e99a62e11dd6df66ebe56bbbd6b}{tensor\+\_\+fields\+::new\+\_\+volsymmetrictensorfield}} (num)
+\item 
+type(voltensorfield) function \mbox{\hyperlink{namespacetensor__fields_a62f581f9e29e80f5ed7d3d2b9539398c}{tensor\+\_\+fields\+::new\+\_\+voltensorfield}} (num)
+\item 
+type(surfacescalarfield) function \mbox{\hyperlink{namespacetensor__fields_a43dbadf69f0711e9f54b26b273a59c48}{tensor\+\_\+fields\+::new\+\_\+surfacescalarfield}} (num)
+\item 
+type(surfacevectorfield) function \mbox{\hyperlink{namespacetensor__fields_a4d60ee914ac1da3fd430425a2e9ae35d}{tensor\+\_\+fields\+::new\+\_\+surfacevectorfield}} (num)
+\item 
+type(surfacesymmetrictensorfield) function \mbox{\hyperlink{namespacetensor__fields_aa4a670d5719348306b889b932ccf7269}{tensor\+\_\+fields\+::new\+\_\+surfacesymmetrictensorfield}} (num)
+\item 
+type(surfacetensorfield) function \mbox{\hyperlink{namespacetensor__fields_a557464fc85d557fc094c7b27cb83696b}{tensor\+\_\+fields\+::new\+\_\+surfacetensorfield}} (num)
+\item 
+type(volscalarfield) function \mbox{\hyperlink{namespacetensor__fields_ad6c49d8afbb9c901fd5a22df1a7ba077}{tensor\+\_\+fields\+::calc\+\_\+inner\+\_\+product}} (v1, v2)
+\item 
+type(surfacescalarfield) function \mbox{\hyperlink{namespacetensor__fields_a43e8af83a03fa4fb382b1a39e80d6deb}{tensor\+\_\+fields\+::calc\+\_\+inner\+\_\+product\+\_\+surface\+\_\+vectors}} (v1, v2)
+\item 
+type(volvectorfield) function \mbox{\hyperlink{namespacetensor__fields_ae884e956487f40d7e6f040c9c93bd39b}{tensor\+\_\+fields\+::calc\+\_\+inner\+\_\+product\+\_\+rank2\+\_\+and\+\_\+rank1\+\_\+tensors}} (T, v1)
+\item 
+type(volvectorfield) function \mbox{\hyperlink{namespacetensor__fields_a9e02b82d56e546edcf838c280f63f03f}{tensor\+\_\+fields\+::calc\+\_\+inner\+\_\+product\+\_\+rank1\+\_\+and\+\_\+rank2\+\_\+tensors}} (v1, T)
+\item 
+type(volvectorfield) function \mbox{\hyperlink{namespacetensor__fields_a0f93eba8884a1cdec880a76879e6e86c}{tensor\+\_\+fields\+::calc\+\_\+cross\+\_\+product}} (v1, v2)
+\item 
+type(voltensorfield) function \mbox{\hyperlink{namespacetensor__fields_a37d6c514ecd5951e961ff2dd9b47f0f5}{tensor\+\_\+fields\+::calc\+\_\+tensor\+\_\+product}} (v1, v2)
+\item 
+type(voltensorfield) function \mbox{\hyperlink{namespacetensor__fields_acd6ff917ee80439503759ede0db5cf5b}{tensor\+\_\+fields\+::calc\+\_\+tensor\+\_\+product\+\_\+rank2\+\_\+tensors}} (T1, T2)
+\item 
+type(volscalarfield) function \mbox{\hyperlink{namespacetensor__fields_a6c4ad8de3bbbf4cc737aaf39f22b0427}{tensor\+\_\+fields\+::calc\+\_\+inner\+\_\+product\+\_\+rank2\+\_\+tensor}} (T1, T2)
+\item 
+type(volscalarfield) function \mbox{\hyperlink{namespacetensor__fields_a2b6b258978be49fee7e8d55327006a0a}{tensor\+\_\+fields\+::calc\+\_\+inner\+\_\+product\+\_\+rank2\+\_\+symmetric\+\_\+tensor}} (T1, T2)
+\item 
+type(voltensorfield) function \mbox{\hyperlink{namespacetensor__fields_a1dc0528667ffde3ad78991670c841626}{tensor\+\_\+fields\+::transpose\+\_\+rank2\+\_\+tensor}} (T1)
+\item 
+type(voltensorfield) function \mbox{\hyperlink{namespacetensor__fields_ab8fbf252b30a321eceaa830b08f8e50d}{tensor\+\_\+fields\+::add\+\_\+tensors}} (T1, T2)
+\item 
+type(volscalarfield) function \mbox{\hyperlink{namespacetensor__fields_a42a01a20c488c5fffe78234c9b3cc939}{tensor\+\_\+fields\+::add\+\_\+volscalarfields}} (s1, s2)
+\item 
+type(volscalarfield) function \mbox{\hyperlink{namespacetensor__fields_a02ef5a7703dd00357a76c28b8017b05b}{tensor\+\_\+fields\+::subtract\+\_\+volscalarfields}} (s1, s2)
+\item 
+type(voltensorfield) function \mbox{\hyperlink{namespacetensor__fields_a7d7d58d20f5d707d41711270a373fbe2}{tensor\+\_\+fields\+::subtract\+\_\+tensors}} (T1, T2)
+\item 
+type(volscalarfield) function \mbox{\hyperlink{namespacetensor__fields_a4cb6d48934f160bfa420a47cf89fef13}{tensor\+\_\+fields\+::scalar\+\_\+volscalarfield\+\_\+multiply}} (alpha, s1)
+\item 
+type(volscalarfield) function \mbox{\hyperlink{namespacetensor__fields_a9b7cf03484e92ec092671edc737287c3}{tensor\+\_\+fields\+::scalarfield\+\_\+volscalarfield\+\_\+multiply}} (alpha, s1)
+\item 
+type(volvectorfield) function \mbox{\hyperlink{namespacetensor__fields_a64ec8b5639f7b930e0144b1aa954a8bc}{tensor\+\_\+fields\+::scalar\+\_\+volvectorfield\+\_\+multiply}} (alpha, v1)
+\item 
+type(volvectorfield) function \mbox{\hyperlink{namespacetensor__fields_a4a63dad0e046785ec99a3cbfe4e3f240}{tensor\+\_\+fields\+::scalarfield\+\_\+volvectorfield\+\_\+multiply}} (alpha, v1)
+\item 
+type(volvectorfield) function \mbox{\hyperlink{namespacetensor__fields_a76e0ed3b288ec6eb40ba38e4ca790975}{tensor\+\_\+fields\+::volscalarfield\+\_\+volvectorfield\+\_\+multiply}} (alpha, v1)
+\item 
+type(voltensorfield) function \mbox{\hyperlink{namespacetensor__fields_abb1d898651c82cdb09dc13b86990f785}{tensor\+\_\+fields\+::scalar\+\_\+voltensorfield\+\_\+multiply}} (alpha, T1)
+\item 
+type(voltensorfield) function \mbox{\hyperlink{namespacetensor__fields_a980f9c238ff3ecace6ceacf3ed1697b3}{tensor\+\_\+fields\+::scalarfield\+\_\+voltensorfield\+\_\+multiply}} (alpha, T1)
+\item 
+type(voltensorfield) function \mbox{\hyperlink{namespacetensor__fields_aca15b3607ab689325f461aacd4015f01}{tensor\+\_\+fields\+::volscalarfield\+\_\+voltensorfield\+\_\+multiply}} (alpha, T1)
+\item 
+type(surfacetensorfield) function \mbox{\hyperlink{namespacetensor__fields_a84483228c191e01b5f313c12518d5df5}{tensor\+\_\+fields\+::surfacescalarfield\+\_\+surfacetensorfield\+\_\+multiply}} (alpha, T1)
+\item 
+type(surfacevectorfield) function \mbox{\hyperlink{namespacetensor__fields_a07834683d379731ee6d48e49b50ca6a3}{tensor\+\_\+fields\+::scalar\+\_\+surfacevectorfield\+\_\+multiply}} (alpha, v1)
+\item 
+type(surfacevectorfield) function \mbox{\hyperlink{namespacetensor__fields_a43f41ad51d5df47315357c52a242a0bd}{tensor\+\_\+fields\+::scalarfield\+\_\+surfacevectorfield\+\_\+multiply}} (alpha, v1)
+\item 
+type(volscalarfield) function \mbox{\hyperlink{namespacetensor__fields_addad601d6313567fd4d27bd382c93e78}{tensor\+\_\+fields\+::volscalarfield\+\_\+volscalarfield\+\_\+divide}} (s1, s2)
+\item 
+type(volscalarfield) function \mbox{\hyperlink{namespacetensor__fields_a2010ae43bd7eb1a352d973363e05d0a0}{tensor\+\_\+fields\+::trace\+\_\+rank2\+\_\+symmetric\+\_\+tensor}} (T)
+\item 
+type(volscalarfield) function \mbox{\hyperlink{namespacetensor__fields_afaf336102bcc1d86d4fc45b6b5746b1d}{tensor\+\_\+fields\+::trace\+\_\+rank2\+\_\+tensor}} (T)
+\item 
+type(volscalarfield) function \mbox{\hyperlink{namespacetensor__fields_a7a41234322928751a58f8e7608daf182}{tensor\+\_\+fields\+::square\+\_\+scalar\+\_\+field}} (s1)
+\item 
+type(voltensorfield) function \mbox{\hyperlink{namespacetensor__fields_a0d327bac0e068c18db5633d2f7d9436f}{tensor\+\_\+fields\+::square\+\_\+rank2\+\_\+tensor}} (T1)
+\item 
+type(volsymmetrictensorfield) function \mbox{\hyperlink{namespacetensor__fields_a88f4584bcf3ef10fc1b6d8198f0425b6}{tensor\+\_\+fields\+::square\+\_\+rank2\+\_\+symmetric\+\_\+tensor}} (T1)
+\item 
+type(volscalarfield) function \mbox{\hyperlink{namespacetensor__fields_ae931ff64fe2027c91a7665d700857114}{tensor\+\_\+fields\+::power\+\_\+volscalarfield}} (s, p)
+\item 
+type(volvectorfield) function \mbox{\hyperlink{namespacetensor__fields_a704320ba06a4b9ae131ddca02b13ed08}{tensor\+\_\+fields\+::power\+\_\+volvectorfield}} (v, p)
+\item 
+type(voltensorfield) function \mbox{\hyperlink{namespacetensor__fields_a4a330b59b6e4a4d26d40704ce1c1d2d0}{tensor\+\_\+fields\+::power\+\_\+voltensorfield}} (T, p)
+\item 
+type(volsymmetrictensorfield) function \mbox{\hyperlink{namespacetensor__fields_a2a5ec9703e148f8ca730d7b3b116ce74}{tensor\+\_\+fields\+::power\+\_\+volsymmetrictensorfield}} (T, p)
+\item 
+type(volscalarfield) function \mbox{\hyperlink{namespacetensor__fields_a9c2c637b39fcbd72d33bd2e08960d9a9}{tensor\+\_\+fields\+::determinant\+\_\+rank2\+\_\+symmetric\+\_\+tensor}} (T)
+\item 
+type(volscalarfield) function \mbox{\hyperlink{namespacetensor__fields_ad87ae48f028d1e670c17487ba6fbe24e}{tensor\+\_\+fields\+::determinant\+\_\+rank2\+\_\+tensor}} (T)
+\item 
+type(volvectorfield) function \mbox{\hyperlink{namespacetensor__fields_a8101b88f322c248436c97f3f5a0e3996}{tensor\+\_\+fields\+::diagonal}} (T)
+\item 
+type(volvectorfield) function \mbox{\hyperlink{namespacetensor__fields_a59d6ea682885cb4acb8d46129bc9d92c}{tensor\+\_\+fields\+::hodge\+\_\+dual}} (T)
+\item 
+type(voltensorfield) function \mbox{\hyperlink{namespacetensor__fields_aac106b13779602c59f2e77ffd8b70455}{tensor\+\_\+fields\+::eye}} (num)
+\item 
+type(voltensorfield) function \mbox{\hyperlink{namespacetensor__fields_a99a7a8591ef7c075380d8aec3f9de538}{tensor\+\_\+fields\+::symm}} (T)
+\item 
+type(voltensorfield) function \mbox{\hyperlink{namespacetensor__fields_ab1e0526ce8c32bd6c77a1984a7681c8c}{tensor\+\_\+fields\+::skew}} (T)
+\item 
+type(volvectorfield) function \mbox{\hyperlink{namespacetensor__fields_afef5181a7d5bf8841925c4a50f06374b}{tensor\+\_\+fields\+::curl}} (D)
+\item 
+type(voltensorfield) function \mbox{\hyperlink{namespacetensor__fields_a8ced28c786e906bc2a46c7c5542a71e7}{tensor\+\_\+fields\+::deviatoric\+\_\+part\+\_\+rank2\+\_\+tensor}} (T)
+\item 
+type(voltensorfield) function \mbox{\hyperlink{namespacetensor__fields_afdad221dcd31f2240f916422f7042b9d}{tensor\+\_\+fields\+::deviatoric\+\_\+part\+\_\+rank2\+\_\+tensor\+\_\+23}} (T)
+\item 
+type(voltensorfield) function \mbox{\hyperlink{namespacetensor__fields_adaa0c312edb1949af3dbe083926737b5}{tensor\+\_\+fields\+::hydrostatic\+\_\+part\+\_\+rank2\+\_\+tensor}} (T)
+\item 
+type(volscalarfield) function \mbox{\hyperlink{namespacetensor__fields_ada1cb7ae9d93a4b6bb1357f73c8382b3}{tensor\+\_\+fields\+::magsqrtensorfield}} (T)
+\item 
+type(volscalarfield) function \mbox{\hyperlink{namespacetensor__fields_a160febf9523d975fad84efa927893867}{tensor\+\_\+fields\+::magsqrsymmetrictensorfield}} (S)
+\item 
+type(volscalarfield) function \mbox{\hyperlink{namespacetensor__fields_ad52a00a818947e8c84864d411de35a4d}{tensor\+\_\+fields\+::magtensorfield}} (T)
+\item 
+type(volscalarfield) function \mbox{\hyperlink{namespacetensor__fields_ad669b38b94e143e2c0d140ee89cfb638}{tensor\+\_\+fields\+::magsymmetrictensorfield}} (S)
 \end{DoxyCompactItemize}

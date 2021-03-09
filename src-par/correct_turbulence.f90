@@ -5,6 +5,7 @@ subroutine correct_turbulence()
   use k_omega_sst
   use k_eqn_eddy
   use spalart_allmaras
+  use wale_sgs
   use gradients
   use variables, only: u,v,w,dudxi,dvdxi,dwdxi
   implicit none
@@ -39,6 +40,9 @@ subroutine correct_turbulence()
 
     case (6)
       call correct_turbulence_k_eqn_eddy()
+
+    case (7)
+      call modify_viscosity_wale_sgs
 
     case default
       

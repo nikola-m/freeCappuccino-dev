@@ -14,8 +14,12 @@ To be able to write Paraview files, you need to have vtk template for this geome
 
 To run this case do the following:
 
-- Unpack zip archives with mesh (polyMesh.zip), vtk mesh file (vtk.zip), and initial and boundary conditions (0.zip).
+* Unpack zip archives with mesh (polyMesh.zip), vtk mesh file (vtk.zip), and initial and boundary conditions (0.zip).
 
-- Provided that you have cappuccino code on your path execute 'run' script from command line.
+* Provided that you have cappuccino code on your path execute 'run' script from command line.
 
-- Open solution files located in vtk folder in Paraview.
+* If you have gnuplot, run `gnuplot plotResiduals` from command line to plot the residuals.
+
+* Open solution files located in vtk folder in Paraview.
+
+__A FEW NOTES:__ In our settings in _input.nml_ file we have enalbed solution of momentum and pressure fields, which is solution setup for laminar viscous flow. Turbulence model is set to _none_  by default. Simulation is stady state by default but we show whole block starting with LTRANSIENT option just to be clar. Solution method is SIMPLE. Number of steps for steady state is controled either by NUMSTEP or by MAXIT. Simulation stops when normalised residuals reach level below _tolerance_ set in the _input.nml_ file.

@@ -93,47 +93,6 @@ subroutine calcuvwp
   sp = 0.0_dp
 
 
-!@# Odmah ubacujemo na glavnu dijagonalu, nece nam trebati ovo.
-
-  ! ! For u  sp => spu; for v  sp => spv; for w  sp => sp 
-  ! spu = 0.0_dp
-  ! spv = 0.0_dp
-
-
-!@# Extrapolacija, ne teba nam sada?
-
-  ! if ( piso .and. bdf ) then
-
-  !   ! If you want to use midpoint timestepping method to improve piso to 2nd order,
-  !   ! extrapolate using Adams-Abshfort method extrapolation to time interval midpoint, t^n+1/2
-  !   ! flmass = 1.5_dp*flmasso - 0.5_dp*flmassoo
-  !   ! p = 1.5_dp*po - 0.5_dp*poo
-  !   ! u = 1.5_dp*uo - 0.5_dp*uoo
-  !   ! v = 1.5_dp*vo - 0.5_dp*voo
-  !   ! w = 1.5_dp*wo - 0.5_dp*woo
-
-  ! ! For consistent 2nd order PISO algorithm.
-  ! ! Estimate mass flux, velocity components and pressure for the current timestep 
-  ! ! using 2nd order Adams-Bashfort extrapolation from previous two time steps.
-  ! elseif ( piso .and. bdf2 ) then 
-
-  !   flmass = 2*flmasso - flmassoo
-  !   p = 2*po - poo
-  !   u = 2*uo - uoo
-  !   v = 2*vo - voo
-  !   w = 2*wo - woo
-
-  ! elseif ( piso .and. bdf3 ) then 
-
-  !   ! Extrapolation from three time levels to n+1 time level
-  !   flmass = 3*flmasso - 8*flmassoo + 6*flmassooo
-  !   p = 3*po - 8*poo + 6*pooo
-  !   u = 3*uo - 8*uoo + 6*uooo
-  !   v = 3*vo - 8*voo + 6*vooo
-  !   w = 3*wo - 8*woo + 6*wooo
-
-  ! endif
-
   ! Update velocity at boudary and update velocity gradients: 
   call updateVelocityAtBoundary
 
@@ -281,15 +240,6 @@ subroutine calcuvwp
     endif
 
   end do
-
-  
-  ! Calculate Reynols stresses explicitly and additional asm terms:
-  !
-  ! if(lturb .and. lasm) then
-  !   call calcstress
-  !   call Additional_algebraic_stress_terms
-  ! end if
-
 
 
 !  __             __

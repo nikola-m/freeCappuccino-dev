@@ -1,19 +1,5 @@
 var searchData=
 [
-  ['gauss',['gauss',['../classgradients.html#ac41921915930ac80ed01373fd760ac51',1,'gradients']]],
-  ['gds',['gds',['../classparameters.html#afbde368408f6a43813af0e49d787df6e',1,'parameters']]],
-  ['gen',['gen',['../classvariables.html#a7fba6e5562a27808947cabbcbf416a37',1,'variables']]],
-  ['global',['global',['../continuityErrors_8h.html#a998a60dc8795d9b0ca98843235246d82',1,'continuityErrors.h']]],
-  ['globalconterr',['globalconterr',['../classparameters.html#a120613bfe457f5df8d64925d9dfc0980',1,'parameters']]],
-  ['globfaces',['globfaces',['../classgeometry.html#ad1e038213bb054d1e90870329c685f60',1,'geometry']]],
-  ['glocells',['glocells',['../classgeometry.html#a0512cb49b2ee4ae8aa67fe7b3e9cfa25',1,'geometry']]],
-  ['glofaces',['glofaces',['../classgeometry.html#a11e0bee8bca796dfc9673a1652675d95',1,'geometry']]],
-  ['gloifaces',['gloifaces',['../classgeometry.html#aa0b3019664f1e20f95c082706fbf4bf6',1,'geometry']]],
-  ['glonodes',['glonodes',['../classgeometry.html#aa32cd7bcc888322cd384ba928fbe0fd8',1,'geometry']]],
-  ['gradpcmf',['gradpcmf',['../classparameters.html#a5a6b774ca58ebb8cbc128e6110c1307a',1,'parameters']]],
-  ['gravx',['gravx',['../classparameters.html#a08012157e86745800e8e5e8ad3dfb51f',1,'parameters']]],
-  ['gravy',['gravy',['../classparameters.html#a1c4c7a835c45fa35247a54b67df693aa',1,'parameters']]],
-  ['gravz',['gravz',['../classparameters.html#a0eaec95bb976c2d04268f81b448339ad',1,'parameters']]],
-  ['great',['great',['../classparameters.html#a0661d83c6bd642cf4b90d65de20ada6d',1,'parameters']]],
-  ['grid_5ffile',['grid_file',['../classtitle__mod.html#a998c71ccbb4580eb3b5e1bac6ec581d0',1,'title_mod']]]
+  ['h_1363',['h',['../namespacehcoef.html#a0fe90253d788ab22a12015d18132d8bf',1,'hcoef']]],
+  ['hpr_1364',['hpr',['../namespacehcoef.html#aac65983f64ce20a3ddb35933d35cb78b',1,'hcoef']]]
 ];

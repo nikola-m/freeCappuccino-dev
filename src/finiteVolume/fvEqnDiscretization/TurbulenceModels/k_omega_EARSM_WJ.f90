@@ -281,7 +281,7 @@ subroutine calcsc(Fi,dFidxi,ifi)
     !=====================================
     ! VOLUME SOURCE TERMS: buoyancy
     !=====================================
-      if(lcal(ien).and.lbuoy) then
+      if(lbuoy) then
         
         ! When bouy activated we need the freshest utt,vtt,wtt - turbulent heat fluxes
         call calcheatflux 
@@ -437,7 +437,7 @@ subroutine calcsc(Fi,dFidxi,ifi)
     !=====================================
     ! VOLUME SOURCE TERMS: Buoyancy
     !=====================================
-      if(lcal(ien).and.lbuoy) then
+      if(lbuoy) then
         const=c3*den(inp)*ed(inp)*vol(inp)/(te(inp)+small)
 
         if(boussinesq) then

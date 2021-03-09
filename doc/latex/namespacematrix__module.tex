@@ -1,0 +1,210 @@
+\hypertarget{namespacematrix__module}{}\doxysection{matrix\+\_\+module Module Reference}
+\label{namespacematrix__module}\index{matrix\_module@{matrix\_module}}
+\doxysubsection*{Functions/\+Subroutines}
+\begin{DoxyCompactItemize}
+\item 
+real(dp) function, dimension(n, n) \mbox{\hyperlink{namespacematrix__module_a5d18b03838a0ba41d729284188c492cb}{eye}} (n)
+\item 
+real(dp) function, dimension(n, n) \mbox{\hyperlink{namespacematrix__module_af69a49d66c94be6592dcb58fca86bdf3}{matmult}} (a, b, n)
+\item 
+real(dp) function, dimension(m, n) \mbox{\hyperlink{namespacematrix__module_a8bf812de99eb57e458068660b1f18489}{rank\+\_\+one\+\_\+update}} (A, m, n, y, x, alpha)
+\item 
+real(dp) function, dimension(m, m) \mbox{\hyperlink{namespacematrix__module_ad5e55e5a4eb29b1279b288d6be4ceaf1}{matrix\+\_\+update}} (c, m, n, a, b, alpha)
+\item 
+real(dp) function \mbox{\hyperlink{namespacematrix__module_a26938657b164b2fef543f9bf9970e221}{det}} (a, n)
+\item 
+real(dp) function, dimension(3, 3) \mbox{\hyperlink{namespacematrix__module_a6385f30e4a8d81b4c1b56b4820ed3062}{inv}} (a)
+\item 
+real(dp) function, dimension(n) \mbox{\hyperlink{namespacematrix__module_a4d090697eec2099b42a72fe48550a55e}{solve}} (A, b, n)
+\item 
+real(dp) function, dimension(3) \mbox{\hyperlink{namespacematrix__module_aad2aea6b95c3ce754cc05060dabad632}{trace}} (a)
+\item 
+real(dp) function, dimension(n) \mbox{\hyperlink{namespacematrix__module_a804a60dba1b7d188e9cb4e7e8eddaa73}{solve\+\_\+leastsq}} (A, b, m, n)
+\item 
+real(dp) function, dimension(n) \mbox{\hyperlink{namespacematrix__module_a27ddd157e0994bf1ac433571b5247f42}{solve\+\_\+leastsq\+\_\+cholesky}} (A, b, m, n)
+\item 
+real(dp) function, dimension(n) \mbox{\hyperlink{namespacematrix__module_aaccd5f8cce3be8bdb46a6b915b72b5f5}{solve\+\_\+leastsq\+\_\+mgs}} (A, b, m, n)
+\item 
+real(dp) function, dimension(n) \mbox{\hyperlink{namespacematrix__module_a6d1f6ce16d73eb003d5d4254a5c57f86}{solve\+\_\+lstsq\+\_\+householder}} (A, b, m, n)
+\item 
+subroutine \mbox{\hyperlink{namespacematrix__module_ac88cca09a0310ee3f4f32c86f6aac9e6}{householder\+\_\+qr}} (a, m, n, q, r)
+\item 
+subroutine \mbox{\hyperlink{namespacematrix__module_a5500c11609ac1e842fde5f050c9c031b}{mgs\+\_\+qr}} (a, m, n, q, r)
+\item 
+real(dp) function \mbox{\hyperlink{namespacematrix__module_af5657071f15da28fea495d7644a36398}{pnorm}} (w, p)
+\item 
+subroutine \mbox{\hyperlink{namespacematrix__module_ae47e43dd7d7b9e43d81bf6128af52b02}{rsolve}} (a, n, b, x)
+\item 
+subroutine \mbox{\hyperlink{namespacematrix__module_addfed84dcfeb9340921b94a7952f3c39}{cholesky}} (a, n, l)
+\item 
+real(dp) function, dimension(n) \mbox{\hyperlink{namespacematrix__module_a1f13e0a78a85e9bcfa4c2ec3c94952db}{solve\+\_\+spd\+\_\+cholesky}} (a, n, b)
+\item 
+real(dp) function, dimension(n) \mbox{\hyperlink{namespacematrix__module_a18bdcc900cdfd05db1978a8ab2d532a2}{solve\+\_\+already\+\_\+choleskyed}} (l, n, b)
+\item 
+subroutine \mbox{\hyperlink{namespacematrix__module_a6125425b4483c40b89354347000cbcd1}{solve\+\_\+cholesky}} (a, n, b, x)
+\item 
+real(dp) function, dimension(n, n) \mbox{\hyperlink{namespacematrix__module_abc2c427f09eeadbff74f7f2bab79d950}{frobenius\+\_\+product}} (a, b, n)
+\item 
+subroutine \mbox{\hyperlink{namespacematrix__module_a0aed5ffb6e05b3425093d49b7b08a084}{eig}} (a, n, lam, v)
+\item 
+real(dp) function \mbox{\hyperlink{namespacematrix__module_a46361b935590ba828408a945af33fae0}{norm2\+\_\+offdiag}} (a, n)
+\end{DoxyCompactItemize}
+
+
+\doxysubsection{Function/\+Subroutine Documentation}
+\mbox{\Hypertarget{namespacematrix__module_addfed84dcfeb9340921b94a7952f3c39}\label{namespacematrix__module_addfed84dcfeb9340921b94a7952f3c39}} 
+\index{matrix\_module@{matrix\_module}!cholesky@{cholesky}}
+\index{cholesky@{cholesky}!matrix\_module@{matrix\_module}}
+\doxysubsubsection{\texorpdfstring{cholesky()}{cholesky()}}
+{\footnotesize\ttfamily subroutine matrix\+\_\+module\+::cholesky (\begin{DoxyParamCaption}\item[{real(dp), dimension(n,n), intent(in)}]{a,  }\item[{integer, intent(in)}]{n,  }\item[{real(dp), dimension(n,n), intent(out)}]{l }\end{DoxyParamCaption})}
+
+\mbox{\Hypertarget{namespacematrix__module_a26938657b164b2fef543f9bf9970e221}\label{namespacematrix__module_a26938657b164b2fef543f9bf9970e221}} 
+\index{matrix\_module@{matrix\_module}!det@{det}}
+\index{det@{det}!matrix\_module@{matrix\_module}}
+\doxysubsubsection{\texorpdfstring{det()}{det()}}
+{\footnotesize\ttfamily real(dp) function matrix\+\_\+module\+::det (\begin{DoxyParamCaption}\item[{real(dp), dimension(n,n), intent(in)}]{a,  }\item[{integer, intent(in)}]{n }\end{DoxyParamCaption})}
+
+\mbox{\Hypertarget{namespacematrix__module_a0aed5ffb6e05b3425093d49b7b08a084}\label{namespacematrix__module_a0aed5ffb6e05b3425093d49b7b08a084}} 
+\index{matrix\_module@{matrix\_module}!eig@{eig}}
+\index{eig@{eig}!matrix\_module@{matrix\_module}}
+\doxysubsubsection{\texorpdfstring{eig()}{eig()}}
+{\footnotesize\ttfamily subroutine matrix\+\_\+module\+::eig (\begin{DoxyParamCaption}\item[{real(dp), dimension(n,n), intent(in)}]{a,  }\item[{integer, intent(in)}]{n,  }\item[{real(dp), dimension(n,n)}]{lam,  }\item[{real(dp), dimension(n,n)}]{v }\end{DoxyParamCaption})}
+
+Here is the call graph for this function\+:
+% FIG 0
+\mbox{\Hypertarget{namespacematrix__module_a5d18b03838a0ba41d729284188c492cb}\label{namespacematrix__module_a5d18b03838a0ba41d729284188c492cb}} 
+\index{matrix\_module@{matrix\_module}!eye@{eye}}
+\index{eye@{eye}!matrix\_module@{matrix\_module}}
+\doxysubsubsection{\texorpdfstring{eye()}{eye()}}
+{\footnotesize\ttfamily real(dp) function, dimension(n,n) matrix\+\_\+module\+::eye (\begin{DoxyParamCaption}\item[{integer, intent(in)}]{n }\end{DoxyParamCaption})}
+
+\mbox{\Hypertarget{namespacematrix__module_abc2c427f09eeadbff74f7f2bab79d950}\label{namespacematrix__module_abc2c427f09eeadbff74f7f2bab79d950}} 
+\index{matrix\_module@{matrix\_module}!frobenius\_product@{frobenius\_product}}
+\index{frobenius\_product@{frobenius\_product}!matrix\_module@{matrix\_module}}
+\doxysubsubsection{\texorpdfstring{frobenius\_product()}{frobenius\_product()}}
+{\footnotesize\ttfamily real(dp) function, dimension(n,n) matrix\+\_\+module\+::frobenius\+\_\+product (\begin{DoxyParamCaption}\item[{real(dp), dimension(n,n), intent(in)}]{a,  }\item[{real(dp), dimension(n,n), intent(in)}]{b,  }\item[{integer, intent(in)}]{n }\end{DoxyParamCaption})}
+
+\mbox{\Hypertarget{namespacematrix__module_ac88cca09a0310ee3f4f32c86f6aac9e6}\label{namespacematrix__module_ac88cca09a0310ee3f4f32c86f6aac9e6}} 
+\index{matrix\_module@{matrix\_module}!householder\_qr@{householder\_qr}}
+\index{householder\_qr@{householder\_qr}!matrix\_module@{matrix\_module}}
+\doxysubsubsection{\texorpdfstring{householder\_qr()}{householder\_qr()}}
+{\footnotesize\ttfamily subroutine matrix\+\_\+module\+::householder\+\_\+qr (\begin{DoxyParamCaption}\item[{real(dp), dimension(m,n), intent(in)}]{a,  }\item[{integer}]{m,  }\item[{integer}]{n,  }\item[{real(dp), dimension(m,m), intent(inout)}]{q,  }\item[{real(dp), dimension(m,n), intent(inout)}]{r }\end{DoxyParamCaption})}
+
+Here is the call graph for this function\+:
+% FIG 1
+\mbox{\Hypertarget{namespacematrix__module_a6385f30e4a8d81b4c1b56b4820ed3062}\label{namespacematrix__module_a6385f30e4a8d81b4c1b56b4820ed3062}} 
+\index{matrix\_module@{matrix\_module}!inv@{inv}}
+\index{inv@{inv}!matrix\_module@{matrix\_module}}
+\doxysubsubsection{\texorpdfstring{inv()}{inv()}}
+{\footnotesize\ttfamily real(dp) function, dimension(3,3) matrix\+\_\+module\+::inv (\begin{DoxyParamCaption}\item[{real(dp), dimension(3,3), intent(in)}]{a }\end{DoxyParamCaption})}
+
+\mbox{\Hypertarget{namespacematrix__module_af69a49d66c94be6592dcb58fca86bdf3}\label{namespacematrix__module_af69a49d66c94be6592dcb58fca86bdf3}} 
+\index{matrix\_module@{matrix\_module}!matmult@{matmult}}
+\index{matmult@{matmult}!matrix\_module@{matrix\_module}}
+\doxysubsubsection{\texorpdfstring{matmult()}{matmult()}}
+{\footnotesize\ttfamily real(dp) function, dimension(n,n) matrix\+\_\+module\+::matmult (\begin{DoxyParamCaption}\item[{real(dp), dimension(n,n), intent(in)}]{a,  }\item[{real(dp), dimension(n,n), intent(in)}]{b,  }\item[{integer}]{n }\end{DoxyParamCaption})}
+
+\mbox{\Hypertarget{namespacematrix__module_ad5e55e5a4eb29b1279b288d6be4ceaf1}\label{namespacematrix__module_ad5e55e5a4eb29b1279b288d6be4ceaf1}} 
+\index{matrix\_module@{matrix\_module}!matrix\_update@{matrix\_update}}
+\index{matrix\_update@{matrix\_update}!matrix\_module@{matrix\_module}}
+\doxysubsubsection{\texorpdfstring{matrix\_update()}{matrix\_update()}}
+{\footnotesize\ttfamily real(dp) function, dimension(m,m) matrix\+\_\+module\+::matrix\+\_\+update (\begin{DoxyParamCaption}\item[{real(dp), dimension(m,m), intent(in)}]{c,  }\item[{integer, intent(in)}]{m,  }\item[{integer, intent(in)}]{n,  }\item[{real(dp), dimension(m,n), intent(in)}]{a,  }\item[{real(dp), dimension(n,m), intent(in)}]{b,  }\item[{real(dp), intent(in)}]{alpha }\end{DoxyParamCaption})}
+
+\mbox{\Hypertarget{namespacematrix__module_a5500c11609ac1e842fde5f050c9c031b}\label{namespacematrix__module_a5500c11609ac1e842fde5f050c9c031b}} 
+\index{matrix\_module@{matrix\_module}!mgs\_qr@{mgs\_qr}}
+\index{mgs\_qr@{mgs\_qr}!matrix\_module@{matrix\_module}}
+\doxysubsubsection{\texorpdfstring{mgs\_qr()}{mgs\_qr()}}
+{\footnotesize\ttfamily subroutine matrix\+\_\+module\+::mgs\+\_\+qr (\begin{DoxyParamCaption}\item[{real(dp), dimension(m,n), intent(in)}]{a,  }\item[{integer, intent(in)}]{m,  }\item[{integer, intent(in)}]{n,  }\item[{real(dp), dimension(m,n), intent(inout)}]{q,  }\item[{real(dp), dimension(n,n), intent(inout)}]{r }\end{DoxyParamCaption})}
+
+\mbox{\Hypertarget{namespacematrix__module_a46361b935590ba828408a945af33fae0}\label{namespacematrix__module_a46361b935590ba828408a945af33fae0}} 
+\index{matrix\_module@{matrix\_module}!norm2\_offdiag@{norm2\_offdiag}}
+\index{norm2\_offdiag@{norm2\_offdiag}!matrix\_module@{matrix\_module}}
+\doxysubsubsection{\texorpdfstring{norm2\_offdiag()}{norm2\_offdiag()}}
+{\footnotesize\ttfamily real(dp) function matrix\+\_\+module\+::norm2\+\_\+offdiag (\begin{DoxyParamCaption}\item[{real(dp), dimension(n,n), intent(in)}]{a,  }\item[{integer, intent(in)}]{n }\end{DoxyParamCaption})}
+
+\mbox{\Hypertarget{namespacematrix__module_af5657071f15da28fea495d7644a36398}\label{namespacematrix__module_af5657071f15da28fea495d7644a36398}} 
+\index{matrix\_module@{matrix\_module}!pnorm@{pnorm}}
+\index{pnorm@{pnorm}!matrix\_module@{matrix\_module}}
+\doxysubsubsection{\texorpdfstring{pnorm()}{pnorm()}}
+{\footnotesize\ttfamily real(dp) function matrix\+\_\+module\+::pnorm (\begin{DoxyParamCaption}\item[{real(dp), dimension(\+:), intent(in)}]{w,  }\item[{integer}]{p }\end{DoxyParamCaption})}
+
+\mbox{\Hypertarget{namespacematrix__module_a8bf812de99eb57e458068660b1f18489}\label{namespacematrix__module_a8bf812de99eb57e458068660b1f18489}} 
+\index{matrix\_module@{matrix\_module}!rank\_one\_update@{rank\_one\_update}}
+\index{rank\_one\_update@{rank\_one\_update}!matrix\_module@{matrix\_module}}
+\doxysubsubsection{\texorpdfstring{rank\_one\_update()}{rank\_one\_update()}}
+{\footnotesize\ttfamily real(dp) function, dimension(m,n) matrix\+\_\+module\+::rank\+\_\+one\+\_\+update (\begin{DoxyParamCaption}\item[{real(dp), dimension(m,n), intent(in)}]{A,  }\item[{integer, intent(in)}]{m,  }\item[{integer, intent(in)}]{n,  }\item[{real(dp), dimension(m), intent(in)}]{y,  }\item[{real(dp), dimension(n), intent(in)}]{x,  }\item[{real(dp), intent(in)}]{alpha }\end{DoxyParamCaption})}
+
+\mbox{\Hypertarget{namespacematrix__module_ae47e43dd7d7b9e43d81bf6128af52b02}\label{namespacematrix__module_ae47e43dd7d7b9e43d81bf6128af52b02}} 
+\index{matrix\_module@{matrix\_module}!rsolve@{rsolve}}
+\index{rsolve@{rsolve}!matrix\_module@{matrix\_module}}
+\doxysubsubsection{\texorpdfstring{rsolve()}{rsolve()}}
+{\footnotesize\ttfamily subroutine matrix\+\_\+module\+::rsolve (\begin{DoxyParamCaption}\item[{real(dp), dimension(n,n), intent(in)}]{a,  }\item[{integer}]{n,  }\item[{real(dp), dimension(n), intent(in)}]{b,  }\item[{real(dp), dimension(n), intent(out)}]{x }\end{DoxyParamCaption})}
+
+\mbox{\Hypertarget{namespacematrix__module_a4d090697eec2099b42a72fe48550a55e}\label{namespacematrix__module_a4d090697eec2099b42a72fe48550a55e}} 
+\index{matrix\_module@{matrix\_module}!solve@{solve}}
+\index{solve@{solve}!matrix\_module@{matrix\_module}}
+\doxysubsubsection{\texorpdfstring{solve()}{solve()}}
+{\footnotesize\ttfamily real(dp) function, dimension(n) matrix\+\_\+module\+::solve (\begin{DoxyParamCaption}\item[{real(dp), dimension(n,n), intent(in)}]{A,  }\item[{real(dp), dimension(n), intent(in)}]{b,  }\item[{integer, intent(in)}]{n }\end{DoxyParamCaption})}
+
+Here is the call graph for this function\+:
+% FIG 2
+\mbox{\Hypertarget{namespacematrix__module_a18bdcc900cdfd05db1978a8ab2d532a2}\label{namespacematrix__module_a18bdcc900cdfd05db1978a8ab2d532a2}} 
+\index{matrix\_module@{matrix\_module}!solve\_already\_choleskyed@{solve\_already\_choleskyed}}
+\index{solve\_already\_choleskyed@{solve\_already\_choleskyed}!matrix\_module@{matrix\_module}}
+\doxysubsubsection{\texorpdfstring{solve\_already\_choleskyed()}{solve\_already\_choleskyed()}}
+{\footnotesize\ttfamily real(dp) function, dimension(n) matrix\+\_\+module\+::solve\+\_\+already\+\_\+choleskyed (\begin{DoxyParamCaption}\item[{real(dp), dimension(n,n), intent(in)}]{l,  }\item[{integer, intent(in)}]{n,  }\item[{real(dp), dimension(n), intent(in)}]{b }\end{DoxyParamCaption})}
+
+\mbox{\Hypertarget{namespacematrix__module_a6125425b4483c40b89354347000cbcd1}\label{namespacematrix__module_a6125425b4483c40b89354347000cbcd1}} 
+\index{matrix\_module@{matrix\_module}!solve\_cholesky@{solve\_cholesky}}
+\index{solve\_cholesky@{solve\_cholesky}!matrix\_module@{matrix\_module}}
+\doxysubsubsection{\texorpdfstring{solve\_cholesky()}{solve\_cholesky()}}
+{\footnotesize\ttfamily subroutine matrix\+\_\+module\+::solve\+\_\+cholesky (\begin{DoxyParamCaption}\item[{real(dp), dimension(n,n), intent(in)}]{a,  }\item[{integer, intent(in)}]{n,  }\item[{real(dp), dimension(n), intent(in)}]{b,  }\item[{real(dp), dimension(n), intent(out)}]{x }\end{DoxyParamCaption})}
+
+Here is the call graph for this function\+:
+% FIG 3
+\mbox{\Hypertarget{namespacematrix__module_a804a60dba1b7d188e9cb4e7e8eddaa73}\label{namespacematrix__module_a804a60dba1b7d188e9cb4e7e8eddaa73}} 
+\index{matrix\_module@{matrix\_module}!solve\_leastsq@{solve\_leastsq}}
+\index{solve\_leastsq@{solve\_leastsq}!matrix\_module@{matrix\_module}}
+\doxysubsubsection{\texorpdfstring{solve\_leastsq()}{solve\_leastsq()}}
+{\footnotesize\ttfamily real(dp) function, dimension(n) matrix\+\_\+module\+::solve\+\_\+leastsq (\begin{DoxyParamCaption}\item[{real(dp), dimension(m,n), intent(in)}]{A,  }\item[{real(dp), dimension(m), intent(in)}]{b,  }\item[{integer, intent(in)}]{m,  }\item[{integer, intent(in)}]{n }\end{DoxyParamCaption})}
+
+Here is the call graph for this function\+:
+% FIG 4
+\mbox{\Hypertarget{namespacematrix__module_a27ddd157e0994bf1ac433571b5247f42}\label{namespacematrix__module_a27ddd157e0994bf1ac433571b5247f42}} 
+\index{matrix\_module@{matrix\_module}!solve\_leastsq\_cholesky@{solve\_leastsq\_cholesky}}
+\index{solve\_leastsq\_cholesky@{solve\_leastsq\_cholesky}!matrix\_module@{matrix\_module}}
+\doxysubsubsection{\texorpdfstring{solve\_leastsq\_cholesky()}{solve\_leastsq\_cholesky()}}
+{\footnotesize\ttfamily real(dp) function, dimension(n) matrix\+\_\+module\+::solve\+\_\+leastsq\+\_\+cholesky (\begin{DoxyParamCaption}\item[{real(dp), dimension(m,n), intent(in)}]{A,  }\item[{real(dp), dimension(m), intent(in)}]{b,  }\item[{}]{m,  }\item[{}]{n }\end{DoxyParamCaption})}
+
+Here is the call graph for this function\+:
+% FIG 5
+\mbox{\Hypertarget{namespacematrix__module_aaccd5f8cce3be8bdb46a6b915b72b5f5}\label{namespacematrix__module_aaccd5f8cce3be8bdb46a6b915b72b5f5}} 
+\index{matrix\_module@{matrix\_module}!solve\_leastsq\_mgs@{solve\_leastsq\_mgs}}
+\index{solve\_leastsq\_mgs@{solve\_leastsq\_mgs}!matrix\_module@{matrix\_module}}
+\doxysubsubsection{\texorpdfstring{solve\_leastsq\_mgs()}{solve\_leastsq\_mgs()}}
+{\footnotesize\ttfamily real(dp) function, dimension(n) matrix\+\_\+module\+::solve\+\_\+leastsq\+\_\+mgs (\begin{DoxyParamCaption}\item[{real(dp), dimension(m,n), intent(in)}]{A,  }\item[{real(dp), dimension(m), intent(in)}]{b,  }\item[{}]{m,  }\item[{}]{n }\end{DoxyParamCaption})}
+
+Here is the call graph for this function\+:
+% FIG 6
+\mbox{\Hypertarget{namespacematrix__module_a6d1f6ce16d73eb003d5d4254a5c57f86}\label{namespacematrix__module_a6d1f6ce16d73eb003d5d4254a5c57f86}} 
+\index{matrix\_module@{matrix\_module}!solve\_lstsq\_householder@{solve\_lstsq\_householder}}
+\index{solve\_lstsq\_householder@{solve\_lstsq\_householder}!matrix\_module@{matrix\_module}}
+\doxysubsubsection{\texorpdfstring{solve\_lstsq\_householder()}{solve\_lstsq\_householder()}}
+{\footnotesize\ttfamily real(dp) function, dimension(n) matrix\+\_\+module\+::solve\+\_\+lstsq\+\_\+householder (\begin{DoxyParamCaption}\item[{real(dp), dimension(m,n), intent(in)}]{A,  }\item[{real(dp), dimension(m), intent(in)}]{b,  }\item[{}]{m,  }\item[{}]{n }\end{DoxyParamCaption})}
+
+Here is the call graph for this function\+:
+% FIG 7
+\mbox{\Hypertarget{namespacematrix__module_a1f13e0a78a85e9bcfa4c2ec3c94952db}\label{namespacematrix__module_a1f13e0a78a85e9bcfa4c2ec3c94952db}} 
+\index{matrix\_module@{matrix\_module}!solve\_spd\_cholesky@{solve\_spd\_cholesky}}
+\index{solve\_spd\_cholesky@{solve\_spd\_cholesky}!matrix\_module@{matrix\_module}}
+\doxysubsubsection{\texorpdfstring{solve\_spd\_cholesky()}{solve\_spd\_cholesky()}}
+{\footnotesize\ttfamily real(dp) function, dimension(n) matrix\+\_\+module\+::solve\+\_\+spd\+\_\+cholesky (\begin{DoxyParamCaption}\item[{real(dp), dimension(n,n), intent(in)}]{a,  }\item[{integer, intent(in)}]{n,  }\item[{real(dp), dimension(n), intent(in)}]{b }\end{DoxyParamCaption})}
+
+Here is the call graph for this function\+:
+% FIG 8
+\mbox{\Hypertarget{namespacematrix__module_aad2aea6b95c3ce754cc05060dabad632}\label{namespacematrix__module_aad2aea6b95c3ce754cc05060dabad632}} 
+\index{matrix\_module@{matrix\_module}!trace@{trace}}
+\index{trace@{trace}!matrix\_module@{matrix\_module}}
+\doxysubsubsection{\texorpdfstring{trace()}{trace()}}
+{\footnotesize\ttfamily real(dp) function, dimension(3) matrix\+\_\+module\+::trace (\begin{DoxyParamCaption}\item[{real(dp), dimension(3,3), intent(in)}]{a }\end{DoxyParamCaption})}
+

@@ -1,8 +1,37 @@
-\hypertarget{k__epsilon__std_8f90}{\section{src-\/par/k\-\_\-epsilon\-\_\-std.f90 File Reference}
-\label{k__epsilon__std_8f90}\index{src-\/par/k\-\_\-epsilon\-\_\-std.\-f90@{src-\/par/k\-\_\-epsilon\-\_\-std.\-f90}}
-}
-\subsection*{Data Types}
+\hypertarget{k__epsilon__std_8f90}{}\doxysection{src-\/par/k\+\_\+epsilon\+\_\+std.f90 File Reference}
+\label{k__epsilon__std_8f90}\index{src-\/par/k\_epsilon\_std.f90@{src-\/par/k\_epsilon\_std.f90}}
+\doxysubsection*{Modules}
 \begin{DoxyCompactItemize}
 \item 
-module \hyperlink{classk__epsilon__std}{k\-\_\-epsilon\-\_\-std}
+module \mbox{\hyperlink{namespacek__epsilon__std}{k\+\_\+epsilon\+\_\+std}}
+\end{DoxyCompactItemize}
+\doxysubsection*{Functions/\+Subroutines}
+\begin{DoxyCompactItemize}
+\item 
+subroutine, public \mbox{\hyperlink{namespacek__epsilon__std_aba071419bae84ce7a551ad2786481333}{k\+\_\+epsilon\+\_\+std\+::correct\+\_\+turbulence\+\_\+k\+\_\+epsilon\+\_\+std}} ()
+\item 
+subroutine, public \mbox{\hyperlink{namespacek__epsilon__std_a1f9fe4f360a65f9d3f13c90cc30870b0}{k\+\_\+epsilon\+\_\+std\+::correct\+\_\+turbulence\+\_\+inlet\+\_\+k\+\_\+epsilon\+\_\+std}} ()
+\item 
+subroutine \mbox{\hyperlink{namespacek__epsilon__std_a154b083087bab8a4573406234b03da78}{k\+\_\+epsilon\+\_\+std\+::calcsc}} (Fi, d\+Fidxi, ifi)
+\item 
+subroutine \mbox{\hyperlink{namespacek__epsilon__std_a0a532283b523bd70158bf79b67d8d70e}{k\+\_\+epsilon\+\_\+std\+::modify\+\_\+mu\+\_\+eff}} ()
+\end{DoxyCompactItemize}
+\doxysubsection*{Variables}
+\begin{DoxyCompactItemize}
+\item 
+real(dp), parameter \mbox{\hyperlink{namespacek__epsilon__std_ab8b45782adecbcc30ebf7b73d34a5ebd}{k\+\_\+epsilon\+\_\+std\+::cmu}} = 0.\+09\+\_\+dp
+\item 
+real(dp), parameter \mbox{\hyperlink{namespacek__epsilon__std_a93ff6c4e5f083bc36a60209c171035f8}{k\+\_\+epsilon\+\_\+std\+::c1}} = 1.\+44\+\_\+dp
+\item 
+real(dp), parameter \mbox{\hyperlink{namespacek__epsilon__std_a42ad7b9456f3e4d745d15cbfa7dd05c9}{k\+\_\+epsilon\+\_\+std\+::c2}} = 1.\+92\+\_\+dp
+\item 
+real(dp), parameter \mbox{\hyperlink{namespacek__epsilon__std_a95e68b7b052df6838c3c516dd66cf0c5}{k\+\_\+epsilon\+\_\+std\+::c3}} = 1.\+44\+\_\+dp
+\item 
+real(dp), parameter \mbox{\hyperlink{namespacek__epsilon__std_a6fa05e7c5d25ef3f137a8fbf3523f86e}{k\+\_\+epsilon\+\_\+std\+::sigma\+\_\+k}} = 1.\+0\+\_\+dp
+\item 
+real(dp), parameter \mbox{\hyperlink{namespacek__epsilon__std_a915f88270b38c6960c564a1e62b30a4b}{k\+\_\+epsilon\+\_\+std\+::sigma\+\_\+epsilon}} = 1.\+3\+\_\+dp
+\item 
+real(dp), parameter \mbox{\hyperlink{namespacek__epsilon__std_a5560ee6203c001281958b7335769e6e4}{k\+\_\+epsilon\+\_\+std\+::cmu25}} = sqrt(sqrt(cmu))
+\item 
+real(dp), parameter \mbox{\hyperlink{namespacek__epsilon__std_a385af61636cbfd6cd867898d54c297f1}{k\+\_\+epsilon\+\_\+std\+::cmu75}} = cmu25$\ast$$\ast$3
 \end{DoxyCompactItemize}

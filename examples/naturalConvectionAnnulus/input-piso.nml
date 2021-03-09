@@ -1,0 +1,109 @@
+&input_parameters
+              title = 'Natural convection flow around cylinder'  ! Descriptive name of the case which will be written in monitor file.                      
+        mesh_format = 'nativeMesh'                     ! Mesh format 'nativeMesh' for native polyMesh format or 'foamMesh' for OpenFOAM polyMesh.
+              lread = F                                ! Read restart file - continue simulation from saved state?  True/False.
+              ltest = F                                ! Verbosity for linear solver convergence (for troubleshooting) True/False. 
+        !
+        ! Approximation details for velocity field.
+        !
+              calcU = T             ! Activate Velocity field caculation? True/False.
+               urfU = 1.0 1.0 1.0 ! Under-relaxation factor for momentum eq
+               gdsU = 1.0           ! gamma-deferred correction parameter for velocity
+           cSchemeU = 'boundedLinearUpwind02'         ! Convection scheme for momentun eq
+           dSchemeU = 'skewness'    ! Difussion scheme for momentum eq
+            nrelaxU = 1             ! Integer parameter for difussion scheme - advanced
+           lSolverU = 'bicgstab'    ! Linear algebraic solver for momentum eq
+           maxiterU = 5             ! Max no of iterations for linear U-V-W equations
+            tolAbsU = 1e-13         ! Absolute tolerance level for residual for linear U-V-W equations
+            tolRelU = 1e-6          ! Relative tolerance level for residual for linear U-V-W equations
+        ScndOrderPressIntrp = T     ! Second order (default), or massflow weighted interpolation of pressure to faces.
+        !
+        ! Approximation details for pressure/pressure correction.
+        !
+              calcP = T             ! Activate Pressure field caculation? True/False.
+               urfP = 1.0           ! Under-relaxation factor for pressure
+           lSolverP = 'iccg'        ! Linear algebraic solver for pressure/pressure correction
+           maxiterP = 200            ! Max no of iterations for pressure/pressure correction
+            tolAbsP = 1e-10          ! Absolute tolerance level for residual for pressure/pressure correction
+            tolRelP = 1e-6         ! Relative tolerance level for residual for pressure/pressure correction   
+        !
+        ! Physical model: Heat transfer, Temperature as energy equation, Activation and model details.
+        !
+              calcT = T               ! Activate Temperature equation caculation? True/False.
+              urfT = 1.0                ! Under-relaxation factors.
+              gdsT = 1.0                ! Deferred correction factor.
+              cSchemeT = 'linearUpwind' ! Convection scheme - default is second order upwind.
+              dSchemeT = 'skewness'     ! Difussion scheme, i.e. the method for normal gradient at face skewness/offset.
+              nrelaxT = 0               ! Relaxation parameter non-orthogonal correction for face gradient.
+              lSolverT = 'bicgstab'     ! Linear algebraic solver.
+              maxiterT = 20             ! Max number of iterations in linear solver.
+              tolAbsT = 1e-15           ! Absolute residual level.
+              tolRelT = 0.01            ! Relative drop in residual to exit linear solver.
+              sigt = 0.9                ! sigma_t
+        !
+        ! Physical model: Energy equation, Activation and model details.
+        !
+            calcEn  = F                   ! Activate Energy field caculation? True/False.
+            urfEn = 0.9                   ! Under-relaxation factors.
+            gdsEn = 1.0                   ! Deferred correction factor.
+            cSchemeEn = 'linearUpwind'    ! Convection scheme - default is second order upwind.
+            dSchemeEn = 'skewness'        ! Difussion scheme, i.e. the method for normal gradient at face skewness/offset.
+            nrelaxEn = 0                  ! Relaxation parameter non-orthogonal correction for face gradient.
+            lSolverEn = 'bicgstab'        ! Linear algebraic solver.
+            maxiterEn = 20                ! Max number of iterations in linear solver.
+            tolAbsEn = 1e-15              ! Absolute residual level.
+            tolRelEn = 0.01               ! Relative drop in residual to exit linear solver.
+            sigtEn = 0.9                  ! sigma_en
+            solveTotalEnergy = .True.     !@ What we solve here - default is total energy, change it 
+            solveInternalEnergy = .False. !@ in input.nml file.
+            solveEnthalpy = .False.       !@
+            addViscDiss = .False.         ! Add viscous dissipation term? T/F
+        !
+        ! Physical model: Buoyancy 
+        !
+              lbuoy = T                     !g Buoyancy activated True/False
+         Boussinesq = T                     !g Bousinesq approximation for buoyancy
+               tref = 300.0                 ! Reference temperature for buoyant flows
+              gravx = -9.81                 !g Three components of gravity vector
+              gravy = 0.0                   !g -
+              gravz = 0.0                   !g -
+        !
+        ! Definition of physical properties of fluid.
+        !      
+             densit = 1.0                   ! Fluid density [kg/m3]
+             viscos = 1.0e-3                ! Molecular dynamic viscosity [Pa.s]       
+              pranl = 1.0                  ! Prandtl coefficient for specific fluid
+               beta = 1e-3                  ! Thermal expansion coefficient
+        !
+        ! Unsteady simulation
+        !    
+         ltransient = T           !% |Unsteady simulation True/False and chose ONE algorithm  below
+                bdf = T           !% |Backward-Euler; First-Order Implicit, or...
+               bdf2 = f           !% |Second-Order Backward Euler; Second-Order Implicit, or...
+               bdf3 = f           !% |Third-order backard, or...
+                 CN = f           !% |Crank-Nicolson.
+        !
+        ! Numerical approximation: Gradient approximation and limiting
+        !
+              lstsq = F           !@ |Gradient approximation, chose ONE: Unweighted Least-Square gradient approximation, or...
+           lstsq_qr = F           !@ |Least square gradients based on thin QR decomposition, or...
+           lstsq_dm = F           !@ |Distance-square weighted version of Least-Square Gradient, or...
+              gauss = T           !@ |Cell based Gauss gradient with simple linear interpolation.
+            limiter = 'none'      ! Gradient limiter - default for all gradients
+        !
+        ! Solution method: pressure-velocity coupling
+        !    
+             SIMPLE = F       !# |Pressure-velocity coupling method - SIMPLE, or...
+               PISO = T       !# |Pressure-velocity coupling method - PISO.
+              ncorr = 2       ! Number of PISO corrections - only relevant for PISO.
+              npcor = 1       ! Number of iterations for pressure/pressure correction equation - Number of Nonorthogonal corrections.  
+           pRefCell = 1       ! Reference cell for setting pressure level (since we have pure Neumann problem)
+          tolerance = 1e-5    ! Desired level of convergence for SIMPLE iterations.
+        !
+        ! Simulation run details
+        !
+            numstep = 3000     ! Total number of timesteps.                   
+           timestep = 0.5      ! Timestep size  - also known as dt.
+             nzapis = 20      ! Program writes output files every NZAPIS timesteps.
+              maxit = 1        ! Number of iterations in SIMPLE/PISO sequential equation solution loop. 
+/

@@ -16,9 +16,9 @@ module periodicity
 
   implicit none
 
-  integer, parameter :: procSender   = 3 ! Sending process
+  integer, parameter :: procSender   = 1 ! Sending process
   integer, parameter :: procReceiver = 0 ! Receiving process
-  integer, parameter :: asize = 27825 !14905 !21825  ! Number of faces in section, change for every case.
+  integer, parameter :: asize = 14905    ! Number of faces in section, change for every case.
   integer, dimension(:), allocatable :: mappedIndx
 
   private
@@ -97,6 +97,75 @@ subroutine face_mapping
 
     do ib=1,numBoundaries    
       if ( bctype(ib) == 'inlet' ) then
+        do i=1,nfaces(ib)
+          iface = startFace(ib) + i
+!
+! OK sad smo kod tog nekog fejsa, treba da vidimo koji mu je poslati podatak 'predodredjen'
+! u tom smilsu da trazimo neku distancu po xf i yf i kada nadjemo poklapanje taj je indeks 
+!
+          mindist = 1e+30
+          indx = 0
+          do itemp=1,asize
+            ytemp = buf(      itemp)
+            ztemp = buf(asize+itemp)       
+            dist = abs(yf(iface)-ytemp) + abs(zf(iface)-ztemp)
+            if ( dist < mindist ) then
+             mindist = dist
+             indx  = itemp 
+            endif
+          enddo
+
+          mappedIndx(i) = indx
+
+        end do
+      endif 
+    enddo
+  endif  
+
+
+!#---
+
+  !  syncronization before communication
+  call MPI_Barrier(MPI_COMM_WORLD,ierr)
+
+
+  if ( myid.eq.procReceiver ) then  
+    do ib=1,numBoundaries
+      if ( bctype(ib) == 'inlet' ) then ! NOTE, we use 'bcname' here.
+        do i=1,nfaces(ib)
+          iface = startFace(ib) + i
+          buf(        i) = yf(iface) 
+          buf(  asize+i) = zf(iface)                    
+        end do
+      endif 
+    enddo
+
+    call MPI_SEND(          &
+      buf,                  &
+      length,               &
+      MPI_DOUBLE_PRECISION, &
+      iDFriend,             &
+      sendtag,              &
+      MPI_COMM_WORLD,       &
+      ierr)
+
+  endif
+
+
+  if ( myid.eq.procSender ) then
+
+    call MPI_RECV(      & 
+      buf,              &     ! buffer
+      length,           &     ! length   
+      MPI_DOUBLE_PRECISION, & ! datatype     
+      iDFriend,         &     ! source,      
+      rectag,           &     ! recvtag,      
+      MPI_COMM_WORLD,   &     ! communicator
+      status,           &     ! status
+      ierr)                   ! error
+
+    do ib=1,numBoundaries    
+      if ( bctype(ib) == 'outlet' ) then
         do i=1,nfaces(ib)
           iface = startFace(ib) + i
 !
@@ -208,6 +277,70 @@ subroutine recirculate_flow
       endif 
     enddo
   endif  
+
+!#---
+
+  !  syncronization before communication
+  call MPI_Barrier(MPI_COMM_WORLD,ierr)
+
+
+  if ( myid.eq.procReceiver ) then  
+    do ib=1,numBoundaries
+      if ( bctype(ib) == 'inlet' ) then  ! NOTE, we use 'bcname' here.
+        ! asize = nfaces(ib)
+        do i=1,nfaces(ib)
+          iface = startFace(ib) + i
+          ini = iBndValueStart(ib) + i
+          buf(i)         = u(ini)
+          buf(  asize+i) = v(ini)
+          buf(2*asize+i) = w(ini)
+          buf(3*asize+i) = te(ini)
+          buf(4*asize+i) = vis(ini)                   
+        end do
+      endif 
+    enddo
+
+    call MPI_SEND(          &
+      buf,                  &
+      length,               &
+      MPI_DOUBLE_PRECISION, &
+      iDFriend,             &
+      sendtag,              &
+      MPI_COMM_WORLD,       &
+      ierr)
+
+  endif
+
+
+  if ( myid.eq.procSender ) then
+
+    call MPI_RECV(      & 
+      buf,              &     ! buffer
+      length,           &     ! length   
+      MPI_DOUBLE_PRECISION, & ! datatype     
+      iDFriend,         &     ! source,      
+      rectag,           &     ! recvtag,      
+      MPI_COMM_WORLD,   &     ! communicator
+      status,           &     ! status
+      ierr)                   ! error
+
+    do ib=1,numBoundaries    
+      if ( bctype(ib) == 'outlet' ) then
+        do i=1,nfaces(ib)
+          iface = startFace(ib) + i
+          ini = iBndValueStart(ib) + i
+          u(ini)   = buf(         mappedIndx(i) ) 
+          v(ini)   = buf(   asize+mappedIndx(i) ) 
+          w(ini)   = buf( 2*asize+mappedIndx(i) )
+          te(ini)  = buf( 3*asize+mappedIndx(i) )
+          vis(ini) = buf( 4*asize+mappedIndx(i) ) 
+          flmass(iface) = den(ini)*(arx(iface)*u(ini)+ary(iface)*v(ini)+arz(iface)*w(ini))
+
+        end do
+      endif 
+    enddo
+  endif  
+
 
   if (myid == 0) write(*,'(a)') '  **Recycled flow on periodic boundaries.'
 

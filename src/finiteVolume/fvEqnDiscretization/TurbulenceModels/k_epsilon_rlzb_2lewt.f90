@@ -6,6 +6,7 @@ module k_epsilon_rlzb_2lewt
   use parameters
   use geometry
   use variables
+  use turbulence
   use scalar_fluxes, only: facefluxsc
 
   implicit none
@@ -101,8 +102,8 @@ subroutine calcsc(Fi,dFidxi,ifi)
   use variables
   use sparse_matrix
   use gradients
-  use title_mod
-
+  use linear_solvers
+  
   implicit none
 !
 !***********************************************************************
@@ -123,7 +124,8 @@ subroutine calcsc(Fi,dFidxi,ifi)
   real(dp) :: etarlzb 
   real(dp) :: off_diagonal_terms
   real(dp) :: are,nxf,nyf,nzf,vnp,xtp,ytp,ztp,ut2
-  real(dp) :: dudx,dudy,dudz,dvdx,dvdy,dvdz,dwdx,dwdy,dwdz
+  ! real(dp) :: dudx,dudy,dudz,dvdx,dvdy,dvdz,dwdx,dwdy,dwdz
+  real(dp) :: magStrainSq
   real(dp) :: viss
   real(dp) :: fimax,fimin
   real(dp) :: k12,Rey,lambeps,leps,eps2l
@@ -157,26 +159,26 @@ subroutine calcsc(Fi,dFidxi,ifi)
 
   do inp=1,numCells
 
-    dudx = dudxi(1,inp)
-    dudy = dudxi(2,inp)
-    dudz = dudxi(3,inp)
+    ! dudx = dudxi(1,inp)
+    ! dudy = dudxi(2,inp)
+    ! dudz = dudxi(3,inp)
 
-    dvdx = dvdxi(1,inp)
-    dvdy = dvdxi(2,inp)
-    dvdz = dvdxi(3,inp)
+    ! dvdx = dvdxi(1,inp)
+    ! dvdy = dvdxi(2,inp)
+    ! dvdz = dvdxi(3,inp)
 
-    dwdx = dwdxi(1,inp)
-    dwdy = dwdxi(2,inp)
-    dwdz = dwdxi(3,inp)
+    ! dwdx = dwdxi(1,inp)
+    ! dwdy = dwdxi(2,inp)
+    ! dwdz = dwdxi(3,inp)
 
-    ! Minus here in fron because UU,UV,... calculated in calcstress hold -tau_ij
-    ! So the exact production is calculated as tau_ij*dui/dxj
-    gen(inp) = -den(inp)*( uu(inp)*dudx+uv(inp)*(dudy+dvdx)+ &
-                           uw(inp)*(dudz+dwdx)+vv(inp)*dvdy+ &
-                           vw(inp)*(dvdz+dwdy)+ww(inp)*dwdz )
+    ! ! Minus here in fron because UU,UV,... calculated in calcstress hold -tau_ij
+    ! ! So the exact production is calculated as tau_ij*dui/dxj
+    ! gen(inp) = -den(inp)*( uu(inp)*dudx+uv(inp)*(dudy+dvdx)+ &
+    !                        uw(inp)*(dudz+dwdx)+vv(inp)*dvdy+ &
+    !                        vw(inp)*(dvdz+dwdy)+ww(inp)*dwdz )
 
-    ! magStrainSq=magStrain(inp)*magStrain(inp)
-    ! gen(inp)=abs(vis(inp)-viscos)*magStrainSq
+    magStrainSq=magStrain(inp)*magStrain(inp)
+    gen(inp)=abs(vis(inp)-viscos)*magStrainSq
 
   enddo
 
@@ -198,7 +200,7 @@ subroutine calcsc(Fi,dFidxi,ifi)
     !=====================================
     ! VOLUME SOURCE TERMS: buoyancy
     !=====================================
-      if(lcal(ien).and.lbuoy) then
+      if(lbuoy) then
         
         ! When bouy activated we need the freshest utt,vtt,wtt - turbulent heat fluxes
         call calcheatflux 
@@ -272,7 +274,7 @@ subroutine calcsc(Fi,dFidxi,ifi)
     !=====================================
     ! VOLUME SOURCE TERMS: Buoyancy
     !=====================================
-      if(lcal(ien).and.lbuoy) then
+      if(lbuoy) then
         const=c3*den(inp)*ed(inp)*vol(inp)/(te(inp)+small)
 
         if(boussinesq) then
@@ -326,7 +328,7 @@ subroutine calcsc(Fi,dFidxi,ifi)
 
     call facefluxsc( ijp, ijn, &
                      xf(i), yf(i), zf(i), arx(i), ary(i), arz(i), &
-                     flmass(i), facint(i), gam, &
+                     flmass(i), facint(i), gam, cScheme, dScheme, nrelax, &
                      fi, dFidxi, prtr, cap, can, suadd )
 
     ! > Off-diagonal elements:
@@ -583,8 +585,8 @@ subroutine calcsc(Fi,dFidxi,ifi)
   endif
 
   ! Underrelaxation factors
-  urfrs=urfr(ifi)
-  urfms=urfm(ifi)
+  urfrs=1.0_dp/urf(ifi)
+  urfms=1.0_dp-urf(ifi)
 
   ! Main diagonal term assembly:
   do inp = 1,numCells
@@ -603,7 +605,11 @@ subroutine calcsc(Fi,dFidxi,ifi)
   enddo
 
   ! Solve linear system:
-  call bicgstab(fi,ifi)
+  if (ifi.eq.ite) then
+    call csrsolve(lSolver, te, su, resor(5), maxiter, tolAbs, tolRel, 'k' )
+  else
+    call csrsolve(lSolver, ed, su, resor(6), maxiter, tolAbs, tolRel, 'epsilon' )
+  endif
 
   !
   ! Update symmetry and outlet boundaries
@@ -631,7 +637,11 @@ subroutine calcsc(Fi,dFidxi,ifi)
   fimin = minval(fi(1:numCells))
   fimax = maxval(fi(1:numCells))
   
-  write(6,'(2x,es11.4,3a,es11.4)') fimin,' <= ',chvar(ifi),' <= ',fimax
+  if (ifi.eq.ite) then 
+    write(6,'(2x,es11.4,a,es11.4)') fimin,' <= k <= ',fimax
+  else
+    write(6,'(2x,es11.4,a,es11.4)') fimin,' <= epsilon <= ',fimax
+  endif
 
 ! These field values cannot be negative
   if(fimin.lt.0.0_dp) fi(1:numCells) = max(fi(1:numCells),small)

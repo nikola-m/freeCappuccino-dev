@@ -1,14 +1,18 @@
 var searchData=
 [
-  ['a',['a',['../classsparse__matrix.html#a2a9ab7da94dd5aa82b18a3d4748adb4e',1,'sparse_matrix']]],
-  ['a1',['a1',['../classk__omega__sst.html#adbe032a94c6ae8046be321a1d8cbf42a',1,'k_omega_sst']]],
-  ['alpha1',['alpha1',['../classk__omega__sst.html#a6ffaa5ad5ebaed915c79cc4a66d3db02',1,'k_omega_sst']]],
-  ['alpha2',['alpha2',['../classk__omega__sst.html#a33436fc9710954a3f0db2ba17777bb85',1,'k_omega_sst']]],
-  ['apr',['apr',['../classsparse__matrix.html#a9fd644b9786555d9955e8d943c1ac228',1,'sparse_matrix']]],
-  ['apu',['apu',['../classsparse__matrix.html#a699e66e8c57459cd313568e687ee1fc4',1,'sparse_matrix']]],
-  ['apv',['apv',['../classsparse__matrix.html#a07a78a7794c84e258becc676096f3201',1,'sparse_matrix']]],
-  ['apw',['apw',['../classsparse__matrix.html#a57f3206d8ccad08131056ba13ae81af4',1,'sparse_matrix']]],
-  ['arx',['arx',['../classgeometry.html#a471fde959c1d2bdc45facc53fae5fb5b',1,'geometry']]],
-  ['ary',['ary',['../classgeometry.html#a20e05e2b4e25753dc0892a77029b94b8',1,'geometry']]],
-  ['arz',['arz',['../classgeometry.html#af05cbfe19f538092a328e02ba17ec1b9',1,'geometry']]]
+  ['bcname_1251',['bcname',['../namespacegeometry.html#a0fe2e1928be95b09ae4e225a0fe3cead',1,'geometry']]],
+  ['bctype_1252',['bctype',['../namespacegeometry.html#a0fb7fcb1d34e9c6f85cf96f7a5022022',1,'geometry']]],
+  ['bdf_1253',['bdf',['../namespaceparameters.html#a3eb9bfb234c72de12ef64cdf189eb334',1,'parameters']]],
+  ['bdf2_1254',['bdf2',['../namespaceparameters.html#a7b4b5b884b0646fdebae149c324efee0',1,'parameters']]],
+  ['bdf3_1255',['bdf3',['../namespaceparameters.html#aa8493f6c1a3991dc5c6fe99cd83da8a0',1,'parameters']]],
+  ['beta_1256',['beta',['../namespaceparameters.html#a7f21697b41b2321085587f428da3aae5',1,'parameters']]],
+  ['betai1_1257',['betai1',['../namespacek__omega__sst.html#abccf6e91f0767a91ea49dbe9024e6f2f',1,'k_omega_sst']]],
+  ['betai2_1258',['betai2',['../namespacek__omega__sst.html#ac7304204ed3aa2940a1ece2f12f7e3cb',1,'k_omega_sst']]],
+  ['bettast_1259',['bettast',['../namespacek__omega__sst.html#aec0edc6222990ba2e0f8be950b183646',1,'k_omega_sst']]],
+  ['bij_1260',['bij',['../namespacevariables.html#a3ee0f04d3794cce2bc4b94acc2507775',1,'variables']]],
+  ['boundary_5ffile_1261',['boundary_file',['../namespacegeometry.html#a7b1e102e0a1a96f15dcd1def8d7e0e28',1,'geometry']]],
+  ['boussinesq_1262',['boussinesq',['../namespaceparameters.html#a413d8173c9a8a2e2d347abef37428f2c',1,'parameters']]],
+  ['btime_1263',['btime',['../namespaceparameters.html#a76fa638958512a751a8bf818471774ac',1,'parameters']]],
+  ['buffer_1264',['buffer',['../namespacemy__mpi__module.html#a04f467db36199e98b0dfc5c72a2f993d',1,'my_mpi_module']]],
+  ['bufind_1265',['bufind',['../namespacemy__mpi__module.html#a5ece5549dad644d94619ce1566b5bbba',1,'my_mpi_module']]]
 ];

@@ -1,0 +1,1 @@
+find ./vtk -mindepth 1 ! -regex '^./vtk/mesh\(/.*\)?' -delete

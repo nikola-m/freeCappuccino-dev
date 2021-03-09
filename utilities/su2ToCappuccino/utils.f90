@@ -1,7 +1,13 @@
 module utils
+
+implicit none
+
+integer, parameter :: dp = kind(1.0d0)
+
+public
+
+
 contains
-
-
 
  pure integer function noel(NTYPE)
 !
@@ -56,7 +62,7 @@ contains
 
  function face_vertices_NTYPE12(iface,NODE,NDP) result(vertices)
 !
-! SU2 follows rules from Paraveiw format file, page 9.
+! SU2 follows rules from Paraview format file, page 9.
 ! NTYPE12 is 8-node HEX
 !
 ! NOTE: SU2 starts counting from 0, we here from 1!
@@ -88,6 +94,9 @@ contains
     case default
        vertices = (/ 0,0,0,0 /)
  end select
+
+    ! Add one bc zero based numbering
+    vertices = vertices + 1
 
  end function
 
@@ -211,6 +220,12 @@ contains
        vertices = (/ 0,0,0,0 /)
  end select
 
+   if (iface < 4) then
+     vertices = vertices + 1
+   else
+     vertices(1:3) = vertices(1:3) + 1
+   endif
+
  end function
 
 
@@ -249,7 +264,7 @@ contains
  end subroutine
 
 
-subroutine hashmap_insert(iel,fVert,owner,neighbour,fV,listLength,nFaces,ne)
+subroutine hashmap_insert(iel,fVert,owner,neighbour,fV,listLength,nFaces)
 
   implicit none
 
@@ -259,10 +274,8 @@ subroutine hashmap_insert(iel,fVert,owner,neighbour,fV,listLength,nFaces,ne)
   integer, dimension(listLength), intent(inout) :: owner, neighbour
   integer, dimension(4,listLength), intent(inout) :: fV
   integer , intent(inout) :: nFaces
-  integer, intent(out) :: ne
 
-! integer, parameter :: MyLongIntType = selected_int_kind(18) !9223372036854775807
-! integer (MyLongIntType) :: LongInt
+
   integer :: LongInt
   integer :: lp
   integer :: hash
@@ -274,18 +287,13 @@ subroutine hashmap_insert(iel,fVert,owner,neighbour,fV,listLength,nFaces,ne)
   ! more by adding the max and min vertex index, so we decrease multiple collisions,
   ! Many combinations of indices may otherwise give same sum.
   LongInt = sum( fVert(:) )+maxval(fVert(:))+minval(fVert(:))
-  ! Printing hash function for debugging purposes only.
-  ! print*,mod(listLength+LongInt-(minInt-1),listLength)
 
   ! Linear probing to solve multiple collisions
   ! Note: We can also use quadratic probing if hash below is: hash = mod(LongInt+lp*lp,listLength) 
   linear_probing_loop: do lp=0,listLength
 
-    ! Before creating a hash we add listLength and subtract (minInt-1) to
-    ! get well behaving number, ie. biger than listLength, bigger by exaclty 1 at least in once case.
     ! Hash function:
-    hash = mod(LongInt+lp*lp,listLength) 
-    ! print*, hash,fVert ! To check which combination of indices gave which hash.
+    hash = mod(LongInt+lp*lp,listLength)+1 
 
     ! First check is owner at that location free, if it is free, write it there
     if (owner(hash) == 0) then
@@ -314,8 +322,6 @@ subroutine hashmap_insert(iel,fVert,owner,neighbour,fV,listLength,nFaces,ne)
         !!* We have a matching pair *!!
         neighbour(hash) = iel
 
-        ne = owner(hash) ! a hack to return owner when going trough boundary faces, does nothing in element loop.
-        
         nFaces = nFaces+1
         
         exit linear_probing_loop
@@ -337,6 +343,73 @@ subroutine hashmap_insert(iel,fVert,owner,neighbour,fV,listLength,nFaces,ne)
   enddo linear_probing_loop
 
 end subroutine
+
+
+
+subroutine hashmap_boundary_face(fVert,owner,fV,listLength,nFaces,ne)
+
+  implicit none
+
+  integer , intent(in):: listLength
+  integer, dimension(4), intent(inout) :: fVert
+  integer, dimension(listLength), intent(in) :: owner
+  integer, dimension(4,listLength), intent(in) :: fV
+  integer , intent(inout) :: nFaces
+  integer, intent(out) :: ne
+
+  integer :: LongInt
+  integer :: lp
+  integer :: hash
+  integer, dimension(4) :: fV1, fV2
+
+
+  ! ## Hashing ## 
+  ! We get a large number by summing the face indices and we spread it a little bit
+  ! more by adding the max and min vertex index, so we decrease multiple collisions,
+  ! Many combinations of indices may otherwise give same sum.
+  LongInt = sum( fVert(:) )+maxval(fVert(:))+minval(fVert(:))
+
+  ! Linear probing to solve multiple collisions
+  ! Note: We can also use quadratic probing if hash below is: hash = mod(LongInt+lp*lp,listLength) 
+  linear_probing_loop: do lp=0,listLength
+
+
+    ! Hash function:
+    hash = mod(LongInt+lp*lp,listLength)+1 
+
+
+    ! Perform check - have we found a matching pair.
+    ! A check is performed first by sorting array of face idices for both faces,
+    ! and if three vertices coincide than it is enough to claim the faces are matching.
+    ! We have found two neighbouring cells
+    fV1 = fVert
+    call sortIntArray( fV1, 4 ) 
+
+    fV2 = fV(:, hash)
+    call sortIntArray( fV2, 4 ) 
+
+    if ( fV2(2)==fV1(2) .and. fV2(3)==fV1(3) .and. fV2(4)==fV1(4) ) then !( three is enough for matching)
+      
+      ne = owner(hash) ! return owner when going trough boundary faces, does nothing in element loop.
+
+      fVert = fV(:, hash) ! Take the one saved from the first phase of the program
+      
+      nFaces = nFaces+1
+      
+      exit linear_probing_loop
+
+    else ! Not matched, lets look for the alternative
+
+      cycle linear_probing_loop
+
+    endif
+
+
+  enddo linear_probing_loop
+
+
+end subroutine
+
 
 
 subroutine create_field_init_files(bcName,nbc)
@@ -585,6 +658,123 @@ subroutine create_paraview_files(numPoints,numCells,numInnerFaces,bcSize,nbc)
  deallocate( xcoo,types )
 
 end subroutine
+
+
+subroutine triangle_area_vector( NODE,nPoints,XCOO,ARE )
+!
+! Ai, i=1,n are n triangular faces enclosing polyhedron P.
+! Vertices of Ai are (ai,bi,ci),
+!                                _    _   _    _     _  _    _  _
+! Unit normal to P on each Ai is ni = ni/|ni|, ni = (bi-ai)x(ci-ai)
+! and 
+! _    _  _    _    _  _
+! p = (bi-ai); q = (ci-ai)
+!
+! Finally:              _
+! Area A of Ai, A = 1/2|ni|
+!
+! Sources: 
+! [1] Dr Robert Nurnberg, Imperial College London, www.ma.ic.ac.uk/~rn/centroid.pdf
+! [2] paulbourke.net/geometry/polygonmesh
+!
+  implicit none
+
+  integer, dimension(3), intent(in) :: NODE
+  integer, intent(in) :: nPoints
+  real(dp), dimension(3,nPoints), intent(in) :: XCOO
+  real(dp), dimension(3), intent(out) :: ARE
+
+  real(dp) :: px,py,pz,qx,qy,qz
+  real(dp), parameter :: half = 0.5_dp
+
+  ! Vectors to vertices
+  ! 2-1
+  px = XCOO( 1, NODE(2) )-XCOO( 1, NODE(1) )
+  py = XCOO( 2, NODE(2) )-XCOO( 2, NODE(1) )
+  pz = XCOO( 3, NODE(2) )-XCOO( 3, NODE(1) )
+  ! 3-1
+  qx = XCOO( 1, NODE(3) )-XCOO( 1, NODE(1) )
+  qy = XCOO( 2, NODE(3) )-XCOO( 2, NODE(1) )
+  qz = XCOO( 3, NODE(3) )-XCOO( 3, NODE(1) )
+
+  ! Cross products for triangle surface vectors
+  ARE(1) = half * (py*qz-pz*qy)
+  ARE(2) = half * (pz*qx-px*qz)
+  ARE(3) = half * (px*qy-py*qx)
+
+end subroutine
+
+
+subroutine find_cell_center(np,NODE,nPoints,XCOO,CCOO)
+!
+! Purpose:
+!  Given the cell connectivity and coordinates of vertices, find cell center coordinates.
+!
+  implicit none
+
+  integer, intent(in) :: np ! number of vertices passed to subroutine
+  integer, dimension(np), intent(in) :: NODE
+  integer, intent(in) :: nPoints ! number of vertices in a mesh
+  real(dp), dimension(3,nPoints), intent(in) :: XCOO
+  real(dp), dimension(3), intent(out) :: CCOO
+
+  integer :: i
+
+  do i=1,3
+    CCOO(i) = sum( XCOO(i,NODE(1:np)) ) / dble(np)
+  end do
+
+end subroutine
+
+
+subroutine triangle_face_center(NODE,nPoints,XCOO,TCOO)
+!
+! Purpose:
+!  Given vertices and coordinates of vertices, find triangle center coordinates.
+!
+  implicit none
+
+  integer, dimension(3), intent(in) :: NODE ! We are interested in only first three points of NODE
+  integer, intent(in) :: nPoints ! number of vertices in a mesh
+  real(dp), dimension(3,nPoints), intent(in) :: XCOO
+  real(dp), dimension(3), intent(out) :: TCOO
+
+  integer :: i
+
+  do i=1,3
+    TCOO(i) = sum( XCOO(i,NODE(1:3)) ) / 3.0_dp
+  end do
+
+end subroutine
+
+subroutine reverse_vertices( fVert )
+!
+! Purpose:
+!   Reverse order on vertex indices in a face
+!
+  implicit none
+
+  integer, intent(inout) :: fVert(4)
+
+  integer :: np
+  integer :: k
+  integer :: itmp(4)
+
+  ! Check if face is triangle:
+  np = 4
+  if ( fVert(4) == 0 ) np = 3
+
+  itmp = fVert
+
+  fVert = 0
+ 
+  do k=1,np
+    fVert(k) = itmp(np+1-k)
+  end do
+
+
+end subroutine
+
 
 !
 ! Useful routines by John Burkardt

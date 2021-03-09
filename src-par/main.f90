@@ -89,7 +89,8 @@ program cappuccino
   ! Initialisation of fields
   call init
  
-  ! call add_random_noise_to_field(U,10)
+  ! call add_random_noise_to_field(U,40)
+  
   call face_mapping
 !
 !===============================================

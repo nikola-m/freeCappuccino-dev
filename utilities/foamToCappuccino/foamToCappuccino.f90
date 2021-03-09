@@ -40,7 +40,7 @@ program foamToCappuccino
   integer :: numFaces         ! no. of INNER+BOUNDARY faces in the mesh
   integer :: numInnerFaces    ! no. of INNER cells faces in the mesh
   integer :: numBoundaryFaces ! self explanatory
-  integer :: numTotal         ! number of volume field values + number of boundary field values numCells+numBoundaryFaces
+  ! integer :: numTotal         ! number of volume field values + number of boundary field values numCells+numBoundaryFaces
 
   ! ! To define boundary regions
   ! integer :: numBoundaries
@@ -48,8 +48,8 @@ program foamToCappuccino
   ! character(len=15), dimension(:), allocatable :: bcname, bctype
 
   ! Mesh file units
-  integer :: points_file, faces_file, owner_file, neighbour_file, boundary_file 
-  integer :: points_file_of, faces_file_of, owner_file_of, neighbour_file_of, boundary_file_of
+  integer :: points_file, faces_file, owner_file, neighbour_file, size_file
+  integer :: points_file_of, faces_file_of, owner_file_of, neighbour_file_of
 
   real(dp) :: x,y,z  ! Coordinates of mesh nodes 
 
@@ -72,7 +72,7 @@ program foamToCappuccino
   write ( *, '(a)' ) '  \   __\/  _ \__  \  /     \  /  ____/    \  \/\__  \ \____ \\____ \|  |  \_/ ___\/ ___\|  |/    \ /  _ \ '
   write ( *, '(a)' ) '   |  | (  <_> ) __ \|  Y Y  \/       \     \____/ __ \|  |_> >  |_> >  |  /\  \__\  \___|  |   |  (  <_> )'
   write ( *, '(a)' ) '   |__|  \____(____  /__|_|  /\_______ \______  (____  /   __/|   __/|____/  \___  >___  >__|___|  /\____/ '
-  write ( *, '(a)' ) '                  \/      \/         \/      \/     \/|__|   |__|               \/    \/        \/         '
+  write ( *, '(a)' ) '                   \/      \/         \/      \/     \/|__|   |__|               \/    \/        \/        '
   write ( *, '(a)' ) ' '
  
 
@@ -120,10 +120,13 @@ program foamToCappuccino
   open( unit = neighbour_file, file='polyMesh/neighbour' )
   rewind neighbour_file
 
-  call get_unit( boundary_file )
-  open( unit = boundary_file, file='polyMesh/boundary' )
-  rewind boundary_file
+  ! call get_unit( boundary_file )
+  ! open( unit = boundary_file, file='polyMesh/boundary' )
+  ! rewind boundary_file
 
+  call get_unit( size_file )
+  open( unit = size_file, file='polyMesh/size' )
+  rewind size_file
 
 !******************************************************************************
 ! > Find out numNodes, numFaces, numInnerFaces, etc.
@@ -307,18 +310,23 @@ program foamToCappuccino
   numBoundaryFaces = numFaces - numInnerFaces
 
   ! Size of arrays storing variables numCells+numBoundaryFaces
-  numTotal = numCells + numBoundaryFaces
+  ! numTotal = numFaces + numBoundaryFaces
 
 
 !******************************************************************************
 ! > Write headers 
 !..............................................................................
 
-  write( points_file, '(i0,1x,a)' ) numNodes, 'numNodes'
-  write( owner_file, '(i0,1x,a)' ) numFaces, 'numFaces'
-  write( neighbour_file, '(i0,1x,a)' ) numInnerFaces, 'numInnerFaces'
-  write( faces_file, '(i0,1x,a)') numFaces, 'numFaces'
+  ! write( points_file, '(i0,1x,a)' ) numNodes, 'numNodes'
+  ! write( owner_file, '(i0,1x,a)' ) numFaces, 'numFaces'
+  ! write( neighbour_file, '(i0,1x,a)' ) numInnerFaces, 'numInnerFaces'
+  ! write( faces_file, '(i0,1x,a)') numFaces, 'numFaces'
 
+  write(size_file,'(I0,a)') numNodes,    " Vertices"
+  write(size_file,'(I0,a)') numCells,    " Cells"
+  write(size_file,'(I0,a)') numInnerFaces, " Inner faces"
+  write(size_file,'(I0,a)') numBoundaryFaces, " Boundary faces"
+  write(size_file,'(I0,a)') numFaces, " Faces Total"
 
 !
 ! > Write report on mesh size into log file
@@ -401,13 +409,14 @@ program foamToCappuccino
   close ( faces_file_of )
   close ( owner_file_of )
   close ( neighbour_file_of )
-  close ( boundary_file_of )
+  ! close ( boundary_file_of )
 
   close ( points_file )
   close ( faces_file )
   close ( owner_file )
-  close ( neighbour_file)
-  close ( boundary_file)
+  close ( neighbour_file )
+  ! close ( boundary_file )
+  close (size_file )
 
 !+-----------------------------------------------------------------------------+
 

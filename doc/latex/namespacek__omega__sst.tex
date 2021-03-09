@@ -1,0 +1,172 @@
+\hypertarget{namespacek__omega__sst}{}\doxysection{k\+\_\+omega\+\_\+sst Module Reference}
+\label{namespacek__omega__sst}\index{k\_omega\_sst@{k\_omega\_sst}}
+\doxysubsection*{Functions/\+Subroutines}
+\begin{DoxyCompactItemize}
+\item 
+subroutine, public \mbox{\hyperlink{namespacek__omega__sst_ada04287ba03e5bcd1e2513c5a1fb6f42}{correct\+\_\+turbulence\+\_\+k\+\_\+omega\+\_\+sst}} ()
+\item 
+subroutine, public \mbox{\hyperlink{namespacek__omega__sst_a7517fe9a1330e8b029752fc148aefa1c}{correct\+\_\+turbulence\+\_\+inlet\+\_\+k\+\_\+omega\+\_\+sst}} ()
+\item 
+subroutine \mbox{\hyperlink{namespacek__omega__sst_abef5fd711205ff33aec6d98b622a0bdd}{calcsc}} (Fi, d\+Fidxi, ifi)
+\item 
+subroutine \mbox{\hyperlink{namespacek__omega__sst_a9db01a58eaa429bcca05b716220b3b6b}{modify\+\_\+mu\+\_\+eff}} ()
+\end{DoxyCompactItemize}
+\doxysubsection*{Variables}
+\begin{DoxyCompactItemize}
+\item 
+logical, public \mbox{\hyperlink{namespacek__omega__sst_afd70039b4073095a5203e788db819119}{lowre}} = .false.
+\item 
+real(dp), parameter \mbox{\hyperlink{namespacek__omega__sst_aec0edc6222990ba2e0f8be950b183646}{bettast}} =0.\+09\+\_\+dp
+\item 
+real(dp), parameter \mbox{\hyperlink{namespacek__omega__sst_a4859960d166f5aae3a709b6914d17858}{sigmk1}} =1.\+176\+\_\+dp
+\item 
+real(dp), parameter \mbox{\hyperlink{namespacek__omega__sst_a62372426f37f88c0155f05bb8026909f}{sigmk2}} =1.\+0\+\_\+dp
+\item 
+real(dp), parameter \mbox{\hyperlink{namespacek__omega__sst_a0cb7552eb69f1919ecff80bb2e5808e4}{sigmom1}} =2.\+0\+\_\+dp
+\item 
+real(dp), parameter \mbox{\hyperlink{namespacek__omega__sst_ad43aa7379d6ca2d18b6b38168e683ac3}{sigmom2}} =1.\+168\+\_\+dp
+\item 
+real(dp), parameter \mbox{\hyperlink{namespacek__omega__sst_abccf6e91f0767a91ea49dbe9024e6f2f}{betai1}} =0.\+075\+\_\+dp
+\item 
+real(dp), parameter \mbox{\hyperlink{namespacek__omega__sst_ac7304204ed3aa2940a1ece2f12f7e3cb}{betai2}} =0.\+0828\+\_\+dp
+\item 
+real(dp), parameter \mbox{\hyperlink{namespacek__omega__sst_adbe032a94c6ae8046be321a1d8cbf42a}{a1}} =0.\+31\+\_\+dp
+\item 
+real(dp), parameter \mbox{\hyperlink{namespacek__omega__sst_a6ffaa5ad5ebaed915c79cc4a66d3db02}{alpha1}} =5./9.\+0\+\_\+dp
+\item 
+real(dp), parameter \mbox{\hyperlink{namespacek__omega__sst_a33436fc9710954a3f0db2ba17777bb85}{alpha2}} =0.\+44\+\_\+dp
+\item 
+real(dp), parameter \mbox{\hyperlink{namespacek__omega__sst_a4de6fc64d23bbb9405db42e2bc688365}{c3}} = 1.\+44\+\_\+dp
+\item 
+real(dp), parameter \mbox{\hyperlink{namespacek__omega__sst_a2fcd6b5d353eca169d1ed26030035527}{cmu25}} = sqrt(sqrt(B\+E\+T\+T\+A\+ST))
+\item 
+real(dp), parameter \mbox{\hyperlink{namespacek__omega__sst_aac6d679de77188184e955ebdb8b4f56e}{cmu75}} = \mbox{\hyperlink{namespacek__omega__sst_a2fcd6b5d353eca169d1ed26030035527}{cmu25}}$\ast$$\ast$3
+\item 
+real(dp), dimension(\+:), allocatable \mbox{\hyperlink{namespacek__omega__sst_a6e5e5e6fe57f54e43223912b88f269d7}{fsst}}
+\end{DoxyCompactItemize}
+
+
+\doxysubsection{Function/\+Subroutine Documentation}
+\mbox{\Hypertarget{namespacek__omega__sst_abef5fd711205ff33aec6d98b622a0bdd}\label{namespacek__omega__sst_abef5fd711205ff33aec6d98b622a0bdd}} 
+\index{k\_omega\_sst@{k\_omega\_sst}!calcsc@{calcsc}}
+\index{calcsc@{calcsc}!k\_omega\_sst@{k\_omega\_sst}}
+\doxysubsubsection{\texorpdfstring{calcsc()}{calcsc()}}
+{\footnotesize\ttfamily subroutine k\+\_\+omega\+\_\+sst\+::calcsc (\begin{DoxyParamCaption}\item[{real(dp), dimension(numtotal)}]{Fi,  }\item[{real(dp), dimension(3,numpcells)}]{d\+Fidxi,  }\item[{integer, intent(in)}]{ifi }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [private]}}
+
+Here is the call graph for this function\+:
+% FIG 0
+\mbox{\Hypertarget{namespacek__omega__sst_a7517fe9a1330e8b029752fc148aefa1c}\label{namespacek__omega__sst_a7517fe9a1330e8b029752fc148aefa1c}} 
+\index{k\_omega\_sst@{k\_omega\_sst}!correct\_turbulence\_inlet\_k\_omega\_sst@{correct\_turbulence\_inlet\_k\_omega\_sst}}
+\index{correct\_turbulence\_inlet\_k\_omega\_sst@{correct\_turbulence\_inlet\_k\_omega\_sst}!k\_omega\_sst@{k\_omega\_sst}}
+\doxysubsubsection{\texorpdfstring{correct\_turbulence\_inlet\_k\_omega\_sst()}{correct\_turbulence\_inlet\_k\_omega\_sst()}}
+{\footnotesize\ttfamily subroutine, public k\+\_\+omega\+\_\+sst\+::correct\+\_\+turbulence\+\_\+inlet\+\_\+k\+\_\+omega\+\_\+sst}
+
+\mbox{\Hypertarget{namespacek__omega__sst_ada04287ba03e5bcd1e2513c5a1fb6f42}\label{namespacek__omega__sst_ada04287ba03e5bcd1e2513c5a1fb6f42}} 
+\index{k\_omega\_sst@{k\_omega\_sst}!correct\_turbulence\_k\_omega\_sst@{correct\_turbulence\_k\_omega\_sst}}
+\index{correct\_turbulence\_k\_omega\_sst@{correct\_turbulence\_k\_omega\_sst}!k\_omega\_sst@{k\_omega\_sst}}
+\doxysubsubsection{\texorpdfstring{correct\_turbulence\_k\_omega\_sst()}{correct\_turbulence\_k\_omega\_sst()}}
+{\footnotesize\ttfamily subroutine, public k\+\_\+omega\+\_\+sst\+::correct\+\_\+turbulence\+\_\+k\+\_\+omega\+\_\+sst}
+
+Here is the call graph for this function\+:
+% FIG 1
+\mbox{\Hypertarget{namespacek__omega__sst_a9db01a58eaa429bcca05b716220b3b6b}\label{namespacek__omega__sst_a9db01a58eaa429bcca05b716220b3b6b}} 
+\index{k\_omega\_sst@{k\_omega\_sst}!modify\_mu\_eff@{modify\_mu\_eff}}
+\index{modify\_mu\_eff@{modify\_mu\_eff}!k\_omega\_sst@{k\_omega\_sst}}
+\doxysubsubsection{\texorpdfstring{modify\_mu\_eff()}{modify\_mu\_eff()}}
+{\footnotesize\ttfamily subroutine k\+\_\+omega\+\_\+sst\+::modify\+\_\+mu\+\_\+eff}
+
+Here is the call graph for this function\+:
+% FIG 2
+
+
+\doxysubsection{Variable Documentation}
+\mbox{\Hypertarget{namespacek__omega__sst_adbe032a94c6ae8046be321a1d8cbf42a}\label{namespacek__omega__sst_adbe032a94c6ae8046be321a1d8cbf42a}} 
+\index{k\_omega\_sst@{k\_omega\_sst}!a1@{a1}}
+\index{a1@{a1}!k\_omega\_sst@{k\_omega\_sst}}
+\doxysubsubsection{\texorpdfstring{a1}{a1}}
+{\footnotesize\ttfamily real(dp), parameter k\+\_\+omega\+\_\+sst\+::a1 =0.\+31\+\_\+dp}
+
+\mbox{\Hypertarget{namespacek__omega__sst_a6ffaa5ad5ebaed915c79cc4a66d3db02}\label{namespacek__omega__sst_a6ffaa5ad5ebaed915c79cc4a66d3db02}} 
+\index{k\_omega\_sst@{k\_omega\_sst}!alpha1@{alpha1}}
+\index{alpha1@{alpha1}!k\_omega\_sst@{k\_omega\_sst}}
+\doxysubsubsection{\texorpdfstring{alpha1}{alpha1}}
+{\footnotesize\ttfamily real(dp), parameter k\+\_\+omega\+\_\+sst\+::alpha1 =5./9.\+0\+\_\+dp}
+
+\mbox{\Hypertarget{namespacek__omega__sst_a33436fc9710954a3f0db2ba17777bb85}\label{namespacek__omega__sst_a33436fc9710954a3f0db2ba17777bb85}} 
+\index{k\_omega\_sst@{k\_omega\_sst}!alpha2@{alpha2}}
+\index{alpha2@{alpha2}!k\_omega\_sst@{k\_omega\_sst}}
+\doxysubsubsection{\texorpdfstring{alpha2}{alpha2}}
+{\footnotesize\ttfamily real(dp), parameter k\+\_\+omega\+\_\+sst\+::alpha2 =0.\+44\+\_\+dp}
+
+\mbox{\Hypertarget{namespacek__omega__sst_abccf6e91f0767a91ea49dbe9024e6f2f}\label{namespacek__omega__sst_abccf6e91f0767a91ea49dbe9024e6f2f}} 
+\index{k\_omega\_sst@{k\_omega\_sst}!betai1@{betai1}}
+\index{betai1@{betai1}!k\_omega\_sst@{k\_omega\_sst}}
+\doxysubsubsection{\texorpdfstring{betai1}{betai1}}
+{\footnotesize\ttfamily real(dp), parameter k\+\_\+omega\+\_\+sst\+::betai1 =0.\+075\+\_\+dp}
+
+\mbox{\Hypertarget{namespacek__omega__sst_ac7304204ed3aa2940a1ece2f12f7e3cb}\label{namespacek__omega__sst_ac7304204ed3aa2940a1ece2f12f7e3cb}} 
+\index{k\_omega\_sst@{k\_omega\_sst}!betai2@{betai2}}
+\index{betai2@{betai2}!k\_omega\_sst@{k\_omega\_sst}}
+\doxysubsubsection{\texorpdfstring{betai2}{betai2}}
+{\footnotesize\ttfamily real(dp), parameter k\+\_\+omega\+\_\+sst\+::betai2 =0.\+0828\+\_\+dp}
+
+\mbox{\Hypertarget{namespacek__omega__sst_aec0edc6222990ba2e0f8be950b183646}\label{namespacek__omega__sst_aec0edc6222990ba2e0f8be950b183646}} 
+\index{k\_omega\_sst@{k\_omega\_sst}!bettast@{bettast}}
+\index{bettast@{bettast}!k\_omega\_sst@{k\_omega\_sst}}
+\doxysubsubsection{\texorpdfstring{bettast}{bettast}}
+{\footnotesize\ttfamily real(dp), parameter k\+\_\+omega\+\_\+sst\+::bettast =0.\+09\+\_\+dp}
+
+\mbox{\Hypertarget{namespacek__omega__sst_a4de6fc64d23bbb9405db42e2bc688365}\label{namespacek__omega__sst_a4de6fc64d23bbb9405db42e2bc688365}} 
+\index{k\_omega\_sst@{k\_omega\_sst}!c3@{c3}}
+\index{c3@{c3}!k\_omega\_sst@{k\_omega\_sst}}
+\doxysubsubsection{\texorpdfstring{c3}{c3}}
+{\footnotesize\ttfamily real(dp), parameter k\+\_\+omega\+\_\+sst\+::c3 = 1.\+44\+\_\+dp}
+
+\mbox{\Hypertarget{namespacek__omega__sst_a2fcd6b5d353eca169d1ed26030035527}\label{namespacek__omega__sst_a2fcd6b5d353eca169d1ed26030035527}} 
+\index{k\_omega\_sst@{k\_omega\_sst}!cmu25@{cmu25}}
+\index{cmu25@{cmu25}!k\_omega\_sst@{k\_omega\_sst}}
+\doxysubsubsection{\texorpdfstring{cmu25}{cmu25}}
+{\footnotesize\ttfamily real(dp), parameter k\+\_\+omega\+\_\+sst\+::cmu25 = sqrt(sqrt(B\+E\+T\+T\+A\+ST))}
+
+\mbox{\Hypertarget{namespacek__omega__sst_aac6d679de77188184e955ebdb8b4f56e}\label{namespacek__omega__sst_aac6d679de77188184e955ebdb8b4f56e}} 
+\index{k\_omega\_sst@{k\_omega\_sst}!cmu75@{cmu75}}
+\index{cmu75@{cmu75}!k\_omega\_sst@{k\_omega\_sst}}
+\doxysubsubsection{\texorpdfstring{cmu75}{cmu75}}
+{\footnotesize\ttfamily real(dp), parameter k\+\_\+omega\+\_\+sst\+::cmu75 = \mbox{\hyperlink{namespacek__omega__sst_a2fcd6b5d353eca169d1ed26030035527}{cmu25}}$\ast$$\ast$3}
+
+\mbox{\Hypertarget{namespacek__omega__sst_a6e5e5e6fe57f54e43223912b88f269d7}\label{namespacek__omega__sst_a6e5e5e6fe57f54e43223912b88f269d7}} 
+\index{k\_omega\_sst@{k\_omega\_sst}!fsst@{fsst}}
+\index{fsst@{fsst}!k\_omega\_sst@{k\_omega\_sst}}
+\doxysubsubsection{\texorpdfstring{fsst}{fsst}}
+{\footnotesize\ttfamily real(dp), dimension(\+:), allocatable k\+\_\+omega\+\_\+sst\+::fsst}
+
+\mbox{\Hypertarget{namespacek__omega__sst_afd70039b4073095a5203e788db819119}\label{namespacek__omega__sst_afd70039b4073095a5203e788db819119}} 
+\index{k\_omega\_sst@{k\_omega\_sst}!lowre@{lowre}}
+\index{lowre@{lowre}!k\_omega\_sst@{k\_omega\_sst}}
+\doxysubsubsection{\texorpdfstring{lowre}{lowre}}
+{\footnotesize\ttfamily logical, public k\+\_\+omega\+\_\+sst\+::lowre = .false.}
+
+\mbox{\Hypertarget{namespacek__omega__sst_a4859960d166f5aae3a709b6914d17858}\label{namespacek__omega__sst_a4859960d166f5aae3a709b6914d17858}} 
+\index{k\_omega\_sst@{k\_omega\_sst}!sigmk1@{sigmk1}}
+\index{sigmk1@{sigmk1}!k\_omega\_sst@{k\_omega\_sst}}
+\doxysubsubsection{\texorpdfstring{sigmk1}{sigmk1}}
+{\footnotesize\ttfamily real(dp), parameter k\+\_\+omega\+\_\+sst\+::sigmk1 =1.\+176\+\_\+dp}
+
+\mbox{\Hypertarget{namespacek__omega__sst_a62372426f37f88c0155f05bb8026909f}\label{namespacek__omega__sst_a62372426f37f88c0155f05bb8026909f}} 
+\index{k\_omega\_sst@{k\_omega\_sst}!sigmk2@{sigmk2}}
+\index{sigmk2@{sigmk2}!k\_omega\_sst@{k\_omega\_sst}}
+\doxysubsubsection{\texorpdfstring{sigmk2}{sigmk2}}
+{\footnotesize\ttfamily real(dp), parameter k\+\_\+omega\+\_\+sst\+::sigmk2 =1.\+0\+\_\+dp}
+
+\mbox{\Hypertarget{namespacek__omega__sst_a0cb7552eb69f1919ecff80bb2e5808e4}\label{namespacek__omega__sst_a0cb7552eb69f1919ecff80bb2e5808e4}} 
+\index{k\_omega\_sst@{k\_omega\_sst}!sigmom1@{sigmom1}}
+\index{sigmom1@{sigmom1}!k\_omega\_sst@{k\_omega\_sst}}
+\doxysubsubsection{\texorpdfstring{sigmom1}{sigmom1}}
+{\footnotesize\ttfamily real(dp), parameter k\+\_\+omega\+\_\+sst\+::sigmom1 =2.\+0\+\_\+dp}
+
+\mbox{\Hypertarget{namespacek__omega__sst_ad43aa7379d6ca2d18b6b38168e683ac3}\label{namespacek__omega__sst_ad43aa7379d6ca2d18b6b38168e683ac3}} 
+\index{k\_omega\_sst@{k\_omega\_sst}!sigmom2@{sigmom2}}
+\index{sigmom2@{sigmom2}!k\_omega\_sst@{k\_omega\_sst}}
+\doxysubsubsection{\texorpdfstring{sigmom2}{sigmom2}}
+{\footnotesize\ttfamily real(dp), parameter k\+\_\+omega\+\_\+sst\+::sigmom2 =1.\+168\+\_\+dp}
+

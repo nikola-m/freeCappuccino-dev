@@ -6,10 +6,12 @@ src/finiteVolume/fvEqnDiscretization/ScalarEqns
 src/finiteVolume/fvEqnDiscretization/TurbulenceModels
 src/finiteVolume/fvEqnDiscretization/MHD
 src/finiteVolume/interpolation
+src/finiteVolume/tensorFields
 src/finiteVolume/fvExplicit
 src/finiteVolume/fvImplicit
 src/finiteVolume/initialization
 src/finiteVolume/tensorFields
+src/materialProperties
 src/sparseMatrix
 src/linearSolvers
 src/io

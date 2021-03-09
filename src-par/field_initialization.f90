@@ -331,7 +331,7 @@ subroutine pipe_disturbances(x,y,z,ux,uy,uz)
   real(dp), intent(inout) :: ux,uy,uz
 
   real(dp), parameter :: pipeRadius = 0.0105
-  real(dp), parameter :: pipeLength = 0.6
+  real(dp), parameter :: pipeLength = 0.105
   real(dp) :: zr,yr,rr,th,xo,uxx
   real(dp) :: amp_x,freq_x,freq_t,amp_tht,amp_clip,blt,phase_x,arg_tht,amp_sin,rand,big
 

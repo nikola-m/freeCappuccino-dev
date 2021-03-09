@@ -22,6 +22,7 @@ module DDES_k_omega_SST
   use parameters
   use geometry
   use variables
+  use turbulence
   use scalar_fluxes, only: facefluxsc
 
   implicit none
@@ -162,8 +163,8 @@ subroutine calcsc(Fi,dFidxi,ifi)
   use variables
   use sparse_matrix
   use gradients
-  use title_mod
-
+  use linear_solvers
+  
   implicit none
 
   integer, intent(in) :: ifi
@@ -301,7 +302,7 @@ subroutine calcsc(Fi,dFidxi,ifi)
     !=====================================
     ! VOLUME SOURCE TERMS: buoyancy
     !=====================================
-      if(lcal(ien).and.lbuoy) then
+      if(lbuoy) then
         
         ! When bouy activated we need the freshest utt,vtt,wtt - turbulent heat fluxes
         call calcheatflux 
@@ -447,7 +448,7 @@ subroutine calcsc(Fi,dFidxi,ifi)
     !=====================================
     ! VOLUME SOURCE TERMS: Buoyancy
     !=====================================
-      if(lcal(ien).and.lbuoy) then
+      if(lbuoy) then
         const=c3*den(inp)*ed(inp)*vol(inp)/(te(inp)+small)
 
         if(boussinesq) then
@@ -511,7 +512,7 @@ subroutine calcsc(Fi,dFidxi,ifi)
 
     call facefluxsc(  ijp, ijn, &
                       xf(i), yf(i), zf(i), arx(i), ary(i), arz(i), &
-                      flmass(i), facint(i), gam, &
+                      flmass(i), facint(i), gam, cScheme, dScheme, nrelax, &
                       fi, dFidxi, prtr_ijp, cap, can, suadd )                      
                       ! fi, dFidxi, prtr_ijp, prtr_ijn, cap, can, suadd )
 
@@ -730,8 +731,8 @@ subroutine calcsc(Fi,dFidxi,ifi)
   endif
 
   ! Underrelaxation factors
-  urfrs=urfr(ifi)
-  urfms=urfm(ifi)
+  urfrs=1.0_dp/urf(ifi)
+  urfms=1.0_dp-urf(ifi)
 
   ! Main diagonal term assembly:
   do inp = 1,numCells
@@ -750,7 +751,12 @@ subroutine calcsc(Fi,dFidxi,ifi)
   enddo
 
   ! Solve linear system:
-  call bicgstab(fi,ifi)
+  if (ifi.eq.ite) then
+    call csrsolve(lSolver, te, su, resor(5), maxiter, tolAbs, tolRel, 'k' )
+  else
+    call csrsolve(lSolver, ed, su, resor(6), maxiter, tolAbs, tolRel, 'Omega' )
+  endif
+
 
   !
   ! Update symmetry and outlet boundaries
@@ -777,7 +783,11 @@ subroutine calcsc(Fi,dFidxi,ifi)
   fimin = minval(fi)
   fimax = maxval(fi)
 
-  write(6,'(2x,es11.4,3a,es11.4)') fimin,' <= ',chvar(ifi),' <= ',fimax
+  if (ifi.eq.ite) then 
+    write(6,'(2x,es11.4,a,es11.4)') fimin,' <= k <= ',fimax
+  else
+    write(6,'(2x,es11.4,a,es11.4)') fimin,' <= Omega <= ',fimax
+  endif
 
 ! These field values cannot be negative
   if(fimin.lt.0.0_dp) fi = max(fi,small)

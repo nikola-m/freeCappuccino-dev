@@ -57,18 +57,18 @@ subroutine calcp_piso
   use geometry
   use sparse_matrix
   use variables
-  use title_mod
   use gradients
-  use hcoef
+  use linear_solvers
   use fieldmanipulation
   use faceflux_mass
+  use velocity, only: updateVelocityAtBoundary
 
   implicit none
 !
 !***********************************************************************
 !
   integer :: i, k, inp, ib, iface, istage
-  integer :: ijp, ijn
+  integer :: ijp, ijn, ijb
   real(dp) :: cap, can
   real(dp) :: pavg, fmcor
 
@@ -195,6 +195,31 @@ subroutine calcp_piso
 
         end do
 
+      elseif ( bctype(ib) == 'pressure' ) then
+
+        do i=1,nfaces(ib)
+
+          iface = startFace(ib) + i
+          ijp = owner(iface)
+          ijb = iBndValueStart(ib) + i
+
+          call facefluxmassPressBnd( ijp, ijb, &
+                                     xf(iface), yf(iface), zf(iface), &
+                                     arx(iface), ary(iface), arz(iface), &
+                                     cap, flmass(iface) )
+
+          ! > Elements on main diagonal:
+          k = diag(ijp)
+          a(k) = a(k) - cap
+
+          ! > Sources:
+          su(ijp) = su(ijp) - flmass(iface)
+
+          ! > Pressure Boundary value of pressure correction:
+          pp(ijb) = 0.0_dp
+
+        end do
+
       elseif ( bctype(ib) == 'outlet' ) then
 
         do i=1,nfaces(ib)
@@ -235,19 +260,19 @@ subroutine calcp_piso
       !
       ! Solve pressure equation system
       !
-      call iccg(pp,ip)
+      call csrsolve(lSolverP, pp, su, resor(4), maxiterP, tolAbsP, tolRelP, 'p') 
 
       ! We have pure Neumann problem - take out the average of the field as the additive constant
       pavg = sum(pp(1:numCells))/dble(numCells)
       ! p(1:numCells) = p(1:numCells) - pavg
 
       ! Under-relaxation
-      p(1:numCells) = (1.0_dp-urf(ip))*p(1:numCells) + urf(ip)*(pp(1:numCells)-pavg)
+      p(1:numCells) = (1.0_dp-urfP)*p(1:numCells) + urfP*(pp(1:numCells)-pavg)
 
       ! Pressure gradient
       do istage=1,nipgrad
 
-        ! Pressure corr. at boundaries (for correct calculation of pp gradient)
+        ! Pressure corr. at boundaries (for correct calculation of p gradient)
         call bpres(p,istage)
 
         ! Calculate pressure-correction gradient and store it in pressure gradient field.
@@ -345,6 +370,30 @@ subroutine calcp_piso
       v(inp) = v(inp) - apv(inp)*dPdxi(2,inp)*vol(inp)
       w(inp) = w(inp) - apw(inp)*dPdxi(3,inp)*vol(inp)
     enddo 
+
+    ! 
+    ! Correct mass fluxes (and velocity) at pressure boundaries
+    !
+    do ib=1,numBoundaries
+      
+      if ( bctype(ib) == 'pressure' ) then
+
+        do i=1,nfaces(ib)
+
+          iface = startFace(ib) + i
+          ijp = owner(iface)
+          ijb = iBndValueStart(ib) + i
+          call facefluxmassCorrPressBnd( ijp, ijb, &
+                                         xf(iface), yf(iface), zf(iface), &
+                                         arx(iface), ary(iface), arz(iface), &
+                                         flmass(iface) )
+
+        end do
+
+      endif
+
+    enddo
+
 
     ! Explicit correction of boundary conditions 
     call updateVelocityAtBoundary

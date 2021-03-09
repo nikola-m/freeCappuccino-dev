@@ -413,8 +413,8 @@ end function
 
   else
     ! psi = 1.0_dp   ! psi for 2nd order upwind (luds) scheme
-    ! psi = max(0., min(r, 2.0)) ! boundedCDS - just temporary here until I implement it
-    psi = 2./3.*r+1./3. ! Unique third order kappa scheme, kappa=1/3
+    psi = max(0., min(r, 4.0)) ! boundedCDS - just temporary here until I implement it
+    ! psi = 2./3.*r+1./3. ! Unique third order kappa scheme, kappa=1/3
   end if
 
   face_value = u(ijp) + fxp*psi*(u(ijn)-u(ijp))

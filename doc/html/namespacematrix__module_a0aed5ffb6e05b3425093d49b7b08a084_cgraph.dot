@@ -1,0 +1,16 @@
+digraph "matrix_module::eig"
+{
+ // LATEX_PDF_SIZE
+  edge [fontname="Helvetica",fontsize="10",labelfontname="Helvetica",labelfontsize="10"];
+  node [fontname="Helvetica",fontsize="10",shape=record];
+  rankdir="LR";
+  Node1 [label="matrix_module::eig",height=0.2,width=0.4,color="black", fillcolor="grey75", style="filled", fontcolor="black",tooltip=" "];
+  Node1 -> Node2 [color="midnightblue",fontsize="10",style="solid",fontname="Helvetica"];
+  Node2 [label="matrix_module::householder_qr",height=0.2,width=0.4,color="black", fillcolor="white", style="filled",URL="$namespacematrix__module.html#ac88cca09a0310ee3f4f32c86f6aac9e6",tooltip=" "];
+  Node2 -> Node3 [color="midnightblue",fontsize="10",style="solid",fontname="Helvetica"];
+  Node3 [label="matrix_module::eye",height=0.2,width=0.4,color="black", fillcolor="white", style="filled",URL="$namespacematrix__module.html#a5d18b03838a0ba41d729284188c492cb",tooltip=" "];
+  Node2 -> Node4 [color="midnightblue",fontsize="10",style="solid",fontname="Helvetica"];
+  Node4 [label="matrix_module::matrix\l_update",height=0.2,width=0.4,color="black", fillcolor="white", style="filled",URL="$namespacematrix__module.html#ad5e55e5a4eb29b1279b288d6be4ceaf1",tooltip=" "];
+  Node2 -> Node5 [color="midnightblue",fontsize="10",style="solid",fontname="Helvetica"];
+  Node5 [label="matrix_module::rank\l_one_update",height=0.2,width=0.4,color="black", fillcolor="white", style="filled",URL="$namespacematrix__module.html#a8bf812de99eb57e458068660b1f18489",tooltip=" "];
+}

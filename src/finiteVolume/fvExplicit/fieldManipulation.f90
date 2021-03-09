@@ -4,7 +4,7 @@
 !
   use types
   use gradients
-  use interpolation, only: face_value_w_option
+  use interpolation, only: face_value
 
   implicit none
 
@@ -20,7 +20,7 @@
   ! how we calculate interpolation factor. Option "2" is typical for CFD codes, while "1" is something specific
   ! for freeCappuccino.
   !****************************************************
-  character(len=10), parameter :: scheme = 'central' 
+  character(len=30), parameter :: scheme = 'central' 
 
   interface explDiv
     module procedure explDiv
@@ -68,103 +68,6 @@ pure function volumeWeightedAverage(U) result(wAvgU)
     wAvgU = wAvgU / sumvol
 
 end function
-
-
-!***********************************************************************
-!
-subroutine calcPressDiv 
-!
-!***********************************************************************
-! 
-!  -(nabla p) is a vector field: -( (nabla p)x . i + (nabla p)y . j + (nabla p)z . k )
-!  Instead of computing the Grad(p) vector field in center and integrate volumetricaly
-!  simply multiplying it by Vol(ijp), we write it in divergence form.
-!  Interpolate to face {-(nabla p),i . e_i}_f * S_f
-!  where ',i' is a partial derivative with respect to i, i={x,y,z},
-!  '.' is a scalar product of vectors,
-!  and {}_f is interpolation to face center.
-!  And get {-(nabla p),i}_f * (S_f. e_i) = {-(nabla p),i}_f * S_fi
-!  Source(u_i) = sum_over_cell_faces {-(nabla p),i}_f * S_fi
-!  Interpolation to cell face centers done by central scheme.
-!
-!***********************************************************************
-!
-  use geometry
-  use parameters, only: small
-  use variables, only: p,dPdxi
-  use sparse_matrix, only: su,sv,sw!,apu
-
-  implicit none
-
-  ! Local
-  integer, parameter :: nipgrad = 2 
-  integer :: i,ijp,ijn,ijb,iface,istage
-  real(dp) :: dfxe,dfye,dfze
-  ! real(dp) :: pf
-
-!
-!***********************************************************************
-!
-
-
-    ! Pressure gradient
-    do istage=1,nipgrad
-      ! Pressure at boundaries (for correct calculation of press. gradient)
-      call bpres(p,istage)
-      ! Calculate pressure gradient.
-      call grad(p,dPdxi)
-    end do
-
-    ! Calculate terms integrated over surfaces
-
-    ! Inner face
-    do i=1,numInnerFaces
-      ijp = owner(i)
-      ijn = neighbour(i)
-
-      ! Linear interpolation of rpessure to face
-      call presFaceDivInner(ijp, ijn, xf(i), yf(i), zf(i), arx(i), ary(i), arz(i), facint(i), &
-                        p, dPdxi,dfxe,dfye,dfze)
-
-
-      ! ! Pressure on face based on "Standard" interpolation in Fluent.
-      ! ! This is weighted interpolation where weights are mass flows estimated at respective cell center
-      ! pf = ( p(ijp)*Apu(ijp)+p(ijn)*Apu(ijn) ) / ( Apu(ijp) + Apu(ijn) + small )
-
-      ! ! Contribution =(interpolated mid-face value)x(area)
-      ! dfxe = pf*arx(i)
-      ! dfye = pf*ary(i)
-      ! dfze = pf*arz(i)
-
-
-      ! Accumulate contribution at cell center and neighbour.
-      ! ***NOTE, we calculate negative Divergence, therefore opposite sign (minus in front of e.g. dfxe, etc.) 
-      su(ijp) = su(ijp)-dfxe
-      sv(ijp) = sv(ijp)-dfye
-      sw(ijp) = sw(ijp)-dfze
-       
-      su(ijn) = su(ijn)+dfxe
-      sv(ijn) = sv(ijn)+dfye
-      sw(ijn) = sw(ijn)+dfze
-
-    enddo
-
-    ! Contribution from boundaries
-
-    do i=1,numBoundaryFaces
-      iface = numInnerFaces + i
-      ijp = owner(iface)
-      ijb = numCells + i
-      call presFaceDivBoundary(arx(iface), ary(iface), arz(iface), p(ijb), su(ijp), sv(ijp), sw(ijp))
-
-      ! su(ijp) = su(ijp) - p(ijb)*arx(iface)
-      ! sv(ijp) = sv(ijp) - p(ijb)*ary(iface)
-      ! sw(ijp) = sw(ijp) - p(ijb)*arz(iface)
-
-    enddo
-
-  return
-end
 
 
 !***********************************************************************
@@ -285,44 +188,6 @@ function explDivFlmass(flmass,u,v,w) result(div)
   return
 end
 
-
-
-!
-!***********************************************************************
-!
-subroutine presFaceDivInner(ijp,ijn,xfc,yfc,zfc,sx,sy,sz,fif, &
-                            fi,df,dfxe,dfye,dfze)
-!
-!***********************************************************************
-!
-    use geometry, only: numTotal
-
-    implicit none
-
-    integer,  intent(in) :: ijp,ijn
-    real(dp), intent(in) :: xfc,yfc,zfc
-    real(dp), intent(in) :: sx,sy,sz
-    real(dp), intent(in) :: fif
-    real(dp), dimension(numTotal), intent(in) :: fi
-    real(dp), dimension(3,numTotal), intent(in) :: df
-    real(dp), intent(out) :: dfxe,dfye,dfze
-
-    real(dp) :: fie
-!
-!***********************************************************************
-!
-
-  ! Value of the variable at cell-face center
-  fie = face_value_w_option( ijp, ijn, xfc, yfc, zfc, fif, fi, df, scheme )
-
-  ! (interpolated mid-face value)x(area)
-  dfxe = fie*sx
-  dfye = fie*sy
-  dfze = fie*sz
-
-end subroutine
-
-
 !
 !***********************************************************************
 !
@@ -349,9 +214,9 @@ subroutine faceDivInner(ijp,ijn,xfc,yfc,zfc,sx,sy,sz,fif, &
 !
 
   ! Value of the variable at cell-face center
-  uf = face_value_w_option( ijp, ijn, xfc, yfc, zfc, fif, u, du, scheme )
-  vf = face_value_w_option( ijp, ijn, xfc, yfc, zfc, fif, v, dv, scheme )
-  wf = face_value_w_option( ijp, ijn, xfc, yfc, zfc, fif, w, dw, scheme )
+  uf = face_value( ijp, ijn, xfc, yfc, zfc, fif, u, du, scheme )
+  vf = face_value( ijp, ijn, xfc, yfc, zfc, fif, v, dv, scheme )
+  wf = face_value( ijp, ijn, xfc, yfc, zfc, fif, w, dw, scheme )
 
   ! (interpolated mid-face value)x(area)
   dfxe = uf*sx + vf*sy + wf*sz
@@ -376,27 +241,6 @@ subroutine faceDivBoundary(sx,sy,sz,uf,vf,wf,dfx)
     dfx = uf*sx + vf*sy + wf*sz
 
 end subroutine
-
-!***********************************************************************
-!
-subroutine presFaceDivBoundary(sx,sy,sz,fi,dfx,dfy,dfz)
-!
-!***********************************************************************
-!
-    implicit none
-
-    real(dp), intent(in) :: sx,sy,sz
-    real(dp), intent(in) :: fi
-    real(dp), intent(inout)  :: dfx,dfy,dfz
-!
-!***********************************************************************
-!
-    dfx = dfx - fi*sx
-    dfy = dfy - fi*sy
-    dfz = dfz - fi*sz
-
-end subroutine
-
 
 
 !***********************************************************************
@@ -441,7 +285,7 @@ function average(u) result(aver)
 
       are = sqrt( arx(i)**2 + ary(i)**2 + arz(i)**2 ) 
 
-      ui = face_value_w_option( ijp, ijn, xf(i), yf(i), zf(i), facint(i), u, dUdxi, scheme )
+      ui = face_value( ijp, ijn, xf(i), yf(i), zf(i), facint(i), u, dUdxi, scheme )
 
       ! Accumulate contribution at cell center and neighbour.
       aver(ijp) = aver(ijp)+ui*are
@@ -511,7 +355,7 @@ function fieldInterpolate(u) result(ui)
   do i=1,numInnerFaces
     ijp = owner(i)
     ijn = neighbour(i)
-    ui(i) = face_value_w_option( ijp, ijn, xf(i), yf(i), zf(i), facint(i), u, dUdxi, scheme )
+    ui(i) = face_value( ijp, ijn, xf(i), yf(i), zf(i), facint(i), u, dUdxi, scheme )
   enddo
 
   ! Update boundaries?
@@ -566,7 +410,7 @@ function surfaceSum(u) result(ssum)
       ijp = owner(i)
       ijn = neighbour(i)
 
-      ui = face_value_w_option( ijp, ijn, xf(i), yf(i), zf(i), facint(i), u, dUdxi, scheme )
+      ui = face_value( ijp, ijn, xf(i), yf(i), zf(i), facint(i), u, dUdxi, scheme )
 
       ! Accumulate contribution at cell center and neighbour.
       ssum(ijp) = ssum(ijp)+ui
@@ -627,7 +471,7 @@ function surfaceIntegrate(u) result(ssum)
       ijp = owner(i)
       ijn = neighbour(i)
 
-      ui = face_value_w_option( ijp, ijn, xf(i), yf(i), zf(i), facint(i), u, dUdxi, scheme )
+      ui = face_value( ijp, ijn, xf(i), yf(i), zf(i), facint(i), u, dUdxi, scheme )
 
       ! Accumulate contribution at cell center and neighbour.
       ssum(ijp) = ssum(ijp)+ui
@@ -780,13 +624,12 @@ subroutine add_random_noise_to_field(Phi,percent)
   real(dp) :: perturb
 
   level = dble(percent)
+     
+  CALL init_random_seed()
 
   do inp=1,numCells
-
-    ! Random number based fluctuation of mean profile            
-    CALL init_random_seed()
-    CALL RANDOM_NUMBER(perturb)
     
+    CALL RANDOM_NUMBER(perturb)
     ! perturb is now between 0. and 1., we want it to be from 0 to 2*amplitude
     ! e.g. perturb = 0.9+perturb/5. when Max perturbation is +/- 10% of mean profile
     perturb = ( 1.0_dp - level/100.0_dp ) + perturb * (2*level/100.0_dp)

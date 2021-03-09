@@ -6,6 +6,7 @@ module k_epsilon_rlzb
   use parameters
   use geometry
   use variables
+  use turbulence
   use scalar_fluxes, only: facefluxsc
 
   implicit none
@@ -93,8 +94,8 @@ subroutine calcsc(Fi,dFidxi,ifi)
   use variables
   use sparse_matrix
   use gradients
-  use title_mod
-
+  use linear_solvers
+  
   implicit none
 !
 !***********************************************************************
@@ -115,7 +116,8 @@ subroutine calcsc(Fi,dFidxi,ifi)
   real(dp) :: etarlzb 
   real(dp) :: off_diagonal_terms
   real(dp) :: are,nxf,nyf,nzf,vnp,xtp,ytp,ztp,ut2
-  real(dp) :: dudx,dudy,dudz,dvdx,dvdy,dvdz,dwdx,dwdy,dwdz
+  ! real(dp) :: dudx,dudy,dudz,dvdx,dvdy,dvdz,dwdx,dwdy,dwdz
+  real(dp) :: magStrainSq
   real(dp) :: viss
   real(dp) :: fimax,fimin
 
@@ -148,26 +150,26 @@ subroutine calcsc(Fi,dFidxi,ifi)
 
   do inp=1,numCells
 
-    dudx = dudxi(1,inp)
-    dudy = dudxi(2,inp)
-    dudz = dudxi(3,inp)
+    ! dudx = dudxi(1,inp)
+    ! dudy = dudxi(2,inp)
+    ! dudz = dudxi(3,inp)
 
-    dvdx = dvdxi(1,inp)
-    dvdy = dvdxi(2,inp)
-    dvdz = dvdxi(3,inp)
+    ! dvdx = dvdxi(1,inp)
+    ! dvdy = dvdxi(2,inp)
+    ! dvdz = dvdxi(3,inp)
 
-    dwdx = dwdxi(1,inp)
-    dwdy = dwdxi(2,inp)
-    dwdz = dwdxi(3,inp)
+    ! dwdx = dwdxi(1,inp)
+    ! dwdy = dwdxi(2,inp)
+    ! dwdz = dwdxi(3,inp)
 
-    ! Minus here in fron because UU,UV,... calculated in calcstress hold -tau_ij
-    ! So the exact production is calculated as tau_ij*dui/dxj
-    gen(inp) = -den(inp)*( uu(inp)*dudx+uv(inp)*(dudy+dvdx)+ &
-                           uw(inp)*(dudz+dwdx)+vv(inp)*dvdy+ &
-                           vw(inp)*(dvdz+dwdy)+ww(inp)*dwdz )
+    ! ! Minus here in front because UU,UV,... calculated in calcstress hold -tau_ij
+    ! ! So the exact production is calculated as tau_ij*dui/dxj
+    ! gen(inp) = -den(inp)*( uu(inp)*dudx+uv(inp)*(dudy+dvdx)+ &
+    !                        uw(inp)*(dudz+dwdx)+vv(inp)*dvdy+ &
+    !                        vw(inp)*(dvdz+dwdy)+ww(inp)*dwdz )
 
-    ! magStrainSq=magStrain(inp)*magStrain(inp)
-    ! gen(inp)=abs(vis(inp)-viscos)*magStrainSq
+    magStrainSq=magStrain(inp)*magStrain(inp)
+    gen(inp)=abs(vis(inp)-viscos)*magStrainSq
 
   enddo
 
@@ -189,7 +191,7 @@ subroutine calcsc(Fi,dFidxi,ifi)
     !=====================================
     ! VOLUME SOURCE TERMS: buoyancy
     !=====================================
-      if(lcal(ien).and.lbuoy) then
+      if(lbuoy) then
         
         ! When bouy activated we need the freshest utt,vtt,wtt - turbulent heat fluxes
         call calcheatflux 
@@ -199,9 +201,9 @@ subroutine calcsc(Fi,dFidxi,ifi)
            vttbuoy=-gravy*den(inp)*vtt(inp)*vol(inp)*beta
            wttbuoy=-gravz*den(inp)*wtt(inp)*vol(inp)*beta
         else
-           uttbuoy=-gravx*den(inp)*utt(inp)*vol(inp)/(t(inp)+273.15)
-           vttbuoy=-gravy*den(inp)*vtt(inp)*vol(inp)/(t(inp)+273.15)
-           wttbuoy=-gravz*den(inp)*wtt(inp)*vol(inp)/(t(inp)+273.15)
+           uttbuoy=-gravx*den(inp)*utt(inp)*vol(inp)/(t(inp)+small)
+           vttbuoy=-gravy*den(inp)*vtt(inp)*vol(inp)/(t(inp)+small)
+           wttbuoy=-gravz*den(inp)*wtt(inp)*vol(inp)/(t(inp)+small)
         end if
 
         utp=max(uttbuoy,zero)
@@ -250,12 +252,11 @@ subroutine calcsc(Fi,dFidxi,ifi)
 
     ! Production of dissipation
     etarlzb = magStrain(inp)*te(inp)/(ed(inp)+small)
-    c1 = max(0.43,etarlzb/(etarlzb+5.))
+    c1 = max(0.43,etarlzb/(etarlzb+5.0))
     su(inp)=c1*genp*ed(inp)*vol(inp)
 
     ! Destruction of dissipation
-    sp(inp)=c2*den(inp)*ed(inp)*vol(inp)/ &
-                             ( te(inp)+sqrt(viscos/densit*ed(inp)) )
+    sp(inp)=c2*den(inp)*ed(inp)*vol(inp)/( te(inp)+sqrt(viscos/densit*ed(inp))+small )
 
     ! Negative value of production moved to lhs.
     sp(inp) = sp(inp) - c1*genn*ed(inp)*vol(inp)
@@ -264,7 +265,8 @@ subroutine calcsc(Fi,dFidxi,ifi)
     !=====================================
     ! VOLUME SOURCE TERMS: Buoyancy
     !=====================================
-      if(lcal(ien).and.lbuoy) then
+      if(lbuoy) then
+
         const=c3*den(inp)*ed(inp)*vol(inp)/(te(inp)+small)
 
         if(boussinesq) then
@@ -272,9 +274,9 @@ subroutine calcsc(Fi,dFidxi,ifi)
            vttbuoy=-gravy*vtt(inp)*const*beta
            wttbuoy=-gravz*wtt(inp)*const*beta
         else ! if(boussinesq.eq.0)
-           uttbuoy=-gravx*utt(inp)*const/(t(inp)+273.15)
-           vttbuoy=-gravy*vtt(inp)*const/(t(inp)+273.15)
-           wttbuoy=-gravz*wtt(inp)*const/(t(inp)+273.15)
+           uttbuoy=-gravx*utt(inp)*const/(t(inp)+small)
+           vttbuoy=-gravy*vtt(inp)*const/(t(inp)+small)
+           wttbuoy=-gravz*wtt(inp)*const/(t(inp)+small)
         end if
 
         utp=max(uttbuoy,zero)
@@ -286,6 +288,7 @@ subroutine calcsc(Fi,dFidxi,ifi)
 
         su(inp)=su(inp)+utp+vtp+wtp
         sp(inp)=sp(inp)-(utn+vtn+wtn)/(ed(inp)+small)
+
       end if
 
     !
@@ -318,7 +321,7 @@ subroutine calcsc(Fi,dFidxi,ifi)
 
     call facefluxsc( ijp, ijn, &
                      xf(i), yf(i), zf(i), arx(i), ary(i), arz(i), &
-                     flmass(i), facint(i), gam, &
+                     flmass(i), facint(i), gam, cScheme, dScheme, nrelax, &
                      fi, dFidxi, prtr, cap, can, suadd )
 
     ! > Off-diagonal elements:
@@ -356,7 +359,7 @@ subroutine calcsc(Fi,dFidxi,ifi)
 
   do ib=1,numBoundaries
 
-    if ( bctype(ib) == 'inlet' ) then
+    if ( bctype(ib) == 'inlet' .or. bctype(ib) == 'outlet' .or. bctype(ib) == 'pressure' ) then
 
       do i=1,nfaces(ib)
 
@@ -368,25 +371,6 @@ subroutine calcsc(Fi,dFidxi,ifi)
                          xf(iface), yf(iface), zf(iface), arx(iface), ary(iface), arz(iface), &
                          flmass(iface), &
                          Fi, dFidxi, prtr, cap, can, suadd)
-
-        Sp(ijp) = Sp(ijp)-can
-
-        Su(ijp) = Su(ijp)-can*Fi(ijb) + suadd
-
-      end do
-
-    elseif ( bctype(ib) == 'outlet' ) then
-
-      do i=1,nfaces(ib)
-
-        iface = startFace(ib) + i
-        ijp = owner(iface)
-        ijb = iBndValueStart(ib) + i
-
-        call facefluxsc( ijp, ijb, &
-                         xf(iface), yf(iface), zf(iface), arx(iface), ary(iface), arz(iface), &
-                         flmass(iface), &
-                         FI, dFidxi, prtr, cap, can, suadd )
 
         Sp(ijp) = Sp(ijp)-can
 
@@ -408,8 +392,6 @@ subroutine calcsc(Fi,dFidxi,ifi)
         ! > Wall boundary conditions for turbulence kinetic energy eq.
         !
 
-          ! viss=viscos
-          ! if(ypl(iWall).gt.ctrans) viss=visw(iWall)
           viss=max(viscos,visw(iWall))
 
           ! Face area 
@@ -520,8 +502,8 @@ subroutine calcsc(Fi,dFidxi,ifi)
   endif
 
   ! Underrelaxation factors
-  urfrs=urfr(ifi)
-  urfms=urfm(ifi)
+  urfrs=1.0_dp/urf(ifi)
+  urfms=1.0_dp-urf(ifi)
 
   ! Main diagonal term assembly:
   do inp = 1,numCells
@@ -540,7 +522,11 @@ subroutine calcsc(Fi,dFidxi,ifi)
   enddo
 
   ! Solve linear system:
-  call bicgstab(fi,ifi)
+  if (ifi.eq.ite) then
+    call csrsolve(lSolver, te, su, resor(5), maxiter, tolAbs, tolRel, 'k' )
+  else
+    call csrsolve(lSolver, ed, su, resor(6), maxiter, tolAbs, tolRel, 'epsilon' )
+  endif
 
   !
   ! Update symmetry and outlet boundaries
@@ -568,7 +554,11 @@ subroutine calcsc(Fi,dFidxi,ifi)
   fimin = minval(fi(1:numCells))
   fimax = maxval(fi(1:numCells))
   
-  write(6,'(2x,es11.4,3a,es11.4)') fimin,' <= ',chvar(ifi),' <= ',fimax
+  if (ifi.eq.ite) then 
+    write(6,'(2x,es11.4,a,es11.4)') fimin,' <= k <= ',fimax
+  else
+    write(6,'(2x,es11.4,a,es11.4)') fimin,' <= epsilon <= ',fimax
+  endif
 
 ! These field values cannot be negative
   if(fimin.lt.0.0_dp) fi(1:numCells) = max(fi(1:numCells),small)
@@ -588,6 +578,7 @@ subroutine modify_mu_eff()
   use parameters
   use geometry
   use variables
+  
   implicit none
 !
 !***********************************************************************

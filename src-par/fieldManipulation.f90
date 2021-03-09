@@ -148,7 +148,225 @@
 
     enddo ! Boundary loop
 
-  return
+  end subroutine
+
+
+
+!***********************************************************************
+!
+  subroutine calcPressDivCrankNicolson
+!
+!***********************************************************************
+!  
+!  -fvc:Div(p)                                       
+!  ExplDiv(u) = sum_{i=1}^{i=nf} (u)_f*sf or
+!  Interpolation to cell face centers done by cds corrected scheme.
+!
+!***********************************************************************
+!
+  use geometry
+  use variables, only: p,po,dPdxi
+  use sparse_matrix, only: su,sv,sw
+
+  implicit none
+!
+!***********************************************************************
+!
+
+
+!...Local
+    integer :: i,ijp,ijn,ijb,iface,istage,ib,ipro
+    real(dp) :: dfxe,dfye,dfze,pf,half
+
+    half = 0.5_dp
+
+
+    ! Pressure gradient
+    do istage=1,nipgrad
+      ! Pressure at boundaries (for correct calculation of press. gradient)
+      call bpres(po,istage)
+      ! Calculate pressure gradient.
+      call grad(po,dPdxi)
+    end do
+
+    ! Calculate terms integrated over surfaces
+
+    ! Inner face
+    do i=1,numInnerFaces
+      ijp = owner(i)
+      ijn = neighbour(i)
+      call presFaceDivInner(ijp, ijn, xf(i), yf(i), zf(i), arx(i), ary(i), arz(i), facint(i), &
+                            po, dPdxi, dfxe, dfye, dfze)
+
+      ! Crank-Nicolson halving
+      dfxe = half*dfxe
+      dfye = half*dfye
+      dfze = half*dfze
+
+      ! Accumulate contribution at cell center and neighbour.
+      ! Note, we calculate negative Dievrgence, therefore opposite sign...
+      su(ijp) = su(ijp)-dfxe
+      sv(ijp) = sv(ijp)-dfye
+      sw(ijp) = sw(ijp)-dfze
+       
+      su(ijn) = su(ijn)+dfxe
+      sv(ijn) = sv(ijn)+dfye
+      sw(ijn) = sw(ijn)+dfze
+
+    enddo
+
+
+    ! Contribution form boundaries
+
+    iPro = 0
+
+    do ib=1,numBoundaries
+
+      if ( bctype(ib) == 'process' ) then
+
+        ! Faces on process boundary
+
+        do i=1,nfaces(ib)
+
+          iface = startFace(ib) + i
+          ijp = owner(iface)
+          ijn = iBndValueStart(ib) + i
+          ipro = ipro+1
+
+          call presFaceDivInner(ijp, ijn, &
+                                xf(iface), yf(iface), zf(iface), &
+                                arx(iface), ary(iface), arz(iface), fpro(ipro), &
+                                po, dPdxi, dfxe, dfye, dfze)
+
+          ! Crank-Nicolson halving
+          dfxe = half*dfxe
+          dfye = half*dfye
+          dfze = half*dfze
+      
+          ! Accumulate contribution at cell center
+          su(ijp) = su(ijp)-dfxe
+          sv(ijp) = sv(ijp)-dfye
+          sw(ijp) = sw(ijp)-dfze
+
+        enddo
+
+      else
+
+        ! Faces on regular boundary
+
+        do i=1,nfaces(ib)
+
+          iface = startFace(ib) + i
+          ijp = owner(iface)
+          ijb = iBndValueStart(ib) + i
+
+          ! For Crank-Nicolson - pressure source is split into two contributions from two consecutive timesteps
+          ! each weighted by half.
+          pf = 0.5_dp * po(ijb)
+
+          su(ijp) = su(ijp) - pf*arx(iface)
+          sv(ijp) = sv(ijp) - pf*ary(iface)
+          sw(ijp) = sw(ijp) - pf*arz(iface)
+
+        enddo
+
+      endif 
+
+    enddo ! Boundary loop
+
+
+
+    ! Pressure gradient
+    do istage=1,nipgrad
+      ! Pressure at boundaries (for correct calculation of press. gradient)
+      call bpres(p,istage)
+      ! Calculate pressure gradient.
+      call grad(p,dPdxi)
+    end do
+
+    ! Calculate terms integrated over surfaces
+
+    ! Inner face
+    do i=1,numInnerFaces
+      ijp = owner(i)
+      ijn = neighbour(i)
+      call presFaceDivInner(ijp, ijn, xf(i), yf(i), zf(i), arx(i), ary(i), arz(i), facint(i), &
+                            p, dPdxi, dfxe, dfye, dfze)
+
+      ! Crank-Nicolson halving
+      dfxe = half*dfxe
+      dfye = half*dfye
+      dfze = half*dfze
+
+      ! Accumulate contribution at cell center and neighbour.
+      ! Note, we calculate negative Dievrgence, therefore opposite sign...
+      su(ijp) = su(ijp)-dfxe
+      sv(ijp) = sv(ijp)-dfye
+      sw(ijp) = sw(ijp)-dfze
+       
+      su(ijn) = su(ijn)+dfxe
+      sv(ijn) = sv(ijn)+dfye
+      sw(ijn) = sw(ijn)+dfze
+
+    enddo
+
+
+    ! Contribution form boundaries
+
+    iPro = 0
+
+    do ib=1,numBoundaries
+
+      if ( bctype(ib) == 'process' ) then
+
+        ! Faces on process boundary
+
+        do i=1,nfaces(ib)
+
+          iface = startFace(ib) + i
+          ijp = owner(iface)
+          ijn = iBndValueStart(ib) + i
+          ipro = ipro+1
+
+          call presFaceDivInner(ijp, ijn, xf(iface), yf(iface), zf(iface), arx(iface), ary(iface), arz(iface), fpro(ipro), &
+                                p, dPdxi, dfxe, dfye, dfze)
+
+          ! Crank-Nicolson halving
+          dfxe = half*dfxe
+          dfye = half*dfye
+          dfze = half*dfze
+
+          ! Accumulate contribution at cell center
+          su(ijp) = su(ijp)-dfxe
+          sv(ijp) = sv(ijp)-dfye
+          sw(ijp) = sw(ijp)-dfze
+
+        enddo
+
+      else
+
+        ! Faces on regular boundary
+
+        do i=1,nfaces(ib)
+
+          iface = startFace(ib) + i
+          ijp = owner(iface)
+          ijb = iBndValueStart(ib) + i
+
+          ! For Crank-Nicolson - pressure source is split into two contributions from two consecutive timesteps
+          ! each weighted by half.
+          pf = 0.5_dp * p(ijb)
+
+          su(ijp) = su(ijp) - pf*arx(iface)
+          sv(ijp) = sv(ijp) - pf*ary(iface)
+          sw(ijp) = sw(ijp) - pf*arz(iface)
+
+        enddo
+
+      endif 
+
+    enddo ! Boundary loop
+
   end subroutine
 
 

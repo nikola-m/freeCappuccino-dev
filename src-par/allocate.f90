@@ -92,21 +92,22 @@ subroutine allocate_arrays
   allocate( dPdxi( 3,numTotal ), stat=ierr) 
     if(ierr /= 0)write(*,*)"allocation error: dPdxi"
 
-
-  if ( piso ) then
-    
+  if (CN ) then
     allocate(po(numTotal),stat=ierr) 
     if(ierr /= 0)write(*,*)"allocation error: po" 
-
-    allocate(poo(numTotal),stat=ierr) 
-    if(ierr /= 0)write(*,*)"allocation error: poo" 
-
-    if (bdf3 ) then
-      allocate(pooo(numTotal),stat=ierr) 
-      if(ierr /= 0)write(*,*)"allocation error: poo" 
-    endif
-
   endif
+
+  ! if ( piso ) then
+    
+  !   allocate(poo(numTotal),stat=ierr) 
+  !   if(ierr /= 0)write(*,*)"allocation error: poo" 
+
+  !   if (bdf3 ) then
+  !     allocate(pooo(numTotal),stat=ierr) 
+  !     if(ierr /= 0)write(*,*)"allocation error: poo" 
+  !   endif
+
+  ! endif
 
   ! Turbulent K.E. and dissipation or any other turbulent scalar taking its place
   allocate( te( numTotal ), stat=ierr) 

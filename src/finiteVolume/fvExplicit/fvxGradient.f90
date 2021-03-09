@@ -23,12 +23,14 @@ use tensorFields
 implicit none
 
 ! Gradient discretization approach 
-logical :: lstsq                        
-logical :: lstsq_qr                      
-logical :: lstsq_dm                     
-logical :: gauss                      
+logical :: lstsq    = .False.                         
+logical :: lstsq_qr = .False.                      
+logical :: lstsq_dm = .False.                   
+logical :: gauss    = .True.   
 
-character(len=20) :: limiter                       ! Gradient limiter. Options: none, Barth-Jespersen, Venkatakrishnan, mVenkatakrishnan
+logical, save :: createdLSQMat = .False. 
+
+character(len=20) :: limiter = 'no-limit'          ! Gradient limiter. Options: none, Barth-Jespersen, Venkatakrishnan, MDL
 
 real(dp),dimension(:,:), allocatable ::  Dmat      !  d(6,nxyz) - when using bn, or dm version of the subroutine
 real(dp),dimension(:,:,:), allocatable ::  D       !  when using qr version of the subroutine size(3,6,nxyz)!
@@ -76,7 +78,7 @@ function grad_volScalarField(phi) result(dPhi)
 
 !+-----------------------------------------------------------------------------+
 
-  dPhi = new_volVectorField( numTotal )
+  dPhi = new_volVectorField( numCells )
 
   dPhi%field_name = 'gradient_field'
 
@@ -104,7 +106,7 @@ function grad_volVectorField(U) result(G)
 
 !+-----------------------------------------------------------------------------+
 
-  G = new_volTensorField( numTotal )
+  G = new_volTensorField( numCells )
 
   G%field_name = 'gradient_field'
 
@@ -144,7 +146,7 @@ function sngrad_volScalarField(phi) result(sndPhi)
 
 !+-----------------------------------------------------------------------------+
 
-  sndPhi = new_surfaceVectorField( numTotal )
+  sndPhi = new_surfaceVectorField( numCells )
 
   sndPhi%field_name = 'gradient_field'
 
@@ -200,7 +202,7 @@ function sngrad_volVectorField(U) result(G)
   type(volTensorField) :: G
 !+-----------------------------------------------------------------------------+
 
-  snG = new_surfaceTensorField( numTotal )
+  snG = new_surfaceTensorField( numCells )
 
   snG%field_name = 'surface_grad_field'
 
@@ -281,6 +283,8 @@ implicit none
 
   endif 
 
+  createdLSQMat = .True.
+
 end subroutine
 
 
@@ -319,11 +323,14 @@ subroutine grad_scalar_field(phi,dPhidx,dPhidy,dPhidz)
 implicit none
 
   real(dp), dimension(numTotal), intent(in) :: phi
-  real(dp), dimension(numTotal), intent(inout) :: dPhidx,dPhidy,dPhidz
+  real(dp), dimension(numCells), intent(inout) :: dPhidx,dPhidy,dPhidz
 
   dPhidx = 0.0_dp
   dPhidy = 0.0_dp
   dPhidz = 0.0_dp    
+
+  ! Before calling check this
+  if ( .not.gauss .and. .not.createdLSQMat ) call create_lsq_grad_matrix
   
   if (lstsq) then 
 
@@ -389,14 +396,18 @@ subroutine grad_scalar_field_w_option(phi,dPhidx,dPhidy,dPhidz,option,option_lim
 implicit none
 
   real(dp), dimension(numTotal), intent(in) :: phi
-  real(dp), dimension(numTotal), intent(inout) :: dPhidx,dPhidy,dPhidz
+  real(dp), dimension(numCells), intent(inout) :: dPhidx,dPhidy,dPhidz
   character( len=* ), intent(in) :: option
   character( len=* ), intent(in) :: option_limiter
 
   dPhidx = 0.0_dp
   dPhidy = 0.0_dp
   dPhidz = 0.0_dp  
-  
+ 
+
+  ! Before calling check this
+  if ( .not.gauss .and. .not.createdLSQMat ) call create_lsq_grad_matrix 
+
   if ( option == 'lsq' ) then 
 
     call grad_lsq(phi, dPhidx,dPhidy,dPhidz )
@@ -461,7 +472,7 @@ subroutine slope_limiter_Barth_Jespersen(phi, dPhidx,dPhidy,dPhidz )
 
   ! Input
   real(dp),dimension(numTotal), intent(in) :: phi
-  real(dp),dimension(numTotal), intent(inout) :: dPhidx,dPhidy,dPhidz
+  real(dp),dimension(numCells), intent(inout) :: dPhidx,dPhidy,dPhidz
 
 
   ! Locals
@@ -548,7 +559,7 @@ subroutine slope_limiter_Venkatakrishnan(phi, dPhidx,dPhidy,dPhidz )
 
   ! Input
   real(dp),dimension(numTotal), intent(in) :: phi
-  real(dp),dimension(numTotal), intent(inout) :: dPhidx,dPhidy,dPhidz
+  real(dp),dimension(numCells), intent(inout) :: dPhidx,dPhidy,dPhidz
 
 
   ! Locals
@@ -615,6 +626,7 @@ end subroutine
 
 
 
+
 !***********************************************************************
 !
 subroutine slope_limiter_multidimensional(phi, dPhidx,dPhidy,dPhidz )
@@ -634,54 +646,57 @@ subroutine slope_limiter_multidimensional(phi, dPhidx,dPhidy,dPhidz )
 
   ! Input
   real(dp),dimension(numTotal), intent(in) :: phi
-  real(dp),dimension(numTotal), intent(inout) :: dPhidx,dPhidy,dPhidz
+  real(dp),dimension(numCells), intent(inout) :: dPhidx,dPhidy,dPhidz 
 
 
   ! Locals
-  integer :: inp,ijp,ijn,k
-  real(dp) :: phi_max,phi_min
+  integer :: inp,ijp,k,iface
   real(dp) :: dPhi,dPhimax,dPhimin
-  real(dp) :: gx,gy,gz
   real(dp) :: gtx,gty,gtz
-  real(dp) :: gn
+  real(dp) :: gx,gy,gz,gn
   real(dp) :: xpn,ypn,zpn,dpn
   real(dp) :: nx,ny,nz
+  real(dp), dimension(:), allocatable :: phimax,phimin
+
+  allocate(phimax(numCells),phimin(numCells))
 
   ! Find phi_max and phi_min in  neighbours of Co, including itself.
-  do inp = 1, numCells
+  do inp = 1,numCells
 
     ! max and min values over current cell and neighbors
-    phi_max = phi(ja( ioffset(inp) ))
-    phi_min = phi(ja( ioffset(inp) ))
+    phimax(inp) = phi(ja( ioffset(inp) ))
+    phimin(inp) = phi(ja( ioffset(inp) ))
 
     do k=ioffset(inp)+1, ioffset(inp+1)-1
-      phi_max = max( phi_max, phi(ja(k)) )
-      phi_min = min( phi_max, phi(ja(k)) )      
+      phimax(inp) = max( phimax(inp), phi(ja(k)) )
+      phimin(inp) = min( phimin(inp), phi(ja(k)) )      
     enddo
 
-    ! Initialize gradient vector with current unlimited value
-    gx = dPhidx(inp)
-    gy = dPhidy(inp)
-    gz = dPhidz(inp)
+  enddo
 
-    ! Loop over neighbours, we access info about neighbours using CSR ioffset array..
-    do k=ioffset(inp), ioffset(inp+1)-1
 
-      ! Skip the cell itself, we need only neighbours
-      if (k == diag(inp)) cycle
-   
-      ! Present cell - P
-      ijp = inp
-      ! Neighbour cell - N ( we find its index using CSR column array )
-      ijn = ja(k)
+  ! Loop over inner faces:
+  do iface=1,numInnerFaces
 
-      ! Distance vector between cell centers
-      xpn=xc(ijn)-xc(ijp)
-      ypn=yc(ijn)-yc(ijp)
-      zpn=zc(ijn)-zc(ijp)
+    do k=1,2 ! Do the same for both owner and neighbour cell
 
-      ! Distance from P to neighbor N
-      dpn=sqrt(xpn**2+ypn**2+zpn**2) 
+      if (k==1) then
+        ijp = owner(iface)
+      else
+        ijp = owner(iface)
+      endif
+
+      ! Initialize gradient vector with current unlimited value
+      gx = dPhidx(ijp)
+      gy = dPhidy(ijp)
+      gz = dPhidz(ijp)
+
+      ! Distance vector between cell center and face center
+      xpn=xf(iface)-xc(ijp)
+      ypn=yf(iface)-yc(ijp)
+      zpn=zf(iface)-zc(ijp)
+
+      dpn=sqrt(xpn**2+ypn**2+zpn**2)
 
       nx = xpn/dpn
       ny = ypn/dpn
@@ -693,16 +708,15 @@ subroutine slope_limiter_multidimensional(phi, dPhidx,dPhidy,dPhidz )
       gty = gy - gn*ny
       gtz = gz - gn*nz
 
-      ! Increment from P cell to N cell
-      dPhi=gx*(xc(ijn)-xc(ijp))+gy*(yc(ijn)-yc(ijp))+gz*(zc(ijn)-zc(ijp)) 
+      ! Increment from P cell to face centroid f
+      dPhi=gx*(xf(iface)-xc(ijp))+gy*(yf(iface)-yc(ijp))+gz*(zf(iface)-zc(ijp)) 
 
-      dPhimax = phi_max-phi(inp)
-
-      dPhimin = phi_min-phi(inp)
+      dPhimax = phimax(ijp)-phi(ijp)
+      dPhimin = phimin(ijp)-phi(ijp)
 
       ! Check for overshoots and undershoots and correct accordingly.
 
-      if ( phi_max > phi(inp) .and. dPhi > dPhimax ) then
+      if ( phimax(ijp) > phi(ijp) .and. dPhi > dPhimax ) then
 
         gx = gtx + nx*dPhimax
         gy = gty + ny*dPhimax
@@ -710,7 +724,7 @@ subroutine slope_limiter_multidimensional(phi, dPhidx,dPhidy,dPhidz )
 
       endif
 
-      if ( phi_min < phi(inp) .and. dPhi < dPhimin ) then
+      if ( phimin(ijp) < phi(ijp) .and. dPhi < dPhimin ) then
 
         gx = gtx + nx*dPhimin
         gy = gty + ny*dPhimin
@@ -718,14 +732,15 @@ subroutine slope_limiter_multidimensional(phi, dPhidx,dPhidy,dPhidz )
 
       endif
 
+      dPhidx(ijp) = gx
+      dPhidy(ijp) = gy
+      dPhidz(ijp) = gz
 
     enddo
 
-    dPhidx(inp) = gx
-    dPhidy(inp) = gy
-    dPhidz(inp) = gz
-
   enddo
+
+  deallocate(phimax,phimin)
 
 end subroutine
 
@@ -872,7 +887,7 @@ subroutine grad_lsq( Phi, dPhidx,dPhidy,dPhidz )
   implicit none
 
   real(dp),dimension(numTotal), intent(in)   :: Phi
-  real(dp),dimension(numTotal), intent(inout) ::  dPhidx,dPhidy,dPhidz 
+  real(dp),dimension(numCells), intent(inout) ::  dPhidx,dPhidy,dPhidz 
 
   !
   ! Locals
@@ -1126,7 +1141,7 @@ subroutine grad_lsq_qr( Phi, dPhidx,dPhidy,dPhidz )
   implicit none
 
   real(dp), dimension(numTotal), intent(in)   :: phi
-  real(dp), dimension(numTotal), intent(inout) :: dPhidx,dPhidy,dPhidz
+  real(dp), dimension(numCells), intent(inout) :: dPhidx,dPhidy,dPhidz
 
   ! Locals
   integer, parameter :: n=3, m=6  ! m is the number of neighbours, e.g. for structured 3D mesh it's 6
@@ -1388,7 +1403,7 @@ subroutine grad_lsq_dm( Phi, dPhidx,dPhidy,dPhidz )
   implicit none
 
   real(dp),dimension(numTotal), intent(in)   :: Phi
-  real(dp),dimension(numTotal), intent(inout) ::  dPhidx,dPhidy,dPhidz 
+  real(dp),dimension(numCells), intent(inout) ::  dPhidx,dPhidy,dPhidz 
 
   ! Locals
   integer :: i,ijp,ijn,inp,iface
@@ -1537,7 +1552,7 @@ subroutine grad_gauss(u,dUdx,dUdy,dUdz)
 
   ! Arguments
   real(dp), dimension(numTotal), intent(in) :: u
-  real(dp), dimension(numTotal), intent(inout) :: dUdx,dUdy,dUdz
+  real(dp), dimension(numCells), intent(inout) :: dUdx,dUdy,dUdz
 
   ! Local
   integer :: i,ijp,ijn,ijb,lc,iface
@@ -1654,7 +1669,7 @@ subroutine grad_gauss_corrected(u,dudx,dudy,dudz)
 
   ! Arguments
   real(dp), dimension(numTotal), intent(in) :: u
-  real(dp), dimension(numTotal), intent(inout) :: dudx,dudy,dudz
+  real(dp), dimension(numCells), intent(inout) :: dudx,dudy,dudz
 
   ! Local
   integer :: i,ijp,ijn,ijb,iface

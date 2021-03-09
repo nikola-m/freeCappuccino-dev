@@ -3,7 +3,7 @@ module sparse_matrix
 ! Module defining CSR (Compressed Sparse Row) sparse matrix data type.
 !
   use types
-  use geometry, only: numCells,numInnerFaces,owner, neighbour
+  use geometry, only: numCells,numInnerFaces,owner,neighbour,numPeriodic,numBoundaries,bctype,nfaces,startFace,startFaceTwin
   use utils, only: csr_to_k, find_index_position, find_main_diag_element_positions, i4vec2_sort_a, i4vec_print, i4vec_print2
 
   ! Matrix in sparse format CSR(ioffset,ja,a) and COO(ia,ja,a)
@@ -22,8 +22,9 @@ module sparse_matrix
   real(dp), dimension(:), allocatable :: spu,spv,sp    ! Source terms for the left hand side
   real(dp), dimension(:), allocatable :: su, sv, sw    ! Source terms for the left hand side of equation
   real(dp), dimension(:), allocatable :: apu, apv, apw ! Reciprocal values of diagonal coefficients
-  real(dp), dimension(:), allocatable :: rAu,rAv,rAw   ! Reciprocal values of diagonal coefficients containing only con. and diff. terms
 
+  real(dp), dimension(:), allocatable :: h,rU,rV,rW ! Arrays used in piso algorithm.
+  
   !
   ! The CSR matrix derived type
   !
@@ -76,7 +77,7 @@ function new_csrMatrix( ) result(csr)
   ! csr % a  = a
   
 
-end function new_csrMatrix
+end function
 
 !
 ! > Create new CSR matrix object for given mesh data.
@@ -85,17 +86,28 @@ end function new_csrMatrix
 subroutine create_CSR_matrix
 !
 ! Define sparsity pattern according to given mesh connectivity data,
-! and allocate arays representing system matrix in CSR format
+! and allocate arays representing system matrix in CSR format.
 !
+
   implicit none
   
   integer :: i
   integer :: icell,ijp,ijn
   integer :: istart, iend
+  integer :: k,ib,iPer
 
 
   ! Number of non-zero elements in sparse matrix: nnz
-  nnz = 2*numInnerFaces + numCells
+  ! We brake it down like this:
+  ! If we have cell P and cell N as its neighbour, we will have:
+  ! In Pth row, matrix elements: PP, PN 
+  ! In Nth row, matrix elements: NP, NN
+  ! So finding one inner face (or periodic boundary face, since we treat them as inner faces)
+  ! we will have two off-diagonal elements, therefore 2*numInnerFaces (2*numPeriodic).
+  ! That was about off diagonal elements, we will also need elements on the main diagonal
+  ! of the matrix, and we have numCells of them, since there is numCells linear equations
+  ! in a system on numCells unknowns. Nikola
+  nnz = 2*(numInnerFaces+numPeriodic) + numCells
 
   write ( *, '(a)' ) ' '
   write ( *, '(a,i0)' ) '  Number of nonzero coefficients in sparse matrix, nnz = ', nnz
@@ -115,15 +127,48 @@ subroutine create_CSR_matrix
     ia(icell) = icell
     ja(icell) = icell
   enddo
+
   do i = 1,numInnerFaces
     ia(numCells+i) = owner(i)
     ja(numCells+i) = neighbour(i) 
   enddo
+
   do i = 1,numInnerFaces
     ia(numCells+numInnerFaces+i) = neighbour(i) 
     ja(numCells+numInnerFaces+i) = owner(i)
   enddo
 
+  ! Matrix elements resulting from connecting cells of the periodic boundaries
+  
+  iPer = 0 ! counts every instance of finding periodic boundary
+  k = numCells+2*numInnerFaces ! start counting from this number, see why few lines above, wehere ia,ja are populated.
+
+  do ib=1,numBoundaries
+
+    if (  bctype(ib) == 'periodic' ) then
+
+      iPer = iPer + 1 ! found one pair of periodic boundaries, increase counter by one
+
+      ! Loop trough faces
+      do i=1,nfaces(ib)
+
+        ijp = owner( startFace(ib) + i )
+        ijn = owner( startFaceTwin(iPer) + i )
+
+        k = k + 1 ! next
+        ia(k) = ijp
+        ja(k) = ijn
+
+        k = k + 1
+        ia(k) = ijn
+        ja(k) = ijp
+
+
+      enddo
+
+    endif
+
+  enddo
 !
 !  > Lexically sort the ia, ja values.
 !
@@ -143,7 +188,7 @@ subroutine create_CSR_matrix
 
 
 !
-! > Find positions of row starting in COO matrix format
+! > Find positions of row starting matrix elements in COO format and put these positions in ioffset array.
 !
  allocate ( ioffset(numCells+1) )
 
@@ -160,12 +205,12 @@ subroutine create_CSR_matrix
 
 
 !
-! > Do not need row indices - information on rows is in ioffset (CSR format)
+! > We do not need row indices - information on rows is in ioffset (CSR format).
 !
   deallocate ( ia )
 
 !
-! > Allocate array representing system values in CSR format
+! > Allocate array for sparse matrix element values (matrix is in CSR format).
 !
   allocate( a(nnz) )
 
@@ -176,7 +221,7 @@ subroutine create_CSR_matrix
   allocate( sv(numCells) )  
   allocate( sw(numCells)) 
 
-! > Sources for main diagonal
+! > Sources moved to LHS, i.e. to main diagonal.
 !
   allocate( spu(numCells) )  
   allocate( spv(numCells) ) 
@@ -188,23 +233,20 @@ subroutine create_CSR_matrix
   allocate(res(numCells) ) 
 
 !
-! > 1./UEqn.A()
+! > The inverses of main diagonal elements for u,v and w momentum equations.
 !
   allocate(apu(numCells) )
   allocate(apv(numCells) ) 
   allocate(apw(numCells) ) 
-  allocate(rAu(numCells) )
-  allocate(rAv(numCells) )
-  allocate(rAw(numCells) )
 
 !
-! > Allocate array storing indexes of 'a' array where cell pair coefs are stored
+! > Allocate array storing positions in the array for sparse matrix elements where specific cell pair coefs are stored.
 !
-  allocate( icell_jcell_csr_index(numInnerFaces) )
-  allocate( jcell_icell_csr_index(numInnerFaces) )
+  allocate( icell_jcell_csr_index(numInnerFaces+numPeriodic) )
+  allocate( jcell_icell_csr_index(numInnerFaces+numPeriodic) )
 
 !
-! >Index arrays of matrix elements stored in CSR format
+! >Position arrays of matrix elements stored in CSR format
 !
   do i=1,numInnerFaces                                                       
     ijp = owner(i)
@@ -217,9 +259,41 @@ subroutine create_CSR_matrix
     jcell_icell_csr_index(i) = csr_to_k(ijn,ijp,ioffset,ja) 
   enddo
 
-!+-----------------------------------------------------------------------------+
+  ! Matrix elements resulting from connecting cells of the periodic boundaries
 
-end subroutine create_CSR_matrix
+  iPer = 0 ! counts every instance of finding periodic boundary
+
+  k = numInnerFaces ! counter for arrays filled below
+
+  do ib=1,numBoundaries
+
+    if (  bctype(ib) == 'periodic' ) then
+
+      iPer = iPer + 1
+
+      ! Faces trough periodic boundaries
+      do i=1,nfaces(ib)
+
+        ijp = owner( startFace(ib) + i )
+        ijn = owner( startFaceTwin(iPer) + i )
+
+        k = k + 1 ! next
+
+        ! Index of the (icell,jcell) matrix element:
+        icell_jcell_csr_index(k) = csr_to_k(ijp,ijn,ioffset,ja) 
+
+        ! Index of the (jcell,icell) matrix element:
+        jcell_icell_csr_index(k) = csr_to_k(ijn,ijp,ioffset,ja) 
+
+
+      enddo
+
+    endif
+
+  enddo
+
+
+end subroutine
 
 
 end module sparse_matrix

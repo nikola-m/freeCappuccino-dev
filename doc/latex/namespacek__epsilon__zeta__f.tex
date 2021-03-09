@@ -1,0 +1,174 @@
+\hypertarget{namespacek__epsilon__zeta__f}{}\doxysection{k\+\_\+epsilon\+\_\+zeta\+\_\+f Module Reference}
+\label{namespacek__epsilon__zeta__f}\index{k\_epsilon\_zeta\_f@{k\_epsilon\_zeta\_f}}
+\doxysubsection*{Functions/\+Subroutines}
+\begin{DoxyCompactItemize}
+\item 
+subroutine, public \mbox{\hyperlink{namespacek__epsilon__zeta__f_a96d9ff45439b59d5b8335e39aad4d47d}{correct\+\_\+turbulence\+\_\+k\+\_\+epsilon\+\_\+zeta\+\_\+f}} ()
+\item 
+subroutine, public \mbox{\hyperlink{namespacek__epsilon__zeta__f_a7e80d54ab71f25e4596d0ca6a46ee4ba}{correct\+\_\+turbulence\+\_\+inlet\+\_\+k\+\_\+epsilon\+\_\+zeta\+\_\+f}} ()
+\item 
+subroutine \mbox{\hyperlink{namespacek__epsilon__zeta__f_af14b2ab1d31025e38c2f7c0c03144e0c}{solve\+\_\+f\+\_\+equation}} ()
+\item 
+subroutine \mbox{\hyperlink{namespacek__epsilon__zeta__f_a40c6034a8de0d37467f8b44a6a56c9f4}{calcsc}} (Fi, d\+Fidxi, ifi)
+\item 
+subroutine \mbox{\hyperlink{namespacek__epsilon__zeta__f_aee004b7784046d5d09ef6090646cd0de}{modify\+\_\+mu\+\_\+eff}} ()
+\item 
+subroutine \mbox{\hyperlink{namespacek__epsilon__zeta__f_a2c14f0a38ce6658faca9884c37c791b4}{modify\+\_\+mu\+\_\+eff\+\_\+inlet}} ()
+\end{DoxyCompactItemize}
+\doxysubsection*{Variables}
+\begin{DoxyCompactItemize}
+\item 
+real(dp), parameter \mbox{\hyperlink{namespacek__epsilon__zeta__f_a5d567a6368bca5b0841051cd221355d4}{cmu}} = 0.\+22\+\_\+dp
+\item 
+real(dp), parameter \mbox{\hyperlink{namespacek__epsilon__zeta__f_a45bedddf115b58d59169d1da64d873eb}{c1}} = 1.\+4\+\_\+dp
+\item 
+real(dp) \mbox{\hyperlink{namespacek__epsilon__zeta__f_a424dc1473dde87fac65394097c5a045f}{ceps1}}
+\item 
+real(dp), parameter \mbox{\hyperlink{namespacek__epsilon__zeta__f_a9ebcc0eb612e02b54b59ef242fb0c21c}{ceps2}} = 1.\+9\+\_\+dp
+\item 
+real(dp), parameter \mbox{\hyperlink{namespacek__epsilon__zeta__f_af3e889088961660782f1a7e4406edee3}{c2p}} = 0.\+65\+\_\+dp
+\item 
+real(dp), parameter \mbox{\hyperlink{namespacek__epsilon__zeta__f_a54620cbb76d5c8b3260c4f8037170965}{ct}} = 6.\+0\+\_\+dp
+\item 
+real(dp), parameter \mbox{\hyperlink{namespacek__epsilon__zeta__f_a40a3b2a1b969e48ceb6fdd23b6372ef9}{cl}} = 0.\+36\+\_\+dp
+\item 
+real(dp), parameter \mbox{\hyperlink{namespacek__epsilon__zeta__f_a93538d3314d49ba78d1b3ee314805659}{ceta}} = 85.\+0\+\_\+dp
+\item 
+real(dp), parameter \mbox{\hyperlink{namespacek__epsilon__zeta__f_af3d1153ca4d94b086f0798fbd5f42e69}{sigma\+\_\+k}} = 1.\+0\+\_\+dp
+\item 
+real(dp), parameter \mbox{\hyperlink{namespacek__epsilon__zeta__f_a652a1e9afd57b34e9f0d9c477d6ea1bd}{sigma\+\_\+epsilon}} = 1.\+3\+\_\+dp
+\item 
+real(dp), parameter \mbox{\hyperlink{namespacek__epsilon__zeta__f_a2e51be2b8f0a253169c6cae4be84d58d}{sigma\+\_\+zeta}} = 1.\+2\+\_\+dp
+\item 
+real(dp), parameter \mbox{\hyperlink{namespacek__epsilon__zeta__f_a308cd7b6a2275f11124688a6adf889f4}{cmu25}} = sqrt(sqrt(\mbox{\hyperlink{namespacek__epsilon__zeta__f_a5d567a6368bca5b0841051cd221355d4}{cmu}}))
+\item 
+real(dp), parameter \mbox{\hyperlink{namespacek__epsilon__zeta__f_a131abf270c04c30fb509cfeb44b84083}{cmu75}} = \mbox{\hyperlink{namespacek__epsilon__zeta__f_a308cd7b6a2275f11124688a6adf889f4}{cmu25}}$\ast$$\ast$3
+\end{DoxyCompactItemize}
+
+
+\doxysubsection{Function/\+Subroutine Documentation}
+\mbox{\Hypertarget{namespacek__epsilon__zeta__f_a40c6034a8de0d37467f8b44a6a56c9f4}\label{namespacek__epsilon__zeta__f_a40c6034a8de0d37467f8b44a6a56c9f4}} 
+\index{k\_epsilon\_zeta\_f@{k\_epsilon\_zeta\_f}!calcsc@{calcsc}}
+\index{calcsc@{calcsc}!k\_epsilon\_zeta\_f@{k\_epsilon\_zeta\_f}}
+\doxysubsubsection{\texorpdfstring{calcsc()}{calcsc()}}
+{\footnotesize\ttfamily subroutine k\+\_\+epsilon\+\_\+zeta\+\_\+f\+::calcsc (\begin{DoxyParamCaption}\item[{real(dp), dimension(numtotal)}]{Fi,  }\item[{real(dp), dimension(3,numcells)}]{d\+Fidxi,  }\item[{integer, intent(in)}]{ifi }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [private]}}
+
+Here is the call graph for this function\+:
+% FIG 0
+\mbox{\Hypertarget{namespacek__epsilon__zeta__f_a7e80d54ab71f25e4596d0ca6a46ee4ba}\label{namespacek__epsilon__zeta__f_a7e80d54ab71f25e4596d0ca6a46ee4ba}} 
+\index{k\_epsilon\_zeta\_f@{k\_epsilon\_zeta\_f}!correct\_turbulence\_inlet\_k\_epsilon\_zeta\_f@{correct\_turbulence\_inlet\_k\_epsilon\_zeta\_f}}
+\index{correct\_turbulence\_inlet\_k\_epsilon\_zeta\_f@{correct\_turbulence\_inlet\_k\_epsilon\_zeta\_f}!k\_epsilon\_zeta\_f@{k\_epsilon\_zeta\_f}}
+\doxysubsubsection{\texorpdfstring{correct\_turbulence\_inlet\_k\_epsilon\_zeta\_f()}{correct\_turbulence\_inlet\_k\_epsilon\_zeta\_f()}}
+{\footnotesize\ttfamily subroutine, public k\+\_\+epsilon\+\_\+zeta\+\_\+f\+::correct\+\_\+turbulence\+\_\+inlet\+\_\+k\+\_\+epsilon\+\_\+zeta\+\_\+f}
+
+Here is the call graph for this function\+:
+% FIG 1
+\mbox{\Hypertarget{namespacek__epsilon__zeta__f_a96d9ff45439b59d5b8335e39aad4d47d}\label{namespacek__epsilon__zeta__f_a96d9ff45439b59d5b8335e39aad4d47d}} 
+\index{k\_epsilon\_zeta\_f@{k\_epsilon\_zeta\_f}!correct\_turbulence\_k\_epsilon\_zeta\_f@{correct\_turbulence\_k\_epsilon\_zeta\_f}}
+\index{correct\_turbulence\_k\_epsilon\_zeta\_f@{correct\_turbulence\_k\_epsilon\_zeta\_f}!k\_epsilon\_zeta\_f@{k\_epsilon\_zeta\_f}}
+\doxysubsubsection{\texorpdfstring{correct\_turbulence\_k\_epsilon\_zeta\_f()}{correct\_turbulence\_k\_epsilon\_zeta\_f()}}
+{\footnotesize\ttfamily subroutine, public k\+\_\+epsilon\+\_\+zeta\+\_\+f\+::correct\+\_\+turbulence\+\_\+k\+\_\+epsilon\+\_\+zeta\+\_\+f}
+
+Here is the call graph for this function\+:
+% FIG 2
+\mbox{\Hypertarget{namespacek__epsilon__zeta__f_aee004b7784046d5d09ef6090646cd0de}\label{namespacek__epsilon__zeta__f_aee004b7784046d5d09ef6090646cd0de}} 
+\index{k\_epsilon\_zeta\_f@{k\_epsilon\_zeta\_f}!modify\_mu\_eff@{modify\_mu\_eff}}
+\index{modify\_mu\_eff@{modify\_mu\_eff}!k\_epsilon\_zeta\_f@{k\_epsilon\_zeta\_f}}
+\doxysubsubsection{\texorpdfstring{modify\_mu\_eff()}{modify\_mu\_eff()}}
+{\footnotesize\ttfamily subroutine k\+\_\+epsilon\+\_\+zeta\+\_\+f\+::modify\+\_\+mu\+\_\+eff}
+
+Here is the call graph for this function\+:
+% FIG 3
+\mbox{\Hypertarget{namespacek__epsilon__zeta__f_a2c14f0a38ce6658faca9884c37c791b4}\label{namespacek__epsilon__zeta__f_a2c14f0a38ce6658faca9884c37c791b4}} 
+\index{k\_epsilon\_zeta\_f@{k\_epsilon\_zeta\_f}!modify\_mu\_eff\_inlet@{modify\_mu\_eff\_inlet}}
+\index{modify\_mu\_eff\_inlet@{modify\_mu\_eff\_inlet}!k\_epsilon\_zeta\_f@{k\_epsilon\_zeta\_f}}
+\doxysubsubsection{\texorpdfstring{modify\_mu\_eff\_inlet()}{modify\_mu\_eff\_inlet()}}
+{\footnotesize\ttfamily subroutine k\+\_\+epsilon\+\_\+zeta\+\_\+f\+::modify\+\_\+mu\+\_\+eff\+\_\+inlet}
+
+\mbox{\Hypertarget{namespacek__epsilon__zeta__f_af14b2ab1d31025e38c2f7c0c03144e0c}\label{namespacek__epsilon__zeta__f_af14b2ab1d31025e38c2f7c0c03144e0c}} 
+\index{k\_epsilon\_zeta\_f@{k\_epsilon\_zeta\_f}!solve\_f\_equation@{solve\_f\_equation}}
+\index{solve\_f\_equation@{solve\_f\_equation}!k\_epsilon\_zeta\_f@{k\_epsilon\_zeta\_f}}
+\doxysubsubsection{\texorpdfstring{solve\_f\_equation()}{solve\_f\_equation()}}
+{\footnotesize\ttfamily subroutine k\+\_\+epsilon\+\_\+zeta\+\_\+f\+::solve\+\_\+f\+\_\+equation\hspace{0.3cm}{\ttfamily [private]}}
+
+
+
+\doxysubsection{Variable Documentation}
+\mbox{\Hypertarget{namespacek__epsilon__zeta__f_a45bedddf115b58d59169d1da64d873eb}\label{namespacek__epsilon__zeta__f_a45bedddf115b58d59169d1da64d873eb}} 
+\index{k\_epsilon\_zeta\_f@{k\_epsilon\_zeta\_f}!c1@{c1}}
+\index{c1@{c1}!k\_epsilon\_zeta\_f@{k\_epsilon\_zeta\_f}}
+\doxysubsubsection{\texorpdfstring{c1}{c1}}
+{\footnotesize\ttfamily real(dp), parameter k\+\_\+epsilon\+\_\+zeta\+\_\+f\+::c1 = 1.\+4\+\_\+dp}
+
+\mbox{\Hypertarget{namespacek__epsilon__zeta__f_af3e889088961660782f1a7e4406edee3}\label{namespacek__epsilon__zeta__f_af3e889088961660782f1a7e4406edee3}} 
+\index{k\_epsilon\_zeta\_f@{k\_epsilon\_zeta\_f}!c2p@{c2p}}
+\index{c2p@{c2p}!k\_epsilon\_zeta\_f@{k\_epsilon\_zeta\_f}}
+\doxysubsubsection{\texorpdfstring{c2p}{c2p}}
+{\footnotesize\ttfamily real(dp), parameter k\+\_\+epsilon\+\_\+zeta\+\_\+f\+::c2p = 0.\+65\+\_\+dp}
+
+\mbox{\Hypertarget{namespacek__epsilon__zeta__f_a424dc1473dde87fac65394097c5a045f}\label{namespacek__epsilon__zeta__f_a424dc1473dde87fac65394097c5a045f}} 
+\index{k\_epsilon\_zeta\_f@{k\_epsilon\_zeta\_f}!ceps1@{ceps1}}
+\index{ceps1@{ceps1}!k\_epsilon\_zeta\_f@{k\_epsilon\_zeta\_f}}
+\doxysubsubsection{\texorpdfstring{ceps1}{ceps1}}
+{\footnotesize\ttfamily real(dp) k\+\_\+epsilon\+\_\+zeta\+\_\+f\+::ceps1}
+
+\mbox{\Hypertarget{namespacek__epsilon__zeta__f_a9ebcc0eb612e02b54b59ef242fb0c21c}\label{namespacek__epsilon__zeta__f_a9ebcc0eb612e02b54b59ef242fb0c21c}} 
+\index{k\_epsilon\_zeta\_f@{k\_epsilon\_zeta\_f}!ceps2@{ceps2}}
+\index{ceps2@{ceps2}!k\_epsilon\_zeta\_f@{k\_epsilon\_zeta\_f}}
+\doxysubsubsection{\texorpdfstring{ceps2}{ceps2}}
+{\footnotesize\ttfamily real(dp), parameter k\+\_\+epsilon\+\_\+zeta\+\_\+f\+::ceps2 = 1.\+9\+\_\+dp}
+
+\mbox{\Hypertarget{namespacek__epsilon__zeta__f_a93538d3314d49ba78d1b3ee314805659}\label{namespacek__epsilon__zeta__f_a93538d3314d49ba78d1b3ee314805659}} 
+\index{k\_epsilon\_zeta\_f@{k\_epsilon\_zeta\_f}!ceta@{ceta}}
+\index{ceta@{ceta}!k\_epsilon\_zeta\_f@{k\_epsilon\_zeta\_f}}
+\doxysubsubsection{\texorpdfstring{ceta}{ceta}}
+{\footnotesize\ttfamily real(dp), parameter k\+\_\+epsilon\+\_\+zeta\+\_\+f\+::ceta = 85.\+0\+\_\+dp}
+
+\mbox{\Hypertarget{namespacek__epsilon__zeta__f_a40a3b2a1b969e48ceb6fdd23b6372ef9}\label{namespacek__epsilon__zeta__f_a40a3b2a1b969e48ceb6fdd23b6372ef9}} 
+\index{k\_epsilon\_zeta\_f@{k\_epsilon\_zeta\_f}!cl@{cl}}
+\index{cl@{cl}!k\_epsilon\_zeta\_f@{k\_epsilon\_zeta\_f}}
+\doxysubsubsection{\texorpdfstring{cl}{cl}}
+{\footnotesize\ttfamily real(dp), parameter k\+\_\+epsilon\+\_\+zeta\+\_\+f\+::cl = 0.\+36\+\_\+dp}
+
+\mbox{\Hypertarget{namespacek__epsilon__zeta__f_a5d567a6368bca5b0841051cd221355d4}\label{namespacek__epsilon__zeta__f_a5d567a6368bca5b0841051cd221355d4}} 
+\index{k\_epsilon\_zeta\_f@{k\_epsilon\_zeta\_f}!cmu@{cmu}}
+\index{cmu@{cmu}!k\_epsilon\_zeta\_f@{k\_epsilon\_zeta\_f}}
+\doxysubsubsection{\texorpdfstring{cmu}{cmu}}
+{\footnotesize\ttfamily real(dp), parameter k\+\_\+epsilon\+\_\+zeta\+\_\+f\+::cmu = 0.\+22\+\_\+dp}
+
+\mbox{\Hypertarget{namespacek__epsilon__zeta__f_a308cd7b6a2275f11124688a6adf889f4}\label{namespacek__epsilon__zeta__f_a308cd7b6a2275f11124688a6adf889f4}} 
+\index{k\_epsilon\_zeta\_f@{k\_epsilon\_zeta\_f}!cmu25@{cmu25}}
+\index{cmu25@{cmu25}!k\_epsilon\_zeta\_f@{k\_epsilon\_zeta\_f}}
+\doxysubsubsection{\texorpdfstring{cmu25}{cmu25}}
+{\footnotesize\ttfamily real(dp), parameter k\+\_\+epsilon\+\_\+zeta\+\_\+f\+::cmu25 = sqrt(sqrt(\mbox{\hyperlink{namespacek__epsilon__zeta__f_a5d567a6368bca5b0841051cd221355d4}{cmu}}))}
+
+\mbox{\Hypertarget{namespacek__epsilon__zeta__f_a131abf270c04c30fb509cfeb44b84083}\label{namespacek__epsilon__zeta__f_a131abf270c04c30fb509cfeb44b84083}} 
+\index{k\_epsilon\_zeta\_f@{k\_epsilon\_zeta\_f}!cmu75@{cmu75}}
+\index{cmu75@{cmu75}!k\_epsilon\_zeta\_f@{k\_epsilon\_zeta\_f}}
+\doxysubsubsection{\texorpdfstring{cmu75}{cmu75}}
+{\footnotesize\ttfamily real(dp), parameter k\+\_\+epsilon\+\_\+zeta\+\_\+f\+::cmu75 = \mbox{\hyperlink{namespacek__epsilon__zeta__f_a308cd7b6a2275f11124688a6adf889f4}{cmu25}}$\ast$$\ast$3}
+
+\mbox{\Hypertarget{namespacek__epsilon__zeta__f_a54620cbb76d5c8b3260c4f8037170965}\label{namespacek__epsilon__zeta__f_a54620cbb76d5c8b3260c4f8037170965}} 
+\index{k\_epsilon\_zeta\_f@{k\_epsilon\_zeta\_f}!ct@{ct}}
+\index{ct@{ct}!k\_epsilon\_zeta\_f@{k\_epsilon\_zeta\_f}}
+\doxysubsubsection{\texorpdfstring{ct}{ct}}
+{\footnotesize\ttfamily real(dp), parameter k\+\_\+epsilon\+\_\+zeta\+\_\+f\+::ct = 6.\+0\+\_\+dp}
+
+\mbox{\Hypertarget{namespacek__epsilon__zeta__f_a652a1e9afd57b34e9f0d9c477d6ea1bd}\label{namespacek__epsilon__zeta__f_a652a1e9afd57b34e9f0d9c477d6ea1bd}} 
+\index{k\_epsilon\_zeta\_f@{k\_epsilon\_zeta\_f}!sigma\_epsilon@{sigma\_epsilon}}
+\index{sigma\_epsilon@{sigma\_epsilon}!k\_epsilon\_zeta\_f@{k\_epsilon\_zeta\_f}}
+\doxysubsubsection{\texorpdfstring{sigma\_epsilon}{sigma\_epsilon}}
+{\footnotesize\ttfamily real(dp), parameter k\+\_\+epsilon\+\_\+zeta\+\_\+f\+::sigma\+\_\+epsilon = 1.\+3\+\_\+dp}
+
+\mbox{\Hypertarget{namespacek__epsilon__zeta__f_af3d1153ca4d94b086f0798fbd5f42e69}\label{namespacek__epsilon__zeta__f_af3d1153ca4d94b086f0798fbd5f42e69}} 
+\index{k\_epsilon\_zeta\_f@{k\_epsilon\_zeta\_f}!sigma\_k@{sigma\_k}}
+\index{sigma\_k@{sigma\_k}!k\_epsilon\_zeta\_f@{k\_epsilon\_zeta\_f}}
+\doxysubsubsection{\texorpdfstring{sigma\_k}{sigma\_k}}
+{\footnotesize\ttfamily real(dp), parameter k\+\_\+epsilon\+\_\+zeta\+\_\+f\+::sigma\+\_\+k = 1.\+0\+\_\+dp}
+
+\mbox{\Hypertarget{namespacek__epsilon__zeta__f_a2e51be2b8f0a253169c6cae4be84d58d}\label{namespacek__epsilon__zeta__f_a2e51be2b8f0a253169c6cae4be84d58d}} 
+\index{k\_epsilon\_zeta\_f@{k\_epsilon\_zeta\_f}!sigma\_zeta@{sigma\_zeta}}
+\index{sigma\_zeta@{sigma\_zeta}!k\_epsilon\_zeta\_f@{k\_epsilon\_zeta\_f}}
+\doxysubsubsection{\texorpdfstring{sigma\_zeta}{sigma\_zeta}}
+{\footnotesize\ttfamily real(dp), parameter k\+\_\+epsilon\+\_\+zeta\+\_\+f\+::sigma\+\_\+zeta = 1.\+2\+\_\+dp}
+

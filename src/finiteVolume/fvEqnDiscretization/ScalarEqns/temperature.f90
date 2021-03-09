@@ -3,81 +3,69 @@ module temperature
 ! Implementation of sclar transport equation for temperature.
 !
   use types
-  use parameters
-  use geometry
-  use variables
 
   implicit none
 
-  ! Constants
-  real(dp), parameter :: sigt = 1.0_dp
+  !
+  ! Discrtetization and solution parameters - modified trough input.nml file
+  !
+  logical  :: calcT = .False.                        ! To activate the solution of this field in the main function. 
+  real(dp) :: urfT  = 0.9_dp                         ! Under-relaxation factors.
+  real(dp) :: gdsT = 1.0_dp                          ! Deferred correction factor.
+  character ( len=30 ) :: cSchemeT = 'linearUpwind'  ! Convection scheme - default is second order upwind.
+  character ( len=12 ) :: dSchemeT = 'skewness'      ! Difussion scheme, i.e. the method for normal gradient at face skewness/offset.
+  integer :: nrelaxT = 0                             ! Face-normal gradient non-orthogonal correction relaxation parameter.
+  character ( len=12 ) :: lSolverT = 'bicgstab'      ! Linear algebraic solver.
+  integer  :: maxiterT = 10                          ! Max number of iterations in linear solver.
+  real(dp) :: tolAbsT = 1e-13                        ! Absolute residual level.
+  real(dp) :: tolRelT = 2.5e-2                       ! Relative drop in residual to exit linear solver.
+  real(dp) :: sigt = 1.0_dp                          ! sigma_t
 
 
   private 
 
-  public :: calculate_temperature_field
+  public :: calculate_temperature
+  public :: calcT, urfT, gdsT, cSchemeT, dSchemeT, nrelaxT, lSolverT, maxiterT, tolAbsT, tolRelT, sigT ! params
 
 
 contains
 
 
-subroutine calculate_temperature_field
+subroutine calculate_temperature
 !
-! Main module routine to assemble and solve temperature field.
+! Purpose:
+!   Assemble and solve transport equation for temperature scalar field.
 !
-  use types
-  use parameters
-  use variables
-  use gradients
-  
-  implicit none
 
-  call calcsc(T,dTdxi,ien) ! Assemble and solve temperature eq.
-
-end subroutine
-
-
-!***********************************************************************
-!
-subroutine calcsc(Fi,dFidxi,ifi)
-!
-!*********************************************************************** 
-!
-! Asseamble and solve transport eq. for temerature scalar field.
-!
-!***********************************************************************
   use types
   use parameters
   use geometry
   use variables
   use sparse_matrix
   use gradients
-  use title_mod
-
+  use linear_solvers
+  
   implicit none
-
-  integer, intent(in) :: ifi
-  real(dp), dimension(numTotal) :: fi
-  real(dp), dimension(3,numTotal):: dfidxi
 
 !
 ! Local variables
 !
   integer ::  i, k, inp, ijp, ijn, ijb, ib, iface, iWall
-  real(dp) :: gam, prtr, apotime, urfrs, urfms
+  real(dp) :: gam, prtr, apotime
   real(dp) :: cap, can, suadd
   real(dp) :: off_diagonal_terms
-  real(dp) :: coef,dcoef
+  real(dp) :: dcoef
   real(dp) :: fimax,fimin
   real(dp) :: are,nxf,nyf,nzf,dTn
+  real(dp) :: urfr, urfm
 
 
 ! Variable specific coefficients:
-  gam = gds(ifi)
-  prtr = 1.0d0/pranl
+  gam = gdsT
+  prtr = 1.0d0/pranl ! <-inverse Prandlt number of the working fluid.
 
 ! Calculate gradient: 
-  call grad(fi,dfidxi)
+  call grad(T,dTdxi)
 
 ! Initialize matrix and source arrays
   a  = 0.0_dp
@@ -95,12 +83,12 @@ subroutine calcsc(Fi,dFidxi,ifi)
 
       if( bdf .or. cn ) then
         apotime = den(inp)*vol(inp)/timestep
-        su(inp) = su(inp) + apotime*to(inp)
+        su(inp) = su(inp) + apotime*To(inp)
         sp(inp) = sp(inp) + apotime
 
       elseif( bdf2 ) then
         apotime=den(inp)*vol(inp)/timestep
-        su(inp) = su(inp) + apotime*( 2*to(inp) - 0.5_dp*too(inp) )
+        su(inp) = su(inp) + apotime*( 2*To(inp) - 0.5_dp*Too(inp) )
         sp(inp) = sp(inp) + 1.5_dp*apotime
 
       endif
@@ -108,14 +96,13 @@ subroutine calcsc(Fi,dFidxi,ifi)
     endif
 
 
-    if(lturb.and.lbuoy) then
-      ! When bouy activated we need the freshest utt,vtt,wtt - turbulent heat fluxes
-      call calcheatflux 
-      call Additional_algebraic_heatflux_terms
-    end if
-
   enddo
 
+  if(lturb.and.lbuoy) then
+    ! When buoy activated we need the freshest utt,vtt,wtt - turbulent heat fluxes
+    call calcheatflux 
+    call Additional_algebraic_heatflux_terms
+  end if
 
 !
 ! > Calculate terms integrated over faces
@@ -129,7 +116,7 @@ subroutine calcsc(Fi,dFidxi,ifi)
     call facefluxsc( ijp, ijn, &
                      xf(i), yf(i), zf(i), arx(i), ary(i), arz(i), &
                      flmass(i), facint(i), gam, &
-                     fi, dFidxi, prtr, cap, can, suadd )
+                     T, dTdxi, prtr, cap, can, suadd )
 
     ! > Off-diagonal elements:
 
@@ -143,15 +130,14 @@ subroutine calcsc(Fi,dFidxi,ifi)
 
     ! > Elements on main diagonal:
 
-    ! ! (icell,icell) main diagonal element
+    ! (icell,icell) main diagonal element
     k = diag(ijp)
     a(k) = a(k) - can
-    ! sp(ijp) = sp(ijp) - can
 
-    ! ! (jcell,jcell) main diagonal element
+    ! (jcell,jcell) main diagonal element
     k = diag(ijn)
     a(k) = a(k) - cap
-    !sp(ijn) = sp(ijn) - cap
+
 
     ! > Explicit part of convection and difussion fluxes
 
@@ -169,7 +155,9 @@ subroutine calcsc(Fi,dFidxi,ifi)
 
   do ib=1,numBoundaries
 
-    if ( bctype(ib) == 'inlet' ) then
+    if ( bctype(ib) == 'inlet' .or. &
+         bctype(ib) == 'outlet' .or. &
+         bctype(ib) == 'pressure' ) then
 
       do i=1,nfaces(ib)
 
@@ -180,34 +168,16 @@ subroutine calcsc(Fi,dFidxi,ifi)
         call facefluxsc_boundary( ijp, ijb, &
                          xf(iface), yf(iface), zf(iface), arx(iface), ary(iface), arz(iface), &
                          flmass(iface), &
-                         Fi, dFidxi, prtr, cap, can, suadd)
+                         T, dTdxi, prtr, cap, can, suadd)
 
         Sp(ijp) = Sp(ijp)-can
 
-        Su(ijp) = Su(ijp)-can*Fi(ijb) + suadd
+        Su(ijp) = Su(ijp)-can*T(ijb) + suadd
 
       end do
 
-    elseif ( bctype(ib) == 'outlet' ) then
 
-      do i=1,nfaces(ib)
-
-        iface = startFace(ib) + i
-        ijp = owner(iface)
-        ijb = iBndValueStart(ib) + i
-
-        call facefluxsc_boundary( ijp, ijb, &
-                         xf(iface), yf(iface), zf(iface), arx(iface), ary(iface), arz(iface), &
-                         flmass(iface), &
-                         FI, dFidxi, prtr, cap, can, suadd )
-
-        Sp(ijp) = Sp(ijp)-can
-
-        Su(ijp) = Su(ijp)-can*Fi(ijb) + suadd
-
-      end do
-
-    elseif ( bctype(ib) == 'wall' .and. bcDFraction(ien,ib)==1.0_dp ) then
+    elseif ( bctype(ib) == 'wall' .and. bcDFraction(7,ib)==1.0_dp ) then
 
       ! Isothermal wall boundaries (that's Dirichlet on temperature)
 
@@ -219,15 +189,14 @@ subroutine calcsc(Fi,dFidxi,ifi)
         iWall = iWall + 1
 
         dcoef = viscos/pranl+(vis(ijp)-viscos)/sigt
-        coef=dcoef*srdw(iWall)
-        !# are = sqrt(arx(iface)**2+ary(iface)**2+arz(iface)**2)
-        !# coef = dcoef*are/dnw(iWall)
-        sp(ijp) = sp(ijp) + coef
-        su(ijp) = su(ijp) + coef*t(ijb)
+        dcoef = dcoef*srdw(iWall)
+
+        sp(ijp) = sp(ijp) + dcoef
+        su(ijp) = su(ijp) + dcoef*T(ijb)
 
       enddo
 
-    elseif ( bctype(ib) == 'wall' .and. bcDFraction(ien,ib)==0.0_dp ) then
+    elseif ( bctype(ib) == 'wall' .and. bcDFraction(7,ib)==0.0_dp ) then
 
       ! Adiabatic wall boundaries (that's actually zero grad on temperature)
 
@@ -237,7 +206,7 @@ subroutine calcsc(Fi,dFidxi,ifi)
         ijp = owner(iface)
         ijb = iBndValueStart(ib) + i
 
-        t(ijb)=t(ijp)
+        T(ijb) = T(ijp)
 
       enddo
 
@@ -253,9 +222,9 @@ subroutine calcsc(Fi,dFidxi,ifi)
         iWall = iWall + 1
 
         dcoef = viscos/pranl+(vis(ijp)-viscos)/sigt
-        coef=dcoef*srdw(iWall)
+        dcoef=dcoef*srdw(iWall)
 
-        ! Value of the temprature gradient in normal direction is set trough 
+        ! Value of the temperature gradient in normal direction is set trough 
         ! proper choice of component values. Let's project in to normal direction
         ! to recover normal gradient.
 
@@ -271,7 +240,7 @@ subroutine calcsc(Fi,dFidxi,ifi)
         dTn = dTdxi(1,ijb)*nxf+dTdxi(2,ijb)*nyf+dTdxi(3,ijb)*nzf
 
         ! Explicit source
-        su(ijp) = su(ijp) + coef*dTn
+        su(ijp) = su(ijp) + dcoef*dTn
 
       enddo
 
@@ -292,24 +261,24 @@ subroutine calcsc(Fi,dFidxi,ifi)
           ijn = neighbour(i)
 
           k = icell_jcell_csr_index(i)
-          su(ijp) = su(ijp) - a(k)*to(ijn)
+          su(ijp) = su(ijp) - a(k)*To(ijn)
 
           k = jcell_icell_csr_index(i)
-          su(ijn) = su(ijn) - a(k)*to(ijp)
+          su(ijn) = su(ijn) - a(k)*To(ijp)
       enddo
       
       do ijp=1,numCells
           apotime=den(ijp)*vol(ijp)/timestep
           off_diagonal_terms = sum( a( ioffset(ijp) : ioffset(ijp+1)-1 ) ) - a(diag(ijp))
-          su(ijp) = su(ijp) + (apotime + off_diagonal_terms)*to(ijp)
+          su(ijp) = su(ijp) + (apotime + off_diagonal_terms)*To(ijp)
           sp(ijp) = sp(ijp)+apotime
       enddo
 
   endif
 
   ! Underrelaxation factors
-  urfrs=urfr(ifi)
-  urfms=urfm(ifi)
+  urfr = 1.0_dp / urfT
+  urfm = 1.0_dp - urfT
 
   ! Main diagonal term assembly:
   do inp = 1,numCells
@@ -321,13 +290,13 @@ subroutine calcsc(Fi,dFidxi,ifi)
     a(diag(inp)) = sp(inp) - off_diagonal_terms
 
     ! Underelaxation:
-    a(diag(inp)) = a(diag(inp))*urfrs
-    su(inp) = su(inp) + urfms*a(diag(inp))*fi(inp)
+    a(diag(inp)) = a(diag(inp))*urfr
+    su(inp) = su(inp) + urfm*a(diag(inp))*T(inp)
 
   enddo
 
   ! Solve linear system:
-  call bicgstab(fi,ifi)
+  call csrsolve(lSolverT, T, su, resor(7), maxiterT, tolAbsT, tolRelT, 'Temp')
 
   !
   ! Update symmetry and outlet boundaries
@@ -342,7 +311,7 @@ subroutine calcsc(Fi,dFidxi,ifi)
         ijp = owner(iface)
         ijb = iBndValueStart(ib) + i
 
-        fi(ijb)=fi(ijp)
+        T(ijb) = T(ijp)
 
       enddo
 
@@ -350,16 +319,17 @@ subroutine calcsc(Fi,dFidxi,ifi)
 
   enddo
 
+
 ! Report range of scalar values and clip if negative
-  fimin = minval(fi(1:numCells))
-  fimax = maxval(fi(1:numCells))
+  fimin = minval( T(1:numCells) )
+  fimax = maxval( T(1:numCells) )
   
-  write(6,'(2x,es11.4,3a,es11.4)') fimin,' <= ',chvar(ifi),' <= ',fimax
+  write(6,'(2x,es11.4,a,es11.4)') fimin,' <= Temperature <= ',fimax
 
 ! These field values cannot be negative
-  if(fimin.lt.0.0_dp) fi(1:numCells) = max(fi(1:numCells),small)
+  if(fimin.lt.0.0_dp) T(1:numCells) = max( T(1:numCells), small ) 
 
-end subroutine calcsc
+end subroutine
 
 
 !***********************************************************************
@@ -372,6 +342,7 @@ subroutine facefluxsc(ijp, ijn, xf, yf, zf, arx, ary, arz, &
 !
   use types
   use parameters
+  use geometry, only: numTotal, numCells,xc,yc,zc
   use variables, only: vis
   use interpolation
   use gradients
@@ -394,10 +365,8 @@ subroutine facefluxsc(ijp, ijn, xf, yf, zf, arx, ary, arz, &
 
 
 ! Local variables
-  integer  :: nrelax
-  character(len=12) :: approach
   real(dp) :: are
-  real(dp) :: xpn,ypn,zpn!, xi,yi,zi,r1,r2,psie,psiw
+  real(dp) :: xpn,ypn,zpn
   real(dp) :: dpn
   real(dp) :: cp,ce
   real(dp) :: fii
@@ -451,12 +420,8 @@ subroutine facefluxsc(ijp, ijn, xf, yf, zf, arx, ary, arz, &
   ! Explicit part of diffusion
   !-------------------------------------------------------
 
-  nrelax = 0
-  approach  = 'skewness'
-  ! approach = 'offset'
-
   call sngrad(ijp, ijn, xf, yf, zf, arx, ary, arz, lambda, &
-              Fi, dFidxi, nrelax, approach, dfixi, dfiyi, dfizi, &
+              Fi, dFidxi, nrelaxT , dSchemeT , dfixi, dfiyi, dfizi, &
               dfixii, dfiyii, dfizii)
   
 
@@ -468,14 +433,14 @@ subroutine facefluxsc(ijp, ijn, xf, yf, zf, arx, ary, arz, &
 
 
   !-------------------------------------------------------
-  ! Explicit higher order convection
+  ! Explicit higher order convection; cScheme set in input
   !-------------------------------------------------------
   if( fm .ge. zero ) then 
     ! Flow goes from p to pj - > p is the upwind node
-    fii = face_value(ijp, ijn, xf, yf, zf, fxp, fi, dFidxi)
+    fii = face_value(ijp, ijn, xf, yf, zf, fxp, fi, dFidxi, cSchemeT)
   else
     ! Other way, flow goes from pj, to p -> pj is the upwind node.
-    fii = face_value(ijn, ijp, xf, yf, zf, fxn, fi, dFidxi)
+    fii = face_value(ijn, ijp, xf, yf, zf, fxn, fi, dFidxi, cSchemeT)
   endif
 
   fcfie = fm*fii
@@ -505,9 +470,9 @@ subroutine facefluxsc_boundary(ijp, ijn, xf, yf, zf, arx, ary, arz, fm, FI, dFid
 !***********************************************************************
 !
   use types
-  use parameters
+  use parameters, only: zero, viscos
+  use geometry, only: numTotal, numCells, xc,yc,zc
   use variables, only: vis
-  use gradients
 
   implicit none
 !
@@ -519,7 +484,7 @@ subroutine facefluxsc_boundary(ijp, ijn, xf, yf, zf, arx, ary, arz, fm, FI, dFid
   real(dp), intent(in) :: arx, ary, arz
   real(dp), intent(in) :: fm
   real(dp), dimension(numTotal), intent(in) :: Fi
-  real(dp), dimension(3,numTotal), intent(in) :: dFidxi
+  real(dp), dimension(3,numCells), intent(in) :: dFidxi
   real(dp), intent(in) :: prtr
   real(dp), intent(inout) :: cap, can, suadd
 

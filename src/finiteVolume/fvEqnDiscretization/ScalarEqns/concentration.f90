@@ -3,42 +3,36 @@ module concentration
 ! Implementation of sclar transport equation for concentration.
 !
   use types
-  use parameters
-  use geometry
-  use variables
   use scalar_fluxes, only: facefluxsc
 
   implicit none
 
-  ! Constants
-  real(dp), parameter :: sigt = 0.9_dp  
-
-  private 
+  !
+  ! Discrtetization and solution parameters - modified trough input.nml file
+  !
+  logical  :: calcCon = .False.                               ! To activate the solution of this field in the main function. 
+  real(dp) :: urfCon  = 0.9                                   ! Under-relaxation factors.
+  real(dp) :: gdsCon = 1.0                                    ! Deferred correction factor.
+  character ( len=30 ) :: cSchemeCon = 'boundedLinearUpwind'  ! Convection scheme - default is second order upwind.
+  character ( len=12 ) :: dSchemeCon = 'skewness' ! Difussion scheme, i.e. the method for normal gradient at face skewness/offset.
+  integer :: nrelaxCon = 0 ! Type of non-orthogonal correction for face gradient minimal/orthogonal/over-relaxed. 1/0/-1.
+  character ( len=12 ) :: lSolverCon = 'bicgstab'             ! Linear algebraic solver.
+  integer  :: maxiterCon = 10                                 ! Max number of iterations in linear solver.
+  real(dp) :: tolAbsCon = 1e-13                               ! Absolute residual level.
+  real(dp) :: tolRelCon = 0.025                               ! Relative drop in residual to exit linear solver.
+  real(dp) :: sigCon = 0.9_dp                                 ! Prandtl-Schmidt
+  
+  public :: calcCon, urfCon, gdsCon, cSchemeCon, dSchemeCon, nrelaxCon, lSolverCon, maxiterCon, tolAbsCon, tolRelCon, sigCon ! params
 
   public :: calculate_concentration_field
 
 contains
 
 
-subroutine calculate_concentration_field()
+subroutine calculate_concentration_field
 !
-! Main module routine to assemble and solve concentration field.
-!
-  use types
-  use parameters
-  use variables
-  use gradients
-  implicit none
-
-  call calcsc(Con,dCondxi,icon) ! Assemble and solve concentration eq.
-
-end subroutine
-
-
-
-subroutine calcsc(Fi,dFidxi,ifi)
-!
-! Ansamble and solve transport eq. for a scalar field.
+! Purpose: 
+!   Assemble and solve transport equation for a passive scalar field.
 !
   use types
   use parameters
@@ -46,60 +40,57 @@ subroutine calcsc(Fi,dFidxi,ifi)
   use variables
   use sparse_matrix
   use gradients
-  use title_mod
-
+  use linear_solvers
+  
   implicit none
-
-  integer, intent(in) :: ifi
-  real(dp), dimension(numTotal) :: fi
-  real(dp), dimension(3,numCells) :: dfidxi 
 
 !
 ! Local variables
 !
-  integer ::  i, k, inp, ijp, ijn, ijb, ib, iface
-  real(dp) :: gam, prtr, apotime, urfrs, urfms
+  integer ::  i, k, inp, ijp, ijn, ijb, ib, iface, iWall
+  real(dp) :: gam, prtr, apotime
   real(dp) :: cap, can, suadd
   real(dp) :: off_diagonal_terms
   real(dp) :: fimax,fimin
+  real(dp) :: urfr,urfm
+  real(dp) :: are,nxf,nyf,nzf,dcoef,dCn
 
 
   ! Variable specific coefficients:
-  gam = gds(ifi)      !< first to higher order convection scheme blending parameter gamma.
-  prtr = 1.0d0/sigt   !< reciprocal value of Prandtl-Schmidt number
+  gam = gdsCon          !< first to higher order convection scheme blending parameter gamma.
+  prtr = 1.0d0/sigCon   !< reciprocal value of Prandtl-Schmidt number
 
 ! Calculate gradient: 
-  call grad(fi,dfidxi)
+  call grad(Con,dCondxi)
 
 ! Initialize matrix and source arrays
   a  = 0.0_dp
   su = 0.0d0
   sp = 0.0d0
 
-!
-!=====================================
-! VOLUME SOURCE TERMS 
-!=====================================
+  !
+  ! Volume source terms 
+  !
+
   do inp=1,numCells
 
-    !
     ! UNSTEADY TERM
-    !
     if( bdf .or. cn ) then
       apotime = den(inp)*vol(inp)/timestep
-      su(inp) = su(inp) + apotime*cono(inp)
+      su(inp) = su(inp) + apotime*Cono(inp)
       sp(inp) = sp(inp) + apotime
     elseif( bdf2 ) then
       apotime=den(inp)*vol(inp)/timestep
-      su(inp) = su(inp) + apotime*( 2*cono(inp) - 0.5_dp*conoo(inp) )
+      su(inp) = su(inp) + apotime*( 2*Cono(inp) - 0.5_dp*Conoo(inp) )
       sp(inp) = sp(inp) + 1.5_dp*apotime
     endif
 
   enddo
 
 
-
-! Calculate terms integrated over surfaces
+  !
+  ! Calculate terms integrated over faces
+  !
 
   ! Inner faces:                                             
   do i=1,numInnerFaces                                                       
@@ -108,8 +99,8 @@ subroutine calcsc(Fi,dFidxi,ifi)
 
     call facefluxsc( ijp, ijn, &
                      xf(i), yf(i), zf(i), arx(i), ary(i), arz(i), &
-                     flmass(i), facint(i), gam, &
-                     fi, dFidxi, prtr, cap, can, suadd )
+                     flmass(i), facint(i), gam, cSchemeCon, dSchemeCon, nrelaxCon,  &
+                     Con, dCondxi, prtr, cap, can, suadd )
 
     ! > Off-diagonal elements:
 
@@ -143,10 +134,11 @@ subroutine calcsc(Fi,dFidxi,ifi)
   !
   ! Boundary conditions
   !
+  iWall = 0
 
   do ib=1,numBoundaries
 
-    if ( bctype(ib) == 'inlet' ) then
+    if ( bctype(ib) == 'inlet' .or. bctype(ib) == 'outlet' .or. bctype(ib) == 'pressure' ) then
 
       do i=1,nfaces(ib)
 
@@ -157,15 +149,17 @@ subroutine calcsc(Fi,dFidxi,ifi)
         call facefluxsc( ijp, ijb, &
                          xf(iface), yf(iface), zf(iface), arx(iface), ary(iface), arz(iface), &
                          flmass(iface), &
-                         Fi, dFidxi, prtr, cap, can, suadd)
+                         Con, dCondxi, prtr, cap, can, suadd)
 
         Sp(ijp) = Sp(ijp)-can
 
-        Su(ijp) = Su(ijp)-can*Fi(ijb) + suadd
+        Su(ijp) = Su(ijp)-can*Con(ijb) + suadd
 
       end do
 
-    elseif ( bctype(ib) == 'outlet' ) then
+    elseif ( bctype(ib) == 'wall' .and. bcDFraction(9,ib)==0.0_dp ) then
+
+      ! Wall with zdro grad
 
       do i=1,nfaces(ib)
 
@@ -173,33 +167,47 @@ subroutine calcsc(Fi,dFidxi,ifi)
         ijp = owner(iface)
         ijb = iBndValueStart(ib) + i
 
-        call facefluxsc( ijp, ijb, &
-                         xf(iface), yf(iface), zf(iface), arx(iface), ary(iface), arz(iface), &
-                         flmass(iface), &
-                         FI, dFidxi, prtr, cap, can, suadd )
+        Con(ijb) = Con(ijp)
 
-        Sp(ijp) = Sp(ijp)-can
+      enddo
 
-        Su(ijp) = Su(ijp)-can*Fi(ijb) + suadd
+    elseif ( bctype(ib) == 'wall' .and. bcDFraction(9,ib)==1.0_dp ) then
 
-      end do
-
-    elseif ( bctype(ib) == 'wall') then
-
-      ! Isothermal wall boundaries
+      ! Prescribed concentration flux wall boundaries (that's actually non homo Neumann)
 
       do i=1,nfaces(ib)
 
         iface = startFace(ib) + i
         ijp = owner(iface)
         ijb = iBndValueStart(ib) + i
+        iWall = iWall + 1
 
+        dcoef = viscos/pranl+(vis(ijp)-viscos)/sigCon
+        dcoef = dcoef*srdw(iWall)
+
+        ! Value of the concentration gradient in normal direction is set trough 
+        ! proper choice of component values. Let's project in to normal direction
+        ! to recover normal gradient.
+
+        ! Face area 
+        are = sqrt(arx(iface)**2+ary(iface)**2+arz(iface)**2)
+
+        ! Face normals
+        nxf = arx(iface)/are
+        nyf = ary(iface)/are
+        nzf = arz(iface)/are
+
+        ! Gradient in face-normal direction        
+        dCn = dCondxi(1,ijb)*nxf+dCondxi(2,ijb)*nyf+dCondxi(3,ijb)*nzf
+
+        ! Explicit source
+        su(ijp) = su(ijp) + dcoef*dCn
 
       enddo
 
     elseif ( bctype(ib) == 'symmetry') then
 
-      ! Adiabatic wall boundaries
+      ! Symmetry
 
       do i=1,nfaces(ib)
 
@@ -207,8 +215,7 @@ subroutine calcsc(Fi,dFidxi,ifi)
         ijp = owner(iface)
         ijb = iBndValueStart(ib) + i
 
-
-        fi(ijb)=fi(ijp)
+        Con(ijb) = Con(ijp)
 
       enddo
 
@@ -229,17 +236,17 @@ subroutine calcsc(Fi,dFidxi,ifi)
       ijn = neighbour(i)
 
       k = icell_jcell_csr_index(i)
-      su(ijp) = su(ijp) - a(k)*to(ijn)
+      su(ijp) = su(ijp) - a(k)*Cono(ijn)
 
       k = jcell_icell_csr_index(i)
-      su(ijn) = su(ijn) - a(k)*to(ijp)
+      su(ijn) = su(ijn) - a(k)*Cono(ijp)
 
     enddo
 
     do ijp=1,numCells
       apotime=den(ijp)*vol(ijp)/timestep
-      off_diagonal_terms = sum( a( ioffset(ijp) : ioffset(ijp+1)-1 ) ) !- a(diag(ijp))
-      su(ijp) = su(ijp) + (apotime + off_diagonal_terms)*to(ijp)
+      off_diagonal_terms = sum( a( ioffset(ijp) : ioffset(ijp+1)-1 ) ) - a(diag(ijp))
+      su(ijp) = su(ijp) + (apotime + off_diagonal_terms)*Cono(ijp)
       sp(ijp) = sp(ijp)+apotime
 
     enddo
@@ -247,25 +254,25 @@ subroutine calcsc(Fi,dFidxi,ifi)
   endif
 
   ! Underrelaxation factors
-  urfrs = urfr(ifi)
-  urfms = urfm(ifi)
+  urfr = 1.0_dp / urfCon
+  urfm = 1.0_dp - urfCon
 
   ! Main diagonal term assembly:
   do inp = 1,numCells
     ! Main diagonal term assembly:
     ! Sum all coefs in a row of a sparse matrix, but since we also included diagonal element 
     ! we substract it from the sum, to eliminate it from the sum.
-    off_diagonal_terms  = sum( a(ioffset(inp) : ioffset(inp+1)-1) ) !- a(diag(ijp)) because = 0
+    off_diagonal_terms  = sum( a(ioffset(inp) : ioffset(inp+1)-1) ) - a(diag(ijp))
     a(diag(inp)) = sp(inp) - off_diagonal_terms
 
     ! Underelaxation:
-    a(diag(inp)) = a(diag(inp))*urfrs
-    su(inp) = su(inp) + urfms*a(diag(inp))*fi(inp)
+    a(diag(inp)) = a(diag(inp))*urfr
+    su(inp) = su(inp) + urfm*a(diag(inp))*Con(inp)
 
   enddo
 
   ! Solve linear system:
-  call bicgstab(fi,ifi)
+  call csrsolve(lSolverCon, Con, su, resor(9), maxiterCon, tolAbsCon, tolRelCon, 'Conc')
 
   !
   ! Update symmetry and outlet boundaries
@@ -280,7 +287,7 @@ subroutine calcsc(Fi,dFidxi,ifi)
         ijp = owner(iface)
         ijb = iBndValueStart(ib) + i
 
-        fi(ijb)=fi(ijp)
+        Con(ijb) = Con(ijp)
 
       enddo
 
@@ -289,14 +296,15 @@ subroutine calcsc(Fi,dFidxi,ifi)
   enddo
 
 ! Report range of scalar values and clip if negative
-  fimin = minval(fi(1:numCells))
-  fimax = maxval(fi(1:numCells))
+  fimin = minval( Con(1:numCells))
+  fimax = maxval( Con(1:numCells))
   
-  write(6,'(2x,es11.4,3a,es11.4)') fimin,' <= ',chvar(ifi),' <= ',fimax
+  write(6,'(2x,es11.4,a,es11.4)') fimin,' <= Concentration <= ',fimax
 
 ! These field values cannot be negative
-  if(fimin.lt.0.0_dp) fi(1:numCells) = max(fi(1:numCells),small)
+  if(fimin.lt.0.0_dp) Con(1:numCells) = max( Con(1:numCells),small)
 
-end subroutine calcsc
+end subroutine
 
-end module concentration
+
+end module

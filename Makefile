@@ -39,9 +39,9 @@ execut = bin/cappuccino
 
 FC = gfortran
 
-LDFLAGS = -O2 -Wall
+LDFLAGS = -O2 -Wall #-cpp
 
-LDLIBS = -llapack
+LDLIBS = -llapack # -llis -fopenmp
 
 # Extend known suffixes:
 # (if the suffixes are not ".f" or ".F")

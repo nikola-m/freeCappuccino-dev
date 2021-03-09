@@ -323,78 +323,78 @@ implicit none
 end subroutine
 
 
-!***********************************************************************
-!
-subroutine set_phi_min_max(phi)
-!
-!***********************************************************************
-!
-! Calculates and stores for every cell, a minimum and maximum value
-! of field variable PHI, over current cell and its neighbours.
-! PHI_MAX and PHI_MIN are used for gradient limiter calculation.
-!
-! NOTE: Buffer needs to have fresh values! 
-! Exchange phi should be done previously.
-!
-!***********************************************************************
-!
+! !***********************************************************************
+! !
+! subroutine set_phi_min_max(phi)
+! !
+! !***********************************************************************
+! !
+! ! Calculates and stores for every cell, a minimum and maximum value
+! ! of field variable PHI, over current cell and its neighbours.
+! ! PHI_MAX and PHI_MIN are used for gradient limiter calculation.
+! !
+! ! NOTE: Buffer needs to have fresh values! 
+! ! Exchange phi should be done previously.
+! !
+! !***********************************************************************
+! !
 
-  use geometry
-  use variables, only: phimax,phimin
+!   use geometry
+!   use variables, only: phimax,phimin
 
-  implicit none
+!   implicit none
 
-  ! Input
-  real(dp),dimension(numTotal) :: phi
+!   ! Input
+!   real(dp),dimension(numTotal) :: phi
 
-  ! Locals
-  integer :: i,ib,ijp,ijn,iface
+!   ! Locals
+!   integer :: i,ib,ijp,ijn,iface
 
-  ! Initialize max and min arrays with values of phi in each cell
-  phimax = phi(1:numCells)
-  phimin = phi(1:numCells)
+!   ! Initialize max and min arrays with values of phi in each cell
+!   phimax = phi(1:numCells)
+!   phimin = phi(1:numCells)
 
-  ! > Loop over neighbours 
+!   ! > Loop over neighbours 
 
-  ! Inner faces
-  do i = 1,numInnerFaces
+!   ! Inner faces
+!   do i = 1,numInnerFaces
 
-    ijp = owner(i)
-    ijn = neighbour(i)
+!     ijp = owner(i)
+!     ijn = neighbour(i)
 
-    phimax(ijp) = max( phimax(ijp), phi(ijn) )
-    phimax(ijn) = max( phimax(ijn), phi(ijp) )
-
-
-    phimin(ijp) = min( phimin(ijp), phi(ijn) )
-    phimin(ijn) = min( phimin(ijn), phi(ijp) )
-
-  enddo
-
-  ! Faces on processor boundary
-
-  do ib=1,numBoundaries
-
-    if ( bctype(ib) == 'process') then
-
-      do i=1,nfaces(ib)
-
-        iface = startFace(ib) + i
-        ijp = owner(iface)
-        ijn = iBndValueStart(ib) + i
-
-        phimax(ijp) = max( phimax(ijp), phi(ijn) )
-
-        phimin(ijp) = min( phimin(ijp), phi(ijn) )
-
-      enddo
-
-    endif
-
-  enddo
+!     phimax(ijp) = max( phimax(ijp), phi(ijn) )
+!     phimax(ijn) = max( phimax(ijn), phi(ijp) )
 
 
-end subroutine
+!     phimin(ijp) = min( phimin(ijp), phi(ijn) )
+!     phimin(ijn) = min( phimin(ijn), phi(ijp) )
+
+!   enddo
+
+!   ! Faces on processor boundary
+
+!   do ib=1,numBoundaries
+
+!     if ( bctype(ib) == 'process') then
+
+!       do i=1,nfaces(ib)
+
+!         iface = startFace(ib) + i
+!         ijp = owner(iface)
+!         ijn = iBndValueStart(ib) + i
+
+!         phimax(ijp) = max( phimax(ijp), phi(ijn) )
+
+!         phimin(ijp) = min( phimin(ijp), phi(ijn) )
+
+!       enddo
+
+!     endif
+
+!   enddo
+
+
+! end subroutine
 
 
 

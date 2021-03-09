@@ -1,0 +1,26 @@
+digraph "k_omega_sst::correct_turbulence_k_omega_sst"
+{
+ // LATEX_PDF_SIZE
+  edge [fontname="Helvetica",fontsize="10",labelfontname="Helvetica",labelfontsize="10"];
+  node [fontname="Helvetica",fontsize="10",shape=record];
+  rankdir="LR";
+  Node1 [label="k_omega_sst::correct\l_turbulence_k_omega_sst",height=0.2,width=0.4,color="black", fillcolor="grey75", style="filled", fontcolor="black",tooltip=" "];
+  Node1 -> Node2 [color="midnightblue",fontsize="10",style="solid",fontname="Helvetica"];
+  Node2 [label="k_omega_sst::calcsc",height=0.2,width=0.4,color="black", fillcolor="white", style="filled",URL="$namespacek__omega__sst.html#abef5fd711205ff33aec6d98b622a0bdd",tooltip=" "];
+  Node2 -> Node3 [color="midnightblue",fontsize="10",style="solid",fontname="Helvetica"];
+  Node3 [label="bicgstab",height=0.2,width=0.4,color="black", fillcolor="white", style="filled",URL="$bicgstab_8f90.html#aced1c5bc8683ea5e84054decb03ceaf4",tooltip=" "];
+  Node3 -> Node4 [color="midnightblue",fontsize="10",style="solid",fontname="Helvetica"];
+  Node4 [label="exchange",height=0.2,width=0.4,color="black", fillcolor="white", style="filled",URL="$exchange_8f90.html#a5fc820a1936a17b779afe691729f2e84",tooltip=" "];
+  Node3 -> Node5 [color="midnightblue",fontsize="10",style="solid",fontname="Helvetica"];
+  Node5 [label="global_sum",height=0.2,width=0.4,color="black", fillcolor="white", style="filled",URL="$global__sum__mpi_8f90.html#a58e0607c82def5e112fdf461f29d2d9f",tooltip=" "];
+  Node2 -> Node6 [color="midnightblue",fontsize="10",style="solid",fontname="Helvetica"];
+  Node6 [label="calcheatflux",height=0.2,width=0.4,color="black", fillcolor="white", style="filled",URL="$calcheatflux_8f90.html#a1d121507832c2a426ccf16757c03ad46",tooltip=" "];
+  Node2 -> Node4 [color="midnightblue",fontsize="10",style="solid",fontname="Helvetica"];
+  Node2 -> Node7 [color="midnightblue",fontsize="10",style="solid",fontname="Helvetica"];
+  Node7 [label="global_max",height=0.2,width=0.4,color="black", fillcolor="white", style="filled",URL="$global__max__mpi_8f90.html#a3969dba31b39f0efc28bf16a22bb0f63",tooltip=" "];
+  Node2 -> Node8 [color="midnightblue",fontsize="10",style="solid",fontname="Helvetica"];
+  Node8 [label="global_min",height=0.2,width=0.4,color="black", fillcolor="white", style="filled",URL="$global__min__mpi_8f90.html#a8d3f5ccc1e5e38338c50893c1b241b98",tooltip=" "];
+  Node1 -> Node9 [color="midnightblue",fontsize="10",style="solid",fontname="Helvetica"];
+  Node9 [label="k_omega_sst::modify\l_mu_eff",height=0.2,width=0.4,color="black", fillcolor="white", style="filled",URL="$namespacek__omega__sst.html#a9db01a58eaa429bcca05b716220b3b6b",tooltip=" "];
+  Node9 -> Node4 [color="midnightblue",fontsize="10",style="solid",fontname="Helvetica"];
+}

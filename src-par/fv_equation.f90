@@ -64,10 +64,10 @@ end interface
 
 
 interface operator(-)
-   module procedure substract_source_from_fvEquation  
-   module procedure substract_volVectorFieldSource_from_fvVectorEquation
-   module procedure substract_fvEquations
-   module procedure substract_fvVectorEquations
+   module procedure subtract_source_from_fvEquation  
+   module procedure subtract_volVectorFieldSource_from_fvVectorEquation
+   module procedure subtract_fvEquations
+   module procedure subtract_fvVectorEquations
 end interface
 
 public
@@ -214,7 +214,7 @@ end function add_volVectorFieldSource_to_fvVectorEquation
 
 
 
-function substract_source_from_fvEquation(fvEqnIn,source) result( fvEqnOut )
+function subtract_source_from_fvEquation(fvEqnIn,source) result( fvEqnOut )
 !
 ! Adds source to eqn. system rhs vector.
 !
@@ -238,12 +238,12 @@ function substract_source_from_fvEquation(fvEqnIn,source) result( fvEqnOut )
       fvEqnOut % source(i) = fvEqnIn % source(i) - source % mag(i)
   enddo
 
-end function substract_source_from_fvEquation
+end function subtract_source_from_fvEquation
 
 
 
 
-function substract_volVectorFieldSource_from_fvVectorEquation(fvEqn,vecSource) result( fvEqn_new )
+function subtract_volVectorFieldSource_from_fvVectorEquation(fvEqn,vecSource) result( fvEqn_new )
 !
 ! Adds source to eqn. system rhs vector.
 !
@@ -269,7 +269,7 @@ function substract_volVectorFieldSource_from_fvVectorEquation(fvEqn,vecSource) r
       fvEqn_new % sw(i) = fvEqn % sw(i) - vecSource % z(i)
   enddo
 
-end function substract_volVectorFieldSource_from_fvVectorEquation
+end function subtract_volVectorFieldSource_from_fvVectorEquation
 
 
 function add_fvEquations(fvEqn1,fvEqn2) result( fvEqn_new )
@@ -338,9 +338,9 @@ function add_fvVectorEquations(fvEqn1,fvEqn2) result( fvEqn_new )
 end function add_fvVectorEquations
 
 
-function substract_fvEquations(fvEqn1,fvEqn2) result( fvEqn_new )
+function subtract_fvEquations(fvEqn1,fvEqn2) result( fvEqn_new )
 !
-! Substracts two objects of type(fvEquation).
+! subtracts two objects of type(fvEquation).
 !
   use types
   implicit none
@@ -365,12 +365,12 @@ function substract_fvEquations(fvEqn1,fvEqn2) result( fvEqn_new )
       fvEqn_new % coef(i) = fvEqn1 % coef(i) - fvEqn2 % coef(i)
   enddo
 
-end function substract_fvEquations
+end function subtract_fvEquations
 
 
-function substract_fvVectorEquations(fvEqn1,fvEqn2) result( fvEqn )
+function subtract_fvVectorEquations(fvEqn1,fvEqn2) result( fvEqn )
 !
-! Substracts two objects of type(fvVectorEquation).
+! subtracts two objects of type(fvVectorEquation).
 !
   use types
   implicit none
@@ -401,7 +401,7 @@ function substract_fvVectorEquations(fvEqn1,fvEqn2) result( fvEqn )
       fvEqn % coef(i) = fvEqn1 % coef(i) - fvEqn2 % coef(i)
   enddo
 
-end function substract_fvVectorEquations
+end function subtract_fvVectorEquations
 
 
 end module fv_equation

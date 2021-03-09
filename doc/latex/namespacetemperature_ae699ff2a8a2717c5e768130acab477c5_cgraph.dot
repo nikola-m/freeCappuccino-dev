@@ -1,0 +1,52 @@
+digraph "temperature::calcsc"
+{
+ // LATEX_PDF_SIZE
+  edge [fontname="Helvetica",fontsize="10",labelfontname="Helvetica",labelfontsize="10"];
+  node [fontname="Helvetica",fontsize="10",shape=record];
+  rankdir="LR";
+  Node1 [label="temperature::calcsc",height=0.2,width=0.4,color="black", fillcolor="grey75", style="filled", fontcolor="black",tooltip=" "];
+  Node1 -> Node2 [color="midnightblue",fontsize="10",style="solid"];
+  Node2 [label="additional_algebraic\l_heatflux_terms",height=0.2,width=0.4,color="black", fillcolor="white", style="filled",URL="$asm__heatflux__terms_8f90.html#a9085d392e8697cf2da131542996537f8",tooltip=" "];
+  Node1 -> Node3 [color="midnightblue",fontsize="10",style="solid"];
+  Node3 [label="bicgstab",height=0.2,width=0.4,color="black", fillcolor="white", style="filled",URL="$bicgstab_8f90.html#aced1c5bc8683ea5e84054decb03ceaf4",tooltip=" "];
+  Node3 -> Node4 [color="midnightblue",fontsize="10",style="solid"];
+  Node4 [label="exchange",height=0.2,width=0.4,color="black", fillcolor="white", style="filled",URL="$exchange_8f90.html#a5fc820a1936a17b779afe691729f2e84",tooltip=" "];
+  Node3 -> Node5 [color="midnightblue",fontsize="10",style="solid"];
+  Node5 [label="global_sum",height=0.2,width=0.4,color="black", fillcolor="white", style="filled",URL="$global__sum__mpi_8f90.html#a58e0607c82def5e112fdf461f29d2d9f",tooltip=" "];
+  Node1 -> Node6 [color="midnightblue",fontsize="10",style="solid"];
+  Node6 [label="calcheatflux",height=0.2,width=0.4,color="black", fillcolor="white", style="filled",URL="$calcheatflux_8f90.html#a1d121507832c2a426ccf16757c03ad46",tooltip=" "];
+  Node1 -> Node4 [color="midnightblue",fontsize="10",style="solid"];
+  Node1 -> Node7 [color="midnightblue",fontsize="10",style="solid"];
+  Node7 [label="temperature::facefluxsc",height=0.2,width=0.4,color="black", fillcolor="white", style="filled",URL="$namespacetemperature.html#aa889e584546048b9d1247639a0c80eca",tooltip=" "];
+  Node7 -> Node8 [color="midnightblue",fontsize="10",style="solid"];
+  Node8 [label="interpolation::face\l_value",height=0.2,width=0.4,color="black", fillcolor="white", style="filled",URL="$namespaceinterpolation.html#a4906644e7abbc98fe9e87749dd7ca907",tooltip=" "];
+  Node8 -> Node9 [color="midnightblue",fontsize="10",style="solid"];
+  Node9 [label="interpolation::face\l_value_2nd_upwind",height=0.2,width=0.4,color="black", fillcolor="white", style="filled",URL="$namespaceinterpolation.html#aad6795e9522c835edaf6484a063343cc",tooltip=" "];
+  Node9 -> Node8 [color="midnightblue",fontsize="10",style="solid"];
+  Node8 -> Node10 [color="midnightblue",fontsize="10",style="solid"];
+  Node10 [label="interpolation::face\l_value_2nd_upwind_flux\l_limiter",height=0.2,width=0.4,color="black", fillcolor="white", style="filled",URL="$namespaceinterpolation.html#af5ae37f4a0cb45e47998b454659a6eb9",tooltip=" "];
+  Node10 -> Node8 [color="midnightblue",fontsize="10",style="solid"];
+  Node8 -> Node11 [color="midnightblue",fontsize="10",style="solid"];
+  Node11 [label="interpolation::face\l_value_cds",height=0.2,width=0.4,color="black", fillcolor="white", style="filled",URL="$namespaceinterpolation.html#a2955420d11e2fbe30a99e4fefc374759",tooltip=" "];
+  Node11 -> Node8 [color="midnightblue",fontsize="10",style="solid"];
+  Node8 -> Node12 [color="midnightblue",fontsize="10",style="solid"];
+  Node12 [label="interpolation::face\l_value_cds_corrected",height=0.2,width=0.4,color="black", fillcolor="white", style="filled",URL="$namespaceinterpolation.html#aebfa91890374b7e5e59f1342aa091a58",tooltip=" "];
+  Node12 -> Node8 [color="midnightblue",fontsize="10",style="solid"];
+  Node8 -> Node13 [color="midnightblue",fontsize="10",style="solid"];
+  Node13 [label="interpolation::face\l_value_central",height=0.2,width=0.4,color="black", fillcolor="white", style="filled",URL="$namespaceinterpolation.html#ab244a4491720b6c92b4f5e6e2539e06c",tooltip=" "];
+  Node13 -> Node8 [color="midnightblue",fontsize="10",style="solid"];
+  Node8 -> Node14 [color="midnightblue",fontsize="10",style="solid"];
+  Node14 [label="interpolation::face\l_value_cubic",height=0.2,width=0.4,color="black", fillcolor="white", style="filled",URL="$namespaceinterpolation.html#a4e41ac87b8bddda70bf19622413544e8",tooltip=" "];
+  Node14 -> Node8 [color="midnightblue",fontsize="10",style="solid"];
+  Node8 -> Node15 [color="midnightblue",fontsize="10",style="solid"];
+  Node15 [label="interpolation::face\l_value_muscl",height=0.2,width=0.4,color="black", fillcolor="white", style="filled",URL="$namespaceinterpolation.html#a69b9fafef9c399b908b8c8b6b7c7862d",tooltip=" "];
+  Node15 -> Node8 [color="midnightblue",fontsize="10",style="solid"];
+  Node15 -> Node9 [color="midnightblue",fontsize="10",style="solid"];
+  Node15 -> Node13 [color="midnightblue",fontsize="10",style="solid"];
+  Node1 -> Node16 [color="midnightblue",fontsize="10",style="solid"];
+  Node16 [label="temperature::facefluxsc\l_boundary",height=0.2,width=0.4,color="black", fillcolor="white", style="filled",URL="$namespacetemperature.html#a577d5ab0e670a2bd46613cd9b99ddd1a",tooltip=" "];
+  Node1 -> Node17 [color="midnightblue",fontsize="10",style="solid"];
+  Node17 [label="global_max",height=0.2,width=0.4,color="black", fillcolor="white", style="filled",URL="$global__max__mpi_8f90.html#a3969dba31b39f0efc28bf16a22bb0f63",tooltip=" "];
+  Node1 -> Node18 [color="midnightblue",fontsize="10",style="solid"];
+  Node18 [label="global_min",height=0.2,width=0.4,color="black", fillcolor="white", style="filled",URL="$global__min__mpi_8f90.html#a8d3f5ccc1e5e38338c50893c1b241b98",tooltip=" "];
+}

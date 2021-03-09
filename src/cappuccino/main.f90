@@ -22,17 +22,21 @@ program cappuccino
   use parameters
   use geometry
   use variables
-  use title_mod
   use fieldManipulation
   use sparse_matrix
+  use velocity
+  use pressure
   use temperature
+  use energy
   use concentration
   use mhd
+  use rheology
+  use statistics
+  use monitors
   use utils, only: show_logo
 
   implicit none
 
-  integer :: k
   integer :: iter
   integer :: itimes, itimee
   real(dp):: source
@@ -100,34 +104,39 @@ program cappuccino
 
       call cpu_time(start)
 
+      !---------------------------------------------------------------
+
       ! Calculate velocities.
-      if(lcal(iu)) call calcuvw  
+      if(calcU) call calcuvw  
 
       ! Pressure-velocity coupling. Two options: SIMPLE and PISO
-      if(lcal(ip)) then
+      if(calcP) then
 
         if(SIMPLE)   call calcp_simple
         if(PISO)     call calcp_piso
 
       endif 
 
+      ! Non-Newtonian fluid - modification of modify_viscosity
+      if( calcVis ) call modifyViscosityNonNewtonianFluid
+
       ! Turbulence
-      if(lturb)    call modify_viscosity
+      if( lturb )    call modify_viscosity_turbulence
 
-      !Scalars: Temperature , temperature variance, and concentration eqs.
-      if(lcal(ien))   call calculate_temperature_field
-
-      ! if(lcal(ivart)) call calculate_temperature_variance_field
+      ! Temperature or Total energy/Internal energy/Enhtalpy as energy variables
+      if( calcT )   call calculate_temperature
+      if( calcEn )  call calc_energy
       
-      if(lcal(icon))  call calculate_concentration_field
+      ! Concentration of the passive scalar
+      if( calcCon )  call calculate_concentration_field
 
-      if(lcal(iep))  call calculate_electric_potential
+      ! Electric potential field for mhd flows.
+      if( calcEpot )  call calculate_electric_potential
 
-     
-      ! Log scaled residuals
-      write(6,'(2x,a)') 'Scaled residuals:'
-      write(6,'(2x,11(a,4x))')     (chvarSolver(k), k=1,nphi)
-      write(6,'(a,11(1PE9.3,2x))') '> ',(resor(k), k=1,nphi)
+      !---------------------------------------------------------------
+
+      !  Observe change in values during simulation
+      call log_monitored_values
 
       call cpu_time(finish)
       write(timechar,'(f9.5)') finish-start
@@ -142,35 +151,40 @@ program cappuccino
       source = max(resor(iu),resor(iv),resor(iw)) 
 
       if( source.gt.slarge ) then
-          write(6,"(//,10x,a)") "*** Program terminated -  iterations diverge ***" 
-          stop
+        write(6,"(//,10x,a)") "*** Program terminated -  iterations diverge ***" 
+        stop
       endif
 
       ! If residuals fall to level below tolerance level - simulation is finished.
-      if( .not.ltransient .and. source.lt.sormax ) then
+      if( .not.ltransient .and. source.lt.tolerance ) then
+
         call write_restart_files
         call writefiles
+        write(6,"(//,10x,a)") "*** Successful end -  iterations converged ***" 
         exit time_loop
+
       end if
 
       if(ltransient) then 
 
         ! Has converged within timestep or has reached maximum no. of SIMPLE iterations per timetstep:
-        if( source.lt.sormax .or. iter.ge.maxit ) then 
+        if( source.lt.tolerance .or. iter.ge.maxit ) then 
 
           ! Correct driving force for a constant mass flow rate simulation:
-          if(const_mflux) then
-            call constant_mass_flow_forcing
-          endif
+          if(const_mflux) call constant_mass_flow_forcing
 
-          ! Write values at monitoring points and recalculate time-average values for statistics:
-          call writehistory
+          ! Write values at monitoring points // comment out for now.
+          ! call writehistory
+
+          ! Recalculate time-average values for statistics:
           call calc_statistics 
 
           ! Write field values after nzapis iterations or at the end of time-dependent simulation:
           if( mod(itime,nzapis).eq.0  .or. itime.eq.numstep ) then
+
             call write_restart_files
             call writefiles
+
           endif
 
           cycle time_loop
@@ -183,8 +197,10 @@ program cappuccino
 
     ! Write field values after nzapis iterations or at the end of false-time-stepping simulation:
     if(.not.ltransient .and. ( mod(itime,nzapis).eq.0 .or. (itime-itimes+1).eq.numstep ) ) then
+
       call write_restart_files
       call writefiles
+      
     endif
 
     if(ltransient) call flush(6)

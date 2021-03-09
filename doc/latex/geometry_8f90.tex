@@ -1,8 +1,29 @@
-\hypertarget{geometry_8f90}{\section{src-\/par/geometry.f90 File Reference}
-\label{geometry_8f90}\index{src-\/par/geometry.\-f90@{src-\/par/geometry.\-f90}}
-}
-\subsection*{Data Types}
+\hypertarget{geometry_8f90}{}\doxysection{src-\/par/geometry.f90 File Reference}
+\label{geometry_8f90}\index{src-\/par/geometry.f90@{src-\/par/geometry.f90}}
+\doxysubsection*{Modules}
 \begin{DoxyCompactItemize}
 \item 
-module \hyperlink{classgeometry}{geometry}
+module \mbox{\hyperlink{namespacegeometry}{geometry}}
+\end{DoxyCompactItemize}
+\doxysubsection*{Functions/\+Subroutines}
+\begin{DoxyCompactItemize}
+\item 
+subroutine \mbox{\hyperlink{namespacegeometry_a6f11cfdf3b8f94b5dda77b3330f6428c}{geometry\+::read\+\_\+mesh}}
+\item 
+subroutine \mbox{\hyperlink{namespacegeometry_a5b97404630e45caf9cfe42e5986e1610}{geometry\+::triangle\+\_\+area\+\_\+vector}} (px, py, pz, qx, qy, qz, nx, ny, nz)
+\item 
+pure real(dp) function \mbox{\hyperlink{namespacegeometry_aecc1816d6f36536e7d0c6466597a621d}{geometry\+::cell\+\_\+volume\+\_\+part\+\_\+polymesh}} (ax, ay, az, nx, ny, nz)
+\item 
+pure real(dp) function \mbox{\hyperlink{namespacegeometry_a4e6945c0ecfba5f8bfd4426f0857eb74}{geometry\+::centroid\+\_\+component\+\_\+part\+\_\+polymesh}} (ax, bx, cx, nx, vol)
+\item 
+real(dp) function \mbox{\hyperlink{namespacegeometry_a23fc43cb57a6a3ff4ab9c1261b85ff9f}{geometry\+::determinant}} (a1, a2, a3, b1, b2, b3, q1, q2, q3)
+\item 
+subroutine \mbox{\hyperlink{namespacegeometry_a4a8142afee1f6af8001fb3cfbea168ae}{geometry\+::find\+\_\+intersection\+\_\+point}} (x1, y1, z1, x2, y2, z2, x3, y3, z3, x4, y4, z4, x5, y5, z5, xjp, yjp, zjp)
+\item 
+subroutine \mbox{\hyperlink{namespacegeometry_a26addf2bfa77af939dd112214572338b}{geometry\+::read\+\_\+line\+\_\+faces\+\_\+file\+\_\+polymesh}} (faces\+\_\+file, nn, nod, nmax)
+\end{DoxyCompactItemize}
+\doxysubsection*{Variables}
+\begin{DoxyCompactItemize}
+\item 
+integer \mbox{\hyperlink{namespacegeometry_a1762f20cca1a5ff5ce1bfa2447f475fb}{geometry\+::glonpro}}
 \end{DoxyCompactItemize}

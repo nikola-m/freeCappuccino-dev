@@ -15,6 +15,17 @@ use variables
 implicit none
 
 
+!
+! Discrtetization and solution parameters - modified trough input.nml file
+!
+logical  :: calcEpot = .False.                  ! To activate the solution of this field in the main function. 
+real(dp) :: urfEpot = 0.7                      ! Under-relaxation factor.
+real(dp) :: gdsEpot = 1.0                      ! Deferred correction factor.
+character ( len=10 ) :: lSolverEpot = 'iccg'   ! Linear algebraic solver.
+integer  :: maxiterEpot = 5                       ! Max number of iterations in linear solver.
+real(dp) :: tolAbsEpot = 1e-13                    ! Absolute residual level.
+real(dp) :: tolRelEpot = 0.025                    ! Relative drop in residual to exit linear solver.
+
 real(dp), dimension(:), allocatable :: BMAGX,BMAGY,BMAGZ ! Magnetic inductions vector field components.
 real(dp), dimension(:), allocatable :: EPOT              ! Electric potential.
 real(dp), dimension(:), allocatable :: CURIX,CURIY,CURIZ ! Induced current vector field components.
@@ -23,7 +34,7 @@ real(dp), dimension(:), allocatable :: FLORX,FLORY,FLORZ ! Lorentz force vector 
 real(dp), dimension(:,:), allocatable :: dEpotdxi
  
 ! Parameters defined in input file.       
-real(dp), parameter :: SIGMA = 1.0_dp
+real(dp) :: SIGMA = 1.0_dp
 real(dp) :: BNULA
 real(dp) :: AMHD,BMHD,DMHD
 real(dp) :: LBX,LBY,LBZ
@@ -120,9 +131,9 @@ subroutine calculate_electric_potential
   use variables
   use sparse_matrix
   use gradients
-  use title_mod
   use fieldManipulation, only: explDiv
-
+  use linear_solvers
+  
   implicit none
 
 !
@@ -130,6 +141,7 @@ subroutine calculate_electric_potential
 !
   ! integer :: istage
   real(dp) :: ppref
+  real(dp) :: resnorm
   ! real(dp) :: fimax,fimin
   ! real(dp) :: epavg
 
@@ -150,15 +162,15 @@ subroutine calculate_electric_potential
 
   ! Solve system
   pp = 0.0_dp
-  call iccg(pp,iep) 
+  call csrsolve(lSolverEpot, pp, su, resnorm, maxiterEpot, tolAbsEpot, tolRelEpot, 'Epot') 
  
   ! First way:
   ppref = pp(pRefCell)
-  Epot(1:numCells) = (1.0_dp-urf(iep))*Epot(1:numCells) + urf(iep)*(pp(1:numCells)-ppref)
+  Epot(1:numCells) = (1.0_dp-urfEpot)*Epot(1:numCells) + urfEpot*(pp(1:numCells)-ppref)
   ! Second way:
   ! epavg = sum(pp(1:numCells))/dble(numCells)
   ! pp(1:numCells) = pp(1:numCells) - epavg
-  ! Epot(1:numCells) = (1.0_dp-urf(iep))*Epot(1:numCells) + urf(iep)*pp(1:numCells)
+  ! Epot(1:numCells) = (1.0_dp-urfEpot)*Epot(1:numCells) + urfEpot*pp(1:numCells)
 
   ! Update Epot at boundaries and calculate gradient right away, we'll need it.
   call updateEpotAtBoundaries(1)

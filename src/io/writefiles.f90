@@ -12,13 +12,17 @@ subroutine writefiles
 !
   use types
   use parameters
-  use title_mod
   use geometry
   use variables
   use statistics
   use sparse_matrix
   use output
   use utils, only: i4_to_s_left
+  use temperature, only: calct
+  use energy, only: calcen
+  ! use concentration, only: calccon
+  use turbulence
+  use rheology
   use mhd
 
   implicit none
@@ -100,7 +104,7 @@ subroutine writefiles
 
   call vtu_write_XML_vector_field( output_unit, 'U', u, v, w )
 
-  if( lcal(iep) ) call vtu_write_XML_vector_field( output_unit, 'uxB', curix, curiy, curiz )
+  if( calcEpot ) call vtu_write_XML_vector_field( output_unit, 'uxB', curix, curiy, curiz )
 
 !
 ! > Scalars in cell-centers 
@@ -108,17 +112,19 @@ subroutine writefiles
 
   call vtu_write_XML_scalar_field ( output_unit, 'p', p )
 
-  if( lturb ) call vtu_write_XML_scalar_field ( output_unit, 'mueff', vis )
+  if( lturb .or. calcVis ) call vtu_write_XML_scalar_field ( output_unit, 'mueff', vis )
 
-  if(solveTKE) call vtu_write_XML_scalar_field ( output_unit, 'k', te )
+  if( solveTKE ) call vtu_write_XML_scalar_field ( output_unit, 'k', te )
 
   if( solveEpsilon ) call vtu_write_XML_scalar_field ( output_unit, 'epsilon', ed )
 
   if( solveOmega ) call vtu_write_XML_scalar_field ( output_unit, 'omega', ed )
 
-  if( lcal(ien) ) call vtu_write_XML_scalar_field ( output_unit, 'T', t )
+  if( calcT ) call vtu_write_XML_scalar_field ( output_unit, 'Temp', t )
 
-  if( lcal(iep) ) call vtu_write_XML_scalar_field ( output_unit, 'Epot', Epot )
+  if( calcEn ) call vtu_write_XML_scalar_field ( output_unit, 'Energy', t )
+
+  if( calcEpot ) call vtu_write_XML_scalar_field ( output_unit, 'Epot', Epot )
 
 
 !
@@ -207,7 +213,7 @@ subroutine writefiles
 
     call vtu_write_XML_vector_field_boundary( output_unit, 'U', u, v, w, istart, iend )
 
-    if( lcal(iep) ) call vtu_write_XML_vector_field_boundary( output_unit, 'uxB', curix, curiy, curiz, istart, iend )
+    if( calcEpot ) call vtu_write_XML_vector_field_boundary( output_unit, 'uxB', curix, curiy, curiz, istart, iend )
 
     !
     ! > Scalars in face-centers 
@@ -215,7 +221,7 @@ subroutine writefiles
 
     call vtu_write_XML_scalar_field_boundary ( output_unit, 'p', p, istart, iend )
 
-    if( lturb ) call vtu_write_XML_scalar_field_boundary ( output_unit, 'mueff', vis, istart, iend )
+    if( lturb .or. calcVis ) call vtu_write_XML_scalar_field_boundary ( output_unit, 'mueff', vis, istart, iend )
 
     if(solveTKE) call vtu_write_XML_scalar_field_boundary ( output_unit, 'k', te, istart, iend )
 
@@ -223,9 +229,11 @@ subroutine writefiles
 
     if( solveOmega ) call vtu_write_XML_scalar_field_boundary ( output_unit, 'omega', ed, istart, iend )
 
-    if( lcal(ien) ) call vtu_write_XML_scalar_field_boundary ( output_unit, 'T', t, istart, iend )
+    if( calcT ) call vtu_write_XML_scalar_field_boundary ( output_unit, 'Temp', t, istart, iend )
 
-    if( lcal(iep) ) call vtu_write_XML_scalar_field_boundary ( output_unit, 'Epot', Epot, istart, iend )
+    if( calcEn ) call vtu_write_XML_scalar_field_boundary ( output_unit, 'Energy', t, istart, iend )
+
+    if( calcEpot ) call vtu_write_XML_scalar_field_boundary ( output_unit, 'Epot', Epot, istart, iend )
 
 
 
@@ -264,19 +272,8 @@ subroutine writefiles
 
   enddo ! Boundary loop
 
-
-  ! ! Recirculate output
-  ! call get_unit( output_unit )
-  ! open(unit=output_unit,file='inlet')
-  ! rewind output_unit
-
-  ! do i=1,nout
-  !   ijb = iOutletStart+i
-  !   write(output_unit,'(5(1x,es11.4))') u(ijb), v(ijb), w(ijb), te(ijb), ed(ijb)
-  ! end do
-
-  ! close( output_unit )
-
+  ! ! Added for Bingham fluids tests
+  ! call YieldRegion
 
 end subroutine
 

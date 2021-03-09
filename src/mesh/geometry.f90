@@ -21,19 +21,21 @@ integer :: numCells         ! no. of cells in the mesh
 integer :: numFaces         ! no. of INNER+BOUNDARY faces in the mesh
 integer :: numInnerFaces    ! no. of INNER cells faces in the mesh
 integer :: numBoundaryFaces ! self explanatory
+integer :: numPeriodic      ! number of periodic boundary faces (not counting them twice)
 integer :: numTotal         ! number of volume field values + number of boundary field values numCells+numBoundaryFaces
 
 ! To define boundary regions
 integer :: numBoundaries
 integer, dimension(:), allocatable :: nfaces,startFace,iBndValueStart
-character(len=15), dimension(:), allocatable :: bcname, bctype
+character(len=30), dimension(:), allocatable :: bcname
+character(len=15), dimension(:), allocatable :: bctype
 real(dp), dimension(:,:), allocatable :: bcDFraction
 
 integer :: nwal ! Total no. of boundary faces of type 'wall'
 integer :: nsym ! Total no. of boundary faces of type 'symmetry'
 integer :: ninl ! No. of inlet boundary faces
 integer :: nout ! No. of outlet boundary faces
-                 
+integer :: nper ! Stores the number of periodic boundary pairs, which will be treated as a single inner boundary               
 
 integer, parameter :: nomax = 30 ! Max no. of nodes in face - determines size of some arrays, just change this if necessary.
 real(dp), parameter :: tiny = 1e-30
@@ -62,7 +64,7 @@ real(dp), dimension(:), allocatable :: xf, yf, zf      ! Coordinates of cell fac
 real(dp), dimension(:), allocatable :: xpp, ypp, zpp   ! Coordinates of auxilliary points - owner cell 
 real(dp), dimension(:), allocatable :: xnp, ynp, znp   ! Coordinates of auxilliary points - neighbour cell 
 real(dp), dimension(:), allocatable :: facint          ! Interpolation factor 
-!real(dp), dimension(:), allocatable :: dpn            ! Distance between neigbor cell centers [1:numInnerFaces]
+real(dp), dimension(:), allocatable :: dpn            ! Distance between neigbor cell centers [1:numInnerFaces]
 
 ! Geometry parameters defined for boundary faces
 
@@ -82,6 +84,9 @@ integer, dimension(:), allocatable :: neighbour ! Index of the neighbour cell  -
 integer :: nCellNode
 integer, dimension(:), allocatable :: iCellNode, jCellNode 
 real(dp), dimension(:), allocatable :: wCellNode
+
+! For periodic boundaries
+integer :: startFaceTwin(3)
 
 
 public 
@@ -111,6 +116,10 @@ subroutine read_mesh
       stop
   end if
 
+  if (nPer > 0) then ! we have periodic boundaries: map faces at opposite boundaries.
+    call face_mapping
+  endif
+
 
 end subroutine
 
@@ -134,7 +143,7 @@ subroutine read_mesh_native
 !    26/11/2015; Jan-2019; Dec-2019.
 !
 !  Author:
-!    Nikola Mirkov (E-mail: largeddysimulation@gmail.com
+!    Nikola Mirkov (E-mail: largeddysimulation@gmail.com)
 !
   implicit none
 
@@ -203,7 +212,7 @@ subroutine read_mesh_native
 !   Discussion: 
 !   Boundary conditions file consists of header and numBoundaries number of subsequent lines each containing:  
 !   boundary condition given name, bc type, number of faces belonging to that bc and starting face for that bc.
-!   Possible boundary contiions types are: inlet, outlet, symmtery, wall, wallIsoth, wallAdiab, wallQFlux, prOutlet, etc. 
+!   Possible boundary contiions types are: inlet, outlet, symmtery, wall, pressure, etc. 
 !   Please check are all of these implemented, because this is still in the development. Contact me if you have any questions.
 !
 
@@ -231,21 +240,39 @@ subroutine read_mesh_native
   nwal = 0
   nsym = 0
   ninl = 0
+  nper = 0        ! this one stores the number of periodic boundary pairs, which will be treated as a single inner boundary
+  numPeriodic = 0 ! this one stores the number of cell faces at periodic boundaries
 
   do i=1,numBoundaries
-    read(boundary_file,*) bcname(i), bctype(i), nfaces(i) ,startFace(i)
+    read(boundary_file,*) bcname(i), bctype(i), nfaces(i), startFace(i)
 
     ! We need total number of some bctype faces like wall and symmetry to make things easier for bc implementation
     ! so lets count them. 
     if( bctype(i) == 'wall') then
       nwal = nwal + nfaces(i)
+
     elseif( bctype(i) == 'symmetry') then
       nsym = nsym + nfaces(i)
+
     elseif( bctype(i) == 'inlet') then
       ninl = ninl + nfaces(i)
+
     elseif( bctype(i) == 'outlet') then
       nout = nout + nfaces(i)
+
+    elseif( bctype(i) == 'periodic') then
+      nper = nper + 1 ! number of periodic boundary pairs increases by one
+      numPeriodic = numPeriodic + nfaces(i) ! number of periodic faces increases by nfaces(i)
+      backspace( boundary_file ) ! Move one line back.
+      ! Repeat reading but find some additional information is available for perodic boundary
+      ! namely we have starting face for 'twin' boundary of this periodic boundary.  
+      ! In 'boundary' file, on the line of the twin periodic boundary, put bctype to 'empty' and 
+      ! copy the startFace to the end of the line of the 'older' twin, where bctype is 'periodic'. 
+      ! This is how I see this at the moment - propose improvement please. Nikola 
+      read(boundary_file,*) bcname(i), bctype(i), nfaces(i), startFace(i), startFaceTwin(nper)
+
     endif
+
   enddo  
 
 
@@ -405,6 +432,7 @@ subroutine read_mesh_native
 
     ! We decompose a polygon to a series of triangles, all having first node in common.
     do i=1, nnodes(iface)-2 
+
       ! Vectors to vertices
       ! 2-1
       px = x( node(i+1,iface) )-x( node(1,iface) )
@@ -460,7 +488,7 @@ subroutine read_mesh_native
 
       riSi = ( cx*nx + cy*ny + cz*nz )
 
-      vol(inp) = vol(inp) + third * riSi 
+      vol(inp) = vol(inp) + third * riSi
 
       xc(inp) = xc(inp) + 0.75_dp * riSi * cx
       yc(inp) = yc(inp) + 0.75_dp * riSi * cy
@@ -471,6 +499,7 @@ subroutine read_mesh_native
 
 
       if ( iface <= numInnerFaces ) then 
+
         inn = neighbour(iface)
 
         riSi = -( cx*nx + cy*ny + cz*nz )
@@ -658,46 +687,46 @@ subroutine read_mesh_native
 ! > Report on geometrical quantities > I will leave this for debug purposes.
 !..............................................................................
 
-  write ( *, '(a)' ) ' '
-  write ( *, '(a)' ) '  Cell data: '
+  ! write ( *, '(a)' ) ' '
+  ! write ( *, '(a)' ) '  Cell data: '
 
-  call r8vec_print_some ( numCells, vol, 1, 10, &
-      '  First 10 elements of cell volumes array:' )
+  ! call r8vec_print_some ( numCells, vol, 1, numCells, &
+  !     '  First 10 elements of cell volumes array:' )
 
-  call r8vec_print_some ( numCells, xc, 1, 10, &
-      '  First 10 elements of cell x-centers array:' )
+  ! call r8vec_print_some ( numCells, xc, 1, 10, &
+  !     '  First 10 elements of cell x-centers array:' )
 
-  call r8vec_print_some ( numCells, yc, 1, 10, &
-      '  First 10 elements of cell y-centers array:' )
+  ! call r8vec_print_some ( numCells, yc, 1, 10, &
+  !     '  First 10 elements of cell y-centers array:' )
 
-  call r8vec_print_some ( numCells, zc, 1, 10, &
-      '  First 10 elements of cell z-centers array:' )
+  ! call r8vec_print_some ( numCells, zc, 1, 10, &
+  !     '  First 10 elements of cell z-centers array:' )
 
-  write ( *, '(a)' ) ' '
-  write ( *, '(a)' ) '  Face data: '
+  ! write ( *, '(a)' ) ' '
+  ! write ( *, '(a)' ) '  Face data: '
 
-  call i4vec_print2 ( 10, owner, neighbour, '  First 10 lines of owner and neighbour arrays:' )
+  ! call i4vec_print2 ( 10, owner, neighbour, '  First 10 lines of owner and neighbour arrays:' )
 
-  call r8vec_print_some ( numFaces, arx, 1, 10, &
-      '  First 10 elements of Arx array:' )
+  ! call r8vec_print_some ( numFaces, arx, 1, 10, &
+  !     '  First 10 elements of Arx array:' )
 
-  call r8vec_print_some ( numFaces, ary, 1, 10, &
-      '  First 10 elements of Ary array:' )
+  ! call r8vec_print_some ( numFaces, ary, 1, 10, &
+  !     '  First 10 elements of Ary array:' )
 
-  call r8vec_print_some ( numFaces, arz, 1, 10, &
-      '  First 10 elements of Arz array:' )
+  ! call r8vec_print_some ( numFaces, arz, 1, 10, &
+  !     '  First 10 elements of Arz array:' )
 
-    call r8vec_print_some ( numFaces, xf, 1, 10, &
-      '  First 10 elements of xf array:' )
+  !   call r8vec_print_some ( numFaces, xf, 1, 10, &
+  !     '  First 10 elements of xf array:' )
 
-  call r8vec_print_some ( numFaces, yf, 1, 10, &
-      '  First 10 elements of yf array:' )
+  ! call r8vec_print_some ( numFaces, yf, 1, 10, &
+  !     '  First 10 elements of yf array:' )
 
-  call r8vec_print_some ( numFaces, zf, 1, 10, &
-      '  First 10 elements of zf array:' )
+  ! call r8vec_print_some ( numFaces, zf, 1, 10, &
+  !     '  First 10 elements of zf array:' )
 
-  call r8vec_print_some ( numInnerFaces, facint, 1, 10, &
-      '  First 10 elements of interpolation factor (facint) array:' )
+  ! call r8vec_print_some ( numInnerFaces, facint, 1, 10, &
+  !     '  First 10 elements of interpolation factor (facint) array:' )
 
   write ( *, '(a)' ) ' '
   
@@ -711,6 +740,7 @@ subroutine read_mesh_native
   close ( boundary_file)
   close ( size_file )
 !+-----------------------------------------------------------------------------+
+
 
 end subroutine
 
@@ -794,7 +824,7 @@ subroutine read_mesh_openfoam
 !
 !   Boundary conditions file consists of header and numBoundaries number of subsequent lines each containing:  
 !   boundary condition given name, bc type, number of faces belonging to that bc and starting face for that bc.
-!   Possible boundary contiions types are: inlet, outlet, symmtery, wall, wallIsoth, wallAdiab, wallQFlux, prOutlet, etc. 
+!   Possible boundary contiions types are: inlet, outlet, symmtery, wall, pressure, etc. 
 !   Please check are all of these implemented, because this is still in the development. Contact me if you have any questions.
 !
  
@@ -823,7 +853,9 @@ subroutine read_mesh_openfoam
   nwal = 0
   nsym = 0
   ninl = 0
-
+  nper = 0        ! this one strores the number of periodic boundary pairs, which will be treated as a single inner boundary
+  numPeriodic = 0 ! this one stores the number of cell faces at periodic boundaries
+  
   do i=1,numBoundaries
     read(boundary_file,*) bcname(i), bctype(i), nfaces(i) ,startFace(i)
 
@@ -831,12 +863,27 @@ subroutine read_mesh_openfoam
     ! so lets count them. 
     if( bctype(i) == 'wall') then
       nwal = nwal + nfaces(i)
+
     elseif( bctype(i) == 'symmetry') then
       nsym = nsym + nfaces(i)
+
     elseif( bctype(i) == 'inlet') then
       ninl = ninl + nfaces(i)
+
     elseif( bctype(i) == 'outlet') then
       nout = nout + nfaces(i)
+
+    elseif( bctype(i) == 'periodic') then
+      nper = nper + 1 ! number of periodic boundary pairs increases by one
+      numPeriodic = numPeriodic + nfaces(i) ! number of periodic faces increases by nfaces(i)
+      backspace( boundary_file ) ! Move one line back.
+      ! Repeat reading but find some additional information is available for perodic boundary
+      ! namely we have starting face for 'twin' boundary of this periodic boundary.  
+      ! In 'boundary' file, on the line of the twin peridoci boundary, put bctype to 'empty' and 
+      ! copy the startFace to the end of the line of the 'older' twin. 
+      ! This is how I see this at the moment - propose improvement please. Nikola 
+      read(boundary_file,*) bcname(i), bctype(i), nfaces(i), startFace(i), startFaceTwin(nper)
+
     endif
   enddo  
 
@@ -1581,6 +1628,72 @@ subroutine read_line_faces_file_polyMesh(faces_file,nn,nod,nmax)
       nod(1) = m + 1              ! <
       nod(2:j-1) = nod(2:j-1) + 1 ! < We are going from zero to one based numbering because of Fortran
       nod(nn) = n + 1             ! <
+
+end subroutine
+
+
+subroutine face_mapping
+
+  implicit none
+
+
+  integer :: i,ib,ijn,iface
+  integer :: iPer, itemp, indx
+  real(dp) :: dist,mindist
+  real(dp), parameter :: tol = 1e-10
+  integer, dimension(:), allocatable :: tmp
+
+
+  iPer = 0
+
+  do ib=1,numBoundaries
+
+    if (  bctype(ib) == 'periodic' ) then
+
+
+      allocate( tmp( nfaces(ib) ) )
+
+      iPer = iPer + 1 ! found one pair of periodic boundaries, increase counter by one
+
+      ! Loop trough faces
+      do i=1,nfaces(ib)
+
+        iface = startFace(ib) + i
+
+          mindist = 1e+30
+          indx = 0
+
+          do itemp=1,nfaces(ib)   
+
+            ijn = owner( startFaceTwin(iPer) + itemp )
+
+            dist = abs(yf(iface)-yc(ijn)) + abs(zf(iface)-zc(ijn))
+
+            if ( dist < mindist ) then
+             mindist = dist
+             indx  = ijn
+            endif
+
+          enddo
+
+          ! owner( startFaceTwin(iPer) + i ) = indx
+          tmp(i) = indx
+
+      enddo
+
+      do i=1,nfaces(ib)
+        owner( startFaceTwin(iPer) + i ) = tmp(i)
+      enddo
+
+      deallocate(tmp)
+
+    endif
+
+  enddo 
+
+
+  write(*,'(a)') '  **Mapped faces at periodic boundaries.'
+
 
 end subroutine
 

@@ -51,7 +51,8 @@ TURBULENCE_FILES=\
     k_omega_sst.f90 \
     k_epsilon_rng.f90 \
     spalart_allmaras.f90 \
-    k_eqn_eddy.f90
+    k_eqn_eddy.f90 \
+    wale_sgs.f90
     #k_epsilon_zeta_f.f90
 
 CAFFA_FILES=\

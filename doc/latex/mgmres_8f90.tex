@@ -1,0 +1,82 @@
+\hypertarget{mgmres_8f90}{}\doxysection{src-\/par/mgmres.f90 File Reference}
+\label{mgmres_8f90}\index{src-\/par/mgmres.f90@{src-\/par/mgmres.f90}}
+\doxysubsection*{Functions/\+Subroutines}
+\begin{DoxyCompactItemize}
+\item 
+subroutine \mbox{\hyperlink{mgmres_8f90_a7cd53266980b22c5b62c7d100486772e}{pmgmres\+\_\+ilu}} (n, nz\+\_\+num, ia, ja, a, ua, x, iu, rhs, itr\+\_\+max, mr, tol\+\_\+abs, tol\+\_\+rel)
+\item 
+subroutine \mbox{\hyperlink{mgmres_8f90_a771b41100f654638b0f876b08426e320}{atx\+\_\+cr}} (n, nz\+\_\+num, ia, ja, a, x, w)
+\item 
+subroutine \mbox{\hyperlink{mgmres_8f90_a45982bcf65efac33c06df8f40ccd7590}{ax\+\_\+cr}} (n, nz\+\_\+num, ia, ja, a, x, w)
+\item 
+subroutine \mbox{\hyperlink{mgmres_8f90_ab70c3f24ce0c4626bf7ce759f09d4213}{diagonal\+\_\+pointer\+\_\+cr}} (n, nz\+\_\+num, ia, ja, ua)
+\item 
+subroutine \mbox{\hyperlink{mgmres_8f90_a8633fd0e9562ec2d21ad95746b7146a2}{ilu\+\_\+cr}} (n, nz\+\_\+num, ia, ja, a, ua, l)
+\item 
+subroutine \mbox{\hyperlink{mgmres_8f90_ace94250f64851ae1490b2d9c73d04c98}{lus\+\_\+cr}} (n, nz\+\_\+num, ia, ja, l, ua, r, z)
+\item 
+subroutine \mbox{\hyperlink{mgmres_8f90_ae76858d1e9e690d3169133879584c42a}{mult\+\_\+givens}} (c, s, k, g)
+\item 
+subroutine \mbox{\hyperlink{mgmres_8f90_a5e64b19c036489d0c15f5a2c7ba0e216}{r8vec\+\_\+uniform\+\_\+01}} (n, seed, r)
+\item 
+subroutine \mbox{\hyperlink{mgmres_8f90_a5c30fdfd9d0cfb46f0aa08acd8333480}{rearrange\+\_\+cr}} (n, nz\+\_\+num, ia, ja, a)
+\end{DoxyCompactItemize}
+
+
+\doxysubsection{Function/\+Subroutine Documentation}
+\mbox{\Hypertarget{mgmres_8f90_a771b41100f654638b0f876b08426e320}\label{mgmres_8f90_a771b41100f654638b0f876b08426e320}} 
+\index{mgmres.f90@{mgmres.f90}!atx\_cr@{atx\_cr}}
+\index{atx\_cr@{atx\_cr}!mgmres.f90@{mgmres.f90}}
+\doxysubsubsection{\texorpdfstring{atx\_cr()}{atx\_cr()}}
+{\footnotesize\ttfamily subroutine atx\+\_\+cr (\begin{DoxyParamCaption}\item[{integer ( kind = 4 )}]{n,  }\item[{integer ( kind = 4 )}]{nz\+\_\+num,  }\item[{integer ( kind = 4 ), dimension(n+1)}]{ia,  }\item[{integer ( kind = 4 ), dimension(nz\+\_\+num)}]{ja,  }\item[{real ( kind = 8 ), dimension(nz\+\_\+num)}]{a,  }\item[{real ( kind = 8 ), dimension(n)}]{x,  }\item[{real ( kind = 8 ), dimension(n)}]{w }\end{DoxyParamCaption})}
+
+\mbox{\Hypertarget{mgmres_8f90_a45982bcf65efac33c06df8f40ccd7590}\label{mgmres_8f90_a45982bcf65efac33c06df8f40ccd7590}} 
+\index{mgmres.f90@{mgmres.f90}!ax\_cr@{ax\_cr}}
+\index{ax\_cr@{ax\_cr}!mgmres.f90@{mgmres.f90}}
+\doxysubsubsection{\texorpdfstring{ax\_cr()}{ax\_cr()}}
+{\footnotesize\ttfamily subroutine ax\+\_\+cr (\begin{DoxyParamCaption}\item[{integer ( kind = 4 )}]{n,  }\item[{integer ( kind = 4 )}]{nz\+\_\+num,  }\item[{integer ( kind = 4 ), dimension(n+1)}]{ia,  }\item[{integer ( kind = 4 ), dimension(nz\+\_\+num)}]{ja,  }\item[{real ( kind = 8 ), dimension(nz\+\_\+num)}]{a,  }\item[{real ( kind = 8 ), dimension(n)}]{x,  }\item[{real ( kind = 8 ), dimension(n)}]{w }\end{DoxyParamCaption})}
+
+\mbox{\Hypertarget{mgmres_8f90_ab70c3f24ce0c4626bf7ce759f09d4213}\label{mgmres_8f90_ab70c3f24ce0c4626bf7ce759f09d4213}} 
+\index{mgmres.f90@{mgmres.f90}!diagonal\_pointer\_cr@{diagonal\_pointer\_cr}}
+\index{diagonal\_pointer\_cr@{diagonal\_pointer\_cr}!mgmres.f90@{mgmres.f90}}
+\doxysubsubsection{\texorpdfstring{diagonal\_pointer\_cr()}{diagonal\_pointer\_cr()}}
+{\footnotesize\ttfamily subroutine diagonal\+\_\+pointer\+\_\+cr (\begin{DoxyParamCaption}\item[{integer ( kind = 4 )}]{n,  }\item[{integer ( kind = 4 )}]{nz\+\_\+num,  }\item[{integer ( kind = 4 ), dimension(n+1)}]{ia,  }\item[{integer ( kind = 4 ), dimension(nz\+\_\+num)}]{ja,  }\item[{integer ( kind = 4 ), dimension(n)}]{ua }\end{DoxyParamCaption})}
+
+\mbox{\Hypertarget{mgmres_8f90_a8633fd0e9562ec2d21ad95746b7146a2}\label{mgmres_8f90_a8633fd0e9562ec2d21ad95746b7146a2}} 
+\index{mgmres.f90@{mgmres.f90}!ilu\_cr@{ilu\_cr}}
+\index{ilu\_cr@{ilu\_cr}!mgmres.f90@{mgmres.f90}}
+\doxysubsubsection{\texorpdfstring{ilu\_cr()}{ilu\_cr()}}
+{\footnotesize\ttfamily subroutine ilu\+\_\+cr (\begin{DoxyParamCaption}\item[{integer ( kind = 4 )}]{n,  }\item[{integer ( kind = 4 )}]{nz\+\_\+num,  }\item[{integer ( kind = 4 ), dimension(n+1)}]{ia,  }\item[{integer ( kind = 4 ), dimension(nz\+\_\+num)}]{ja,  }\item[{real ( kind = 8 ), dimension(nz\+\_\+num)}]{a,  }\item[{integer ( kind = 4 ), dimension(n)}]{ua,  }\item[{real ( kind = 8 ), dimension(nz\+\_\+num)}]{l }\end{DoxyParamCaption})}
+
+\mbox{\Hypertarget{mgmres_8f90_ace94250f64851ae1490b2d9c73d04c98}\label{mgmres_8f90_ace94250f64851ae1490b2d9c73d04c98}} 
+\index{mgmres.f90@{mgmres.f90}!lus\_cr@{lus\_cr}}
+\index{lus\_cr@{lus\_cr}!mgmres.f90@{mgmres.f90}}
+\doxysubsubsection{\texorpdfstring{lus\_cr()}{lus\_cr()}}
+{\footnotesize\ttfamily subroutine lus\+\_\+cr (\begin{DoxyParamCaption}\item[{integer ( kind = 4 )}]{n,  }\item[{integer ( kind = 4 )}]{nz\+\_\+num,  }\item[{integer ( kind = 4 ), dimension(n+1)}]{ia,  }\item[{integer ( kind = 4 ), dimension(nz\+\_\+num)}]{ja,  }\item[{real ( kind = 8 ), dimension(nz\+\_\+num)}]{l,  }\item[{integer ( kind = 4 ), dimension(n)}]{ua,  }\item[{real ( kind = 8 ), dimension(n)}]{r,  }\item[{real ( kind = 8 ), dimension(n)}]{z }\end{DoxyParamCaption})}
+
+\mbox{\Hypertarget{mgmres_8f90_ae76858d1e9e690d3169133879584c42a}\label{mgmres_8f90_ae76858d1e9e690d3169133879584c42a}} 
+\index{mgmres.f90@{mgmres.f90}!mult\_givens@{mult\_givens}}
+\index{mult\_givens@{mult\_givens}!mgmres.f90@{mgmres.f90}}
+\doxysubsubsection{\texorpdfstring{mult\_givens()}{mult\_givens()}}
+{\footnotesize\ttfamily subroutine mult\+\_\+givens (\begin{DoxyParamCaption}\item[{real ( kind = 8 )}]{c,  }\item[{real ( kind = 8 )}]{s,  }\item[{integer ( kind = 4 )}]{k,  }\item[{real ( kind = 8 ), dimension(1\+:k+1)}]{g }\end{DoxyParamCaption})}
+
+\mbox{\Hypertarget{mgmres_8f90_a7cd53266980b22c5b62c7d100486772e}\label{mgmres_8f90_a7cd53266980b22c5b62c7d100486772e}} 
+\index{mgmres.f90@{mgmres.f90}!pmgmres\_ilu@{pmgmres\_ilu}}
+\index{pmgmres\_ilu@{pmgmres\_ilu}!mgmres.f90@{mgmres.f90}}
+\doxysubsubsection{\texorpdfstring{pmgmres\_ilu()}{pmgmres\_ilu()}}
+{\footnotesize\ttfamily subroutine pmgmres\+\_\+ilu (\begin{DoxyParamCaption}\item[{integer ( kind = 4 )}]{n,  }\item[{integer ( kind = 4 )}]{nz\+\_\+num,  }\item[{integer ( kind = 4 ), dimension(n+1)}]{ia,  }\item[{integer ( kind = 4 ), dimension(nz\+\_\+num)}]{ja,  }\item[{real ( kind = 8 ), dimension(nz\+\_\+num)}]{a,  }\item[{integer ( kind = 4 ), dimension(n)}]{ua,  }\item[{real ( kind = 8 ), dimension(n)}]{x,  }\item[{integer ( kind = 4 )}]{iu,  }\item[{real ( kind = 8 ), dimension(n)}]{rhs,  }\item[{integer ( kind = 4 )}]{itr\+\_\+max,  }\item[{integer ( kind = 4 )}]{mr,  }\item[{real ( kind = 8 )}]{tol\+\_\+abs,  }\item[{real ( kind = 8 )}]{tol\+\_\+rel }\end{DoxyParamCaption})}
+
+Here is the call graph for this function\+:
+% FIG 0
+\mbox{\Hypertarget{mgmres_8f90_a5e64b19c036489d0c15f5a2c7ba0e216}\label{mgmres_8f90_a5e64b19c036489d0c15f5a2c7ba0e216}} 
+\index{mgmres.f90@{mgmres.f90}!r8vec\_uniform\_01@{r8vec\_uniform\_01}}
+\index{r8vec\_uniform\_01@{r8vec\_uniform\_01}!mgmres.f90@{mgmres.f90}}
+\doxysubsubsection{\texorpdfstring{r8vec\_uniform\_01()}{r8vec\_uniform\_01()}}
+{\footnotesize\ttfamily subroutine r8vec\+\_\+uniform\+\_\+01 (\begin{DoxyParamCaption}\item[{integer ( kind = 4 )}]{n,  }\item[{integer ( kind = 4 )}]{seed,  }\item[{real ( kind = 8 ), dimension(n)}]{r }\end{DoxyParamCaption})}
+
+\mbox{\Hypertarget{mgmres_8f90_a5c30fdfd9d0cfb46f0aa08acd8333480}\label{mgmres_8f90_a5c30fdfd9d0cfb46f0aa08acd8333480}} 
+\index{mgmres.f90@{mgmres.f90}!rearrange\_cr@{rearrange\_cr}}
+\index{rearrange\_cr@{rearrange\_cr}!mgmres.f90@{mgmres.f90}}
+\doxysubsubsection{\texorpdfstring{rearrange\_cr()}{rearrange\_cr()}}
+{\footnotesize\ttfamily subroutine rearrange\+\_\+cr (\begin{DoxyParamCaption}\item[{integer ( kind = 4 )}]{n,  }\item[{integer ( kind = 4 )}]{nz\+\_\+num,  }\item[{integer ( kind = 4 ), dimension(n+1)}]{ia,  }\item[{integer ( kind = 4 ), dimension(nz\+\_\+num)}]{ja,  }\item[{real ( kind = 8 ), dimension(nz\+\_\+num)}]{a }\end{DoxyParamCaption})}
+

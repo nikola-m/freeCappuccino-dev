@@ -99,6 +99,7 @@ interface operator(.tr.)
 end interface
 
 interface operator(.Sq.)
+   module procedure square_scalar_field
    module procedure square_rank2_tensor
    module procedure square_rank2_symmetric_tensor
 end interface
@@ -150,21 +151,31 @@ interface operator(.hyd.)
    module procedure hydrostatic_part_rank2_tensor
 end interface
 
+interface power
+   module procedure power_volScalarField
+   module procedure power_volVectorField
+   module procedure power_volTensorField
+   module procedure power_volSymmetricTensorField
+end interface
 
 
 ! > Operator overloading for vector and tensor fields
 
 interface operator(+)
    module procedure add_tensors
+   module procedure add_volScalarFields
 end interface
 
 interface operator(-)
    module procedure subtract_tensors
+   module procedure subtract_volScalarFields
 end interface
 
 
 ! Various ways of multiplying scalar and a vector/tensor
 interface operator(*)
+   module procedure scalar_volScalarField_multiply
+   module procedure scalarField_volScalarField_multiply
    module procedure scalar_volVectorField_multiply
    module procedure scalarField_volVectorField_multiply
    module procedure volScalarField_volVectorField_multiply
@@ -174,6 +185,10 @@ interface operator(*)
    module procedure scalar_surfaceVectorField_multiply
    module procedure scalarField_surfaceVectorField_multiply
    module procedure surfaceScalarField_surfaceTensorField_multiply
+end interface
+
+interface operator(/)
+   module procedure volScalarField_volScalarField_divide
 end interface
 
 public
@@ -332,7 +347,7 @@ function calc_inner_product(v1, v2)  result(inner_product)
         inner_product%mag(i) = v1%x(i) * v2%x(i) + v1%y(i) * v2%y(i) + v1%z(i) * v2%z(i)
     enddo
 
-end function calc_inner_product
+end function
 
 
 function calc_inner_product_surface_vectors(v1, v2)  result(inner_product)
@@ -354,7 +369,7 @@ function calc_inner_product_surface_vectors(v1, v2)  result(inner_product)
     do i = 1,num
         inner_product%mag(i) = v1%x(i) * v2%x(i) + v1%y(i) * v2%y(i) + v1%z(i) * v2%z(i)
     enddo
-end function calc_inner_product_surface_vectors
+end function
 
 
 ! ... inner product between tensor and vector vi = Tij*vj, and...
@@ -375,7 +390,7 @@ function calc_inner_product_rank2_and_rank1_tensors(T, v1)  result(v2)
         v2%y (i) = T%yx(i) * v1%x(i) + T%yy(i) * v1%y(i) + T%yz(i) * v1%z(i)  
         v2%z (i) = T%zx(i) * v1%x(i) + T%zy(i) * v1%y(i) + T%zz(i) * v1%z(i)
     enddo
-end function calc_inner_product_rank2_and_rank1_tensors
+end function
 
 ! ... inner product between vector and tensor vi = vj*Tij
 
@@ -397,7 +412,7 @@ function calc_inner_product_rank1_and_rank2_tensors(v1,T)  result(v2)
 !        |               |
     v2 = .trans.T * v1
 
-end function calc_inner_product_rank1_and_rank2_tensors
+end function
 
 
 ! The cross product of two vector fields
@@ -417,7 +432,7 @@ function calc_cross_product(v1, v2)  result(v3)
         v3%y (i) = v1%z(i) * v2%x(i) - v1%x(i) * v2%z(i) 
         v3%z (i) = v1%x(i) * v2%y(i) - v1%y(i) * v2%x(i)
     enddo
-end function calc_cross_product
+end function
 
 
 ! ! The .o. operator defining tensor, or outer product between two column vectors, or ...
@@ -445,7 +460,7 @@ function calc_tensor_product(v1, v2)  result(T)
         T%zy(i) = v1%z(i) * v2%y(i) 
         T%zz(i) = v1%z(i) * v2%z(i)
     enddo
-end function calc_tensor_product
+end function
 
 ! ... between two tensors
 
@@ -472,7 +487,7 @@ function calc_tensor_product_rank2_tensors(T1, T2)  result(T3)
         T3%zy(i) = T1%zx(i) * T2%xy(i) + T1%zy(i) * T2%yy(i) + T1%zz(i) * T2%zy(i) 
         T3%zz(i) = T1%zx(i) * T2%xz(i) + T1%zy(i) * T2%yz(i) + T1%zz(i) * T2%zz(i)
     enddo
-end function calc_tensor_product_rank2_tensors
+end function
 
 
 function calc_inner_product_rank2_tensor(T1, T2) result(inner_product)
@@ -490,7 +505,7 @@ function calc_inner_product_rank2_tensor(T1, T2) result(inner_product)
                              + T1%yx(i) * T2%yx(i) + T1%yy(i) * T2%yy(i) + T1%yz(i) * T2%yz(i)  &
                              + T1%zx(i) * T2%zx(i) + T1%zy(i) * T2%zy(i) + T1%zz(i) * T2%zz(i)
     enddo
-end function calc_inner_product_rank2_tensor
+end function
 
 function calc_inner_product_rank2_symmetric_tensor(T1, T2) result(inner_product)
     implicit none
@@ -507,7 +522,7 @@ function calc_inner_product_rank2_symmetric_tensor(T1, T2) result(inner_product)
                        + 2 * ( T1%xy(i) * T2%xy(i) + T1%xz(i) * T2%xz(i) + T1%yz(i) * T2%yz(i) )
                                                                          
     enddo
-end function calc_inner_product_rank2_symmetric_tensor
+end function
 
 
 function transpose_rank2_tensor(T1)  result(T2)
@@ -533,7 +548,7 @@ function transpose_rank2_tensor(T1)  result(T2)
         T2%zy(i) = T1%yz(i)  
         T2%zz(i) = T1%zz(i)
     enddo
-end function transpose_rank2_tensor
+end function
 
 function add_tensors(T1,T2)  result(T3)
     implicit none
@@ -558,7 +573,38 @@ function add_tensors(T1,T2)  result(T3)
         T3%zy(i) = T1%zy(i) + T2%zy(i)
         T3%zz(i) = T1%zz(i) + T2%zz(i)
     enddo
-end function add_tensors
+end function
+
+
+function add_volScalarFields(s1,s2)  result(s3)
+    implicit none
+    type(volScalarField), intent(in) :: s1, s2
+    type(volScalarField)             :: s3
+    integer :: i,num
+
+    num = size(s1%mag)
+
+    s3 = new_volScalarField(num)
+
+    do i = 1,num
+        s3%mag(i) = s1%mag(i) + s2%mag(i)
+    enddo
+end function
+
+function subtract_volScalarFields(s1,s2)  result(s3)
+    implicit none
+    type(volScalarField), intent(in) :: s1, s2
+    type(volScalarField)             :: s3
+    integer :: i,num
+
+    num = size(s1%mag)
+
+    s3 = new_volScalarField(num)
+
+    do i = 1,num
+        s3%mag(i) = s1%mag(i) - s2%mag(i)
+    enddo
+end function
 
 function subtract_tensors(T1,T2)  result(T3)
     implicit none
@@ -583,8 +629,39 @@ function subtract_tensors(T1,T2)  result(T3)
         T3%zy(i) = T1%zy(i) - T2%zy(i)
         T3%zz(i) = T1%zz(i) - T2%zz(i)
     enddo
-end function subtract_tensors
+end function
 
+function scalar_volScalarField_multiply(alpha,s1)  result(s2)
+    implicit none
+    real(dp), intent(in) :: alpha
+    type(volScalarField), intent(in) :: s1
+    type(volScalarField)             :: s2
+    integer :: i,num
+
+    num = size(s1%mag)
+
+    s2 = new_volScalarField(num)
+
+    do i = 1,num
+        s2%mag(i) = alpha * s1%mag(i)  
+    enddo
+end function
+
+function scalarField_volScalarField_multiply(alpha,s1)  result(s2)
+    implicit none
+    real(dp), dimension(*), intent(in) :: alpha
+    type(volScalarField), intent(in) :: s1
+    type(volScalarField)             :: s2
+    integer :: i,num
+
+    num = size(s1%mag)
+
+    s2 = new_volScalarField(num)
+
+    do i = 1,num
+        s2%mag(i) = alpha(i) * s1%mag(i)  
+    enddo
+end function
 
 function scalar_volVectorField_multiply(alpha,v1)  result(v2)
     implicit none
@@ -602,7 +679,7 @@ function scalar_volVectorField_multiply(alpha,v1)  result(v2)
         v2%y (i) = alpha * v1%y(i) 
         v2%z (i) = alpha * v1%z(i)
     enddo
-end function scalar_volVectorField_multiply
+end function
 
 
 function scalarField_volVectorField_multiply(alpha,v1)  result(v2)
@@ -640,7 +717,7 @@ function volScalarField_volVectorField_multiply(alpha,v1)  result(v2)
         v2%y (i) = alpha%mag(i) * v1%y(i) 
         v2%z (i) = alpha%mag(i) * v1%z(i)
     enddo
-end function volScalarField_volVectorField_multiply
+end function
 
 
 function scalar_volTensorField_multiply(alpha,T1)  result(T2)
@@ -765,7 +842,7 @@ function scalar_surfaceVectorField_multiply(alpha,v1)  result(v2)
         v2%y (i) = alpha * v1%y(i) 
         v2%z (i) = alpha * v1%z(i)
     enddo
-end function scalar_surfaceVectorField_multiply
+end function
 
 
 function scalarField_surfaceVectorField_multiply(alpha,v1)  result(v2)
@@ -784,8 +861,22 @@ function scalarField_surfaceVectorField_multiply(alpha,v1)  result(v2)
         v2%y (i) = alpha(i) * v1%y(i) 
         v2%z (i) = alpha(i) * v1%z(i)
     enddo
-end function scalarField_surfaceVectorField_multiply
+end function
 
+function volScalarField_volScalarField_divide(s1,s2)  result(s3)
+    implicit none
+    type(volScalarField), intent(in) :: s1,s2
+    type(volScalarField)             :: s3
+    integer :: i,num
+
+    num = size(s1%mag)
+
+    s3 = new_volScalarField(num)
+
+    do i = 1,num
+        s3%mag (i) = s1%mag(i) / ( s2%mag(i) + 1e-30 )  
+    enddo
+end function
 
 function trace_rank2_symmetric_tensor(T) result(trace)
     implicit none
@@ -818,6 +909,20 @@ function trace_rank2_tensor(T) result(trace)
     enddo
 end function trace_rank2_tensor
 
+function square_scalar_field(s1)  result(s2)
+    implicit none
+    type(volScalarField), intent(in) :: s1
+    type(volScalarField)             :: s2
+    integer :: i,num
+
+    num = size(s1%mag)
+
+    s2 = new_volScalarField(num)
+
+    do i = 1,num
+        s2%mag(i) = s1%mag(i)**2
+    enddo
+end function
 
 function square_rank2_tensor(T1)  result(T2)
     implicit none
@@ -867,6 +972,89 @@ function square_rank2_symmetric_tensor(T1)  result(T2)
     enddo
 end function square_rank2_symmetric_tensor
 
+function power_volScalarField(s,p) result(ss)
+    implicit none
+    type(volScalarField), intent(in) :: s
+    real(dp), intent(in) :: p
+    type(volScalarField) :: ss
+    integer :: i,num
+
+    num = size(s%mag)
+ 
+    ss = new_volScalarField(num)
+
+    do i = 1,num
+        ss%mag(i) = s%mag(i)**p 
+    enddo
+end function
+
+function power_volVectorField(v,p) result(vv)
+    implicit none
+    type(volVectorField), intent(in) :: v
+    real(dp), intent(in) :: p
+    type(volVectorField) :: vv
+    integer :: i,num
+
+    num = size(v%x)
+
+    vv = new_volVectorField(num)
+
+    do i = 1,num
+        vv%x (i) = v%x(i)**p 
+        vv%y (i) = v%y(i)**p
+        vv%z (i) = v%z(i)**p
+    enddo
+end function
+
+function power_volTensorField(T,p) result(T2)
+    implicit none
+    type(volTensorField), intent(in) :: T
+    real(dp), intent(in) :: p
+    type(volTensorField) :: T2
+    integer :: i,num
+
+    num = size(T%xx)
+
+    T2 = new_volTensorField(num)
+
+    do i = 1,num
+        T2%xx(i) = T%xx(i)**p
+        T2%xy(i) = T%xy(i)**p
+        T2%xz(i) = T%xz(i)**p
+
+        T2%yx(i) = T%yx(i)**p
+        T2%yy(i) = T%yy(i)**p
+        T2%yz(i) = T%yz(i)**p
+
+        T2%zx(i) = T%zx(i)**p
+        T2%zy(i) = T%zy(i)**p
+        T2%zz(i) = T%zz(i)**p
+    enddo
+end function
+
+function power_volSymmetricTensorField(T,p) result(T2)
+    implicit none
+    type(volSymmetricTensorField), intent(in) :: T
+    real(dp), intent(in) :: p
+    type(volSymmetricTensorField) :: T2
+
+    integer :: i,num
+
+    num = size(T%xx)
+
+    T2 = new_volSymmetricTensorField(num)
+
+    do i = 1,num
+        T2%xx(i) = T%xx(i)**p
+        T2%xy(i) = T%xy(i)**p
+        T2%xz(i) = T%xz(i)**p
+
+        T2%yy(i) = T%yy(i)**p
+        T2%yz(i) = T%yz(i)**p
+
+        T2%zz(i) = T%zz(i)**p
+    enddo
+end function
 
 function determinant_rank2_symmetric_tensor(T) result(determinant)
     implicit none
@@ -883,7 +1071,7 @@ function determinant_rank2_symmetric_tensor(T) result(determinant)
                                T%xy(i) * ( T%xy(i) * T%zz(i) - T%yz(i)*T%xz(i) ) + &
                                T%xz(i) * ( T%xy(i) * T%yz(i) - T%yy(i)*T%xz(i) )   )
     enddo
-end function determinant_rank2_symmetric_tensor
+end function
 
 
 function determinant_rank2_tensor(T) result(determinant)
@@ -901,7 +1089,7 @@ function determinant_rank2_tensor(T) result(determinant)
                                T%xy(i) * ( T%yx(i) * T%zz(i) - T%yz(i)*T%zx(i) ) + &
                                T%xz(i) * ( T%yx(i) * T%zy(i) - T%yy(i)*T%zx(i) )   )
     enddo
-end function determinant_rank2_tensor
+end function
 
 
 function diagonal(T) result(v)
@@ -919,7 +1107,7 @@ function diagonal(T) result(v)
         v%y (i) = T%yy(i) 
         v%z (i) = T%zz(i)
     enddo
-end function diagonal
+end function
 
 
 function hodge_dual(T) result(v)
@@ -937,7 +1125,7 @@ function hodge_dual(T) result(v)
         v%y (i) =-T%xz(i) 
         v%z (i) = T%xy(i)
     enddo
-end function hodge_dual
+end function
 
 
 function eye(num) result(T)
@@ -961,7 +1149,7 @@ function eye(num) result(T)
         T%zy(i) = 0.0_dp 
         T%zz(i) = 1.0_dp
     enddo
-end function eye
+end function
 
 function symm(T)  result(D)
     implicit none
@@ -973,7 +1161,7 @@ function symm(T)  result(D)
 !              |     |
     D = 0.5_dp * ( T + .trans.T )
 
-end function symm
+end function
 
 function skew(T)  result(S)
     implicit none
@@ -985,7 +1173,7 @@ function skew(T)  result(S)
 !              |     |
     S = 0.5_dp * ( T - .trans.T )
 
-end function skew
+end function
 
 function curl(D) result(v)
 !
@@ -1003,7 +1191,7 @@ function curl(D) result(v)
 !              |  |            
     v = 2.0_dp * (.hodge.(.skew.D))
     
-end function curl
+end function
 
 
 function deviatoric_part_rank2_tensor(T)  result(devT)
@@ -1023,7 +1211,7 @@ function deviatoric_part_rank2_tensor(T)  result(devT)
 !            |             |         |
     devT = T - ( 1./3.0_dp * ( .tr.T * I) )
 
-end function deviatoric_part_rank2_tensor
+end function
 
 
 function deviatoric_part_rank2_tensor_23(T)  result(devT)
@@ -1045,7 +1233,7 @@ function deviatoric_part_rank2_tensor_23(T)  result(devT)
                 !^
                 !!----2/3 here !
 
-end function deviatoric_part_rank2_tensor_23
+end function
 
 
 function hydrostatic_part_rank2_tensor(T)  result(hydT)
@@ -1063,7 +1251,7 @@ function hydrostatic_part_rank2_tensor(T)  result(hydT)
 !                     |         |
     hydT =  1./3.0_dp * ( .tr.T * I ) 
 
-end function hydrostatic_part_rank2_tensor
+end function
 
 ! .magSq.
 

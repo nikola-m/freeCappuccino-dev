@@ -1,8 +1,61 @@
-\hypertarget{utils_8f90}{\section{src-\/par/utils.f90 File Reference}
-\label{utils_8f90}\index{src-\/par/utils.\-f90@{src-\/par/utils.\-f90}}
-}
-\subsection*{Data Types}
+\hypertarget{utils_8f90}{}\doxysection{src-\/par/utils.f90 File Reference}
+\label{utils_8f90}\index{src-\/par/utils.f90@{src-\/par/utils.f90}}
+\doxysubsection*{Modules}
 \begin{DoxyCompactItemize}
 \item 
-module \hyperlink{classutils}{utils}
+module \mbox{\hyperlink{namespaceutils}{utils}}
 \end{DoxyCompactItemize}
+\doxysubsection*{Functions/\+Subroutines}
+\begin{DoxyCompactItemize}
+\item 
+subroutine \mbox{\hyperlink{namespaceutils_aa2b73136c7bb22d03472ef1b10438d0e}{utils\+::show\+\_\+logo}}
+\item 
+subroutine \mbox{\hyperlink{namespaceutils_ad708b6195ad758d61b255161ac20d617}{utils\+::say\+\_\+goodbye}}
+\item 
+integer function \mbox{\hyperlink{namespaceutils_a21dbaa7b30cbd5b1723b22a64db81bfd}{utils\+::csr\+\_\+to\+\_\+k}} (icell, jcell, ioffset, ja)
+\item 
+subroutine \mbox{\hyperlink{namespaceutils_ac9bece4ee87f87f5ac284876431bdd41}{utils\+::find\+\_\+main\+\_\+diag\+\_\+element\+\_\+positions}} (ia, ja, nnz, diag, nel)
+\item 
+subroutine \mbox{\hyperlink{namespaceutils_a922ea92783018263c65c651d1fd939bc}{utils\+::find\+\_\+index\+\_\+position}} (target\+\_\+value, istart, iend, int\+Array, length, indx)
+\item 
+subroutine \mbox{\hyperlink{namespaceutils_a399dfe72f2bba356257807b8ddf2540b}{utils\+::timestamp}} ()
+\item 
+subroutine \mbox{\hyperlink{namespaceutils_afeae93498668a901c97062ea8c7da8b3}{utils\+::file\+\_\+row\+\_\+count}} (input\+\_\+unit, row\+\_\+num)
+\item 
+subroutine \mbox{\hyperlink{namespaceutils_a4c02ab80fe8c45c48f93d44158999277}{utils\+::get\+\_\+unit}} (iunit)
+\item 
+subroutine \mbox{\hyperlink{namespaceutils_a8b21cdbd108f01d8b9c409cdac3d5283}{utils\+::i4vec2\+\_\+sort\+\_\+a}} (n, a1, a2)
+\item 
+subroutine \mbox{\hyperlink{namespaceutils_aebd984aa8e9a5f85b3545273652ee28f}{utils\+::sort\+\_\+heap\+\_\+external}} (n, indx, i, j, isgn)
+\item 
+subroutine \mbox{\hyperlink{namespaceutils_ab4fc73a151af25df823b1e7bcc475c3f}{utils\+::i4vec2\+\_\+compare}} (n, a1, a2, i, j, isgn)
+\item 
+subroutine \mbox{\hyperlink{namespaceutils_ac743c893a742994ba79088f917aa66b1}{utils\+::i4vec\+\_\+print}} (n, a, title)
+\item 
+subroutine \mbox{\hyperlink{namespaceutils_a34a8ef81d609bb2f52d645de2b5eb198}{utils\+::i4vec\+\_\+print2}} (n, a, b, title)
+\item 
+subroutine \mbox{\hyperlink{namespaceutils_a99f11e3629559c436b21305a07473d4d}{utils\+::r8vec\+\_\+print\+\_\+some}} (n, a, i\+\_\+lo, i\+\_\+hi, title)
+\item 
+subroutine \mbox{\hyperlink{namespaceutils_aa6b436f89f63f908b3a17a7339c9bfbf}{utils\+::digit\+\_\+to\+\_\+ch}} (digit, ch)
+\item 
+subroutine \mbox{\hyperlink{namespaceutils_a380db670d15265d5b5a6a003a3df926a}{utils\+::i4\+\_\+to\+\_\+s\+\_\+left}} (i4, s)
+\item 
+pure integer function \mbox{\hyperlink{namespaceutils_a17ce4bd3bad99b84b7151374817d485c}{utils\+::str\+\_\+int\+\_\+len}} (i)
+\item 
+pure character(len=str\+\_\+int\+\_\+len(i)) function \mbox{\hyperlink{namespaceutils_ab7a03fd86144e0190731be8d84592345}{utils\+::str\+\_\+int}} (i)
+\item 
+subroutine \mbox{\hyperlink{namespaceutils_af87e5b325383002221a63cdd5bd84ed3}{utils\+::init\+\_\+random\+\_\+seed}} ()
+\item 
+integer function \mbox{\hyperlink{utils_8f90_a669ac8da4cdd11efd16a0ef72a4f7915}{lcg}} (s)
+\end{DoxyCompactItemize}
+
+
+\doxysubsection{Function/\+Subroutine Documentation}
+\mbox{\Hypertarget{utils_8f90_a669ac8da4cdd11efd16a0ef72a4f7915}\label{utils_8f90_a669ac8da4cdd11efd16a0ef72a4f7915}} 
+\index{utils.f90@{utils.f90}!lcg@{lcg}}
+\index{lcg@{lcg}!utils.f90@{utils.f90}}
+\doxysubsubsection{\texorpdfstring{lcg()}{lcg()}}
+{\footnotesize\ttfamily integer function init\+\_\+random\+\_\+seed\+::lcg (\begin{DoxyParamCaption}\item[{integer(int64)}]{s }\end{DoxyParamCaption})}
+
+Here is the call graph for this function\+:
+% FIG 0

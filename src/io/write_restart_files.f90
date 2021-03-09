@@ -8,7 +8,6 @@ subroutine write_restart_files
   use parameters
   use geometry
   use variables
-  use title_mod
   use statistics
 
   implicit none

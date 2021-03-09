@@ -6,6 +6,7 @@ module k_epsilon_std_2lewt
   use parameters
   use geometry
   use variables
+  use turbulence
   use scalar_fluxes, only: facefluxsc
 
   implicit none
@@ -100,8 +101,8 @@ subroutine calcsc(Fi,dFidxi,ifi)
   use variables
   use sparse_matrix
   use gradients
-  use title_mod
-
+  use linear_solvers
+  
   implicit none
 !
 !***********************************************************************
@@ -119,10 +120,10 @@ subroutine calcsc(Fi,dFidxi,ifi)
               genp, genn, &
               uttbuoy, vttbuoy, wttbuoy
   real(dp) :: cap, can, suadd
-  ! real(dp) :: magStrainSq
+  real(dp) :: magStrainSq
   real(dp) :: off_diagonal_terms
   real(dp) :: are,nxf,nyf,nzf,vnp,xtp,ytp,ztp,ut2
-  real(dp) :: dudx,dudy,dudz,dvdx,dvdy,dvdz,dwdx,dwdy,dwdz
+  ! real(dp) :: dudx,dudy,dudz,dvdx,dvdy,dvdz,dwdx,dwdy,dwdz
   real(dp) :: viss
   real(dp) :: fimax,fimin
   real(dp) :: k12,Rey,lambeps,leps,eps2l
@@ -157,26 +158,26 @@ subroutine calcsc(Fi,dFidxi,ifi)
 
   do inp=1,numCells
 
-    dudx = dudxi(1,inp)
-    dudy = dudxi(2,inp)
-    dudz = dudxi(3,inp)
+    ! dudx = dudxi(1,inp)
+    ! dudy = dudxi(2,inp)
+    ! dudz = dudxi(3,inp)
 
-    dvdx = dvdxi(1,inp)
-    dvdy = dvdxi(2,inp)
-    dvdz = dvdxi(3,inp)
+    ! dvdx = dvdxi(1,inp)
+    ! dvdy = dvdxi(2,inp)
+    ! dvdz = dvdxi(3,inp)
 
-    dwdx = dwdxi(1,inp)
-    dwdy = dwdxi(2,inp)
-    dwdz = dwdxi(3,inp)
+    ! dwdx = dwdxi(1,inp)
+    ! dwdy = dwdxi(2,inp)
+    ! dwdz = dwdxi(3,inp)
 
-    ! Minus here in fron because UU,UV,... calculated in calcstress hold -tau_ij
-    ! So the exact production is calculated as tau_ij*dui/dxj
-    gen(inp) = -den(inp)*( uu(inp)*dudx+uv(inp)*(dudy+dvdx)+ &
-                           uw(inp)*(dudz+dwdx)+vv(inp)*dvdy+ &
-                           vw(inp)*(dvdz+dwdy)+ww(inp)*dwdz )
+    ! ! Minus here in fron because UU,UV,... calculated in calcstress hold -tau_ij
+    ! ! So the exact production is calculated as tau_ij*dui/dxj
+    ! gen(inp) = -den(inp)*( uu(inp)*dudx+uv(inp)*(dudy+dvdx)+ &
+    !                        uw(inp)*(dudz+dwdx)+vv(inp)*dvdy+ &
+    !                        vw(inp)*(dvdz+dwdy)+ww(inp)*dwdz )
 
-    ! magStrainSq=magStrain(inp)*magStrain(inp)
-    ! gen(inp)=abs(vis(inp)-viscos)*magStrainSq
+    magStrainSq=magStrain(inp)*magStrain(inp)
+    gen(inp)=abs(vis(inp)-viscos)*magStrainSq
 
   enddo
 
@@ -198,7 +199,7 @@ subroutine calcsc(Fi,dFidxi,ifi)
     !=====================================
     ! VOLUME SOURCE TERMS: buoyancy
     !=====================================
-      if(lcal(ien).and.lbuoy) then
+      if(lbuoy) then
         
         ! When bouy activated we need the freshest utt,vtt,wtt - turbulent heat fluxes
         call calcheatflux 
@@ -208,9 +209,9 @@ subroutine calcsc(Fi,dFidxi,ifi)
            vttbuoy=-gravy*den(inp)*vtt(inp)*vol(inp)*beta
            wttbuoy=-gravz*den(inp)*wtt(inp)*vol(inp)*beta
         else
-           uttbuoy=-gravx*den(inp)*utt(inp)*vol(inp)/(t(inp)+273.15)
-           vttbuoy=-gravy*den(inp)*vtt(inp)*vol(inp)/(t(inp)+273.15)
-           wttbuoy=-gravz*den(inp)*wtt(inp)*vol(inp)/(t(inp)+273.15)
+           uttbuoy=-gravx*den(inp)*utt(inp)*vol(inp)/(t(inp)+small)
+           vttbuoy=-gravy*den(inp)*vtt(inp)*vol(inp)/(t(inp)+small)
+           wttbuoy=-gravz*den(inp)*wtt(inp)*vol(inp)/(t(inp)+small)
         end if
 
         utp=max(uttbuoy,zero)
@@ -270,7 +271,7 @@ subroutine calcsc(Fi,dFidxi,ifi)
     !=====================================
     ! VOLUME SOURCE TERMS: Buoyancy
     !=====================================
-      if(lcal(ien).and.lbuoy) then
+      if(lbuoy) then
         const=c3*den(inp)*ed(inp)*vol(inp)/(te(inp)+small)
 
         if(boussinesq) then
@@ -278,9 +279,9 @@ subroutine calcsc(Fi,dFidxi,ifi)
            vttbuoy=-gravy*vtt(inp)*const*beta
            wttbuoy=-gravz*wtt(inp)*const*beta
         else ! if(boussinesq.eq.0)
-           uttbuoy=-gravx*utt(inp)*const/(t(inp)+273.15)
-           vttbuoy=-gravy*vtt(inp)*const/(t(inp)+273.15)
-           wttbuoy=-gravz*wtt(inp)*const/(t(inp)+273.15)
+           uttbuoy=-gravx*utt(inp)*const/(t(inp)+small)
+           vttbuoy=-gravy*vtt(inp)*const/(t(inp)+small)
+           wttbuoy=-gravz*wtt(inp)*const/(t(inp)+small)
         end if
 
         utp=max(uttbuoy,zero)
@@ -324,7 +325,7 @@ subroutine calcsc(Fi,dFidxi,ifi)
 
     call facefluxsc( ijp, ijn, &
                      xf(i), yf(i), zf(i), arx(i), ary(i), arz(i), &
-                     flmass(i), facint(i), gam, &
+                     flmass(i), facint(i), gam, cScheme, dScheme, nrelax,  &
                      fi, dFidxi, prtr, cap, can, suadd )
 
     ! > Off-diagonal elements:
@@ -582,8 +583,8 @@ subroutine calcsc(Fi,dFidxi,ifi)
   endif
 
   ! Underrelaxation factors
-  urfrs=urfr(ifi)
-  urfms=urfm(ifi)
+  urfrs=1.0_dp/urf(ifi)
+  urfms=1.0_dp-urf(ifi)
 
   ! Main diagonal term assembly:
   do inp = 1,numCells
@@ -602,8 +603,12 @@ subroutine calcsc(Fi,dFidxi,ifi)
   enddo
 
   ! Solve linear system:
-  ! call bicgstab(fi,ifi)
-  call GaussSeidel(fi,ifi)
+  if (ifi.eq.ite) then
+    call csrsolve(lSolver, te, su, resor(5), maxiter, tolAbs, tolRel, 'k' )
+  else
+    call csrsolve(lSolver, ed, su, resor(6), maxiter, tolAbs, tolRel, 'epsilon' )
+  endif
+
 
   !
   ! Update symmetry and outlet boundaries
@@ -631,7 +636,11 @@ subroutine calcsc(Fi,dFidxi,ifi)
   fimin = minval(fi(1:numCells))
   fimax = maxval(fi(1:numCells))
   
-  write(6,'(2x,es11.4,3a,es11.4)') fimin,' <= ',chvar(ifi),' <= ',fimax
+  if (ifi.eq.ite) then 
+    write(6,'(2x,es11.4,a,es11.4)') fimin,' <= k <= ',fimax
+  else
+    write(6,'(2x,es11.4,a,es11.4)') fimin,' <= epsilon <= ',fimax
+  endif
 
 ! These field values cannot be negative
   if(fimin.lt.0.0_dp) fi(1:numCells) = max(fi(1:numCells),small)
@@ -662,7 +671,7 @@ subroutine modify_mu_eff()
   real(dp) :: Vnp,Vtp,xtp,ytp,ztp
   real(dp) :: Utau,viscw
   real(dp) :: k12,Rey,lmu,mut2l,mut,lambeps
-  ! real(dp) :: Upvisc,Uplog,Gmblend  
+  real(dp) :: Upvisc,Uplog,Gmblend,Ut2  
   real(dp) :: Uplblend
 
   ivisc = 0
@@ -788,13 +797,13 @@ subroutine modify_mu_eff()
         ! Its magnitude
         Vtp = sqrt(xtp*xtp+ytp*ytp+ztp*ztp)
 
-        ! ! Tangent direction
-        ! xtp = xtp/vtp
-        ! ytp = ytp/vtp
-        ! ztp = ztp/vtp
+        ! Tangent direction
+        xtp = xtp/vtp
+        ytp = ytp/vtp
+        ztp = ztp/vtp
 
         ! projektovanje razlike brzina na pravac tangencijalne brzine u cell centru ijp
-        ! Ut2 = abs( (U(ijb)-U(ijp))*xtp + (V(ijb)-V(ijp))*ytp + (W(ijb)-W(ijp))*ztp )
+        Ut2 = abs( (U(ijb)-U(ijp))*xtp + (V(ijb)-V(ijp))*ytp + (W(ijb)-W(ijp))*ztp )
 
         ! Tau(iWall) = viscos*Ut2/dnw(iWall)
         ! Utau = sqrt( Tau(iWall) / den(ijb) )
@@ -806,68 +815,68 @@ subroutine modify_mu_eff()
 
         viscw = zero
 
-        ! *** Enhanced wall treatment - Reichardt blending ***
+        ! ! *** Enhanced wall treatment - Reichardt blending ***
 
-        ! Below is a variant where we use Reichardt blending
-        ! for whole span of y+ values.
-        ! Some authors say that Reichardt function for u+ approximates
-        ! the composite u+(y+) curve, better that Kader blending function.
+        ! ! Below is a variant where we use Reichardt blending
+        ! ! for whole span of y+ values.
+        ! ! Some authors say that Reichardt function for u+ approximates
+        ! ! the composite u+(y+) curve, better that Kader blending function.
  
-        utau = sqrt( viscos*Vtp/(densit*dnw(iWall)) + cmu25*te(ijp) ) ! It's actually u* in original reference...
+        ! utau = sqrt( viscos*Vtp/(densit*dnw(iWall)) + cmu25*te(ijp) ) ! It's actually u* in original reference...
 
-        ypl(iWall) = den(ijp)*Utau*dnw(iWall)/viscos 
+        ! ypl(iWall) = den(ijp)*Utau*dnw(iWall)/viscos 
 
-        Uplblend = one/cappa*log(one+cappa*ypl(iWall)) + &
-                   7.8_dp*(1.-exp(-ypl(iWall)/11.0_dp)-(ypl(iWall)/11.0_dp)*exp(-ypl(iWall)/3.0_dp))
+        ! Uplblend = one/cappa*log(one+cappa*ypl(iWall)) + &
+        !            7.8_dp*(1.-exp(-ypl(iWall)/11.0_dp)-(ypl(iWall)/11.0_dp)*exp(-ypl(iWall)/3.0_dp))
           
-        viscw = den(ijp)*utau*dnw(iWall)/Uplblend  
+        ! viscw = den(ijp)*utau*dnw(iWall)/Uplblend  
 
-        ! Blended version of shear stress - probati ovo(!?)
-        ! tau(iWall) = den(ijp) * (Vtp/Uplblend)**2
+        ! ! Blended version of shear stress - probati ovo(!?)
+        ! ! tau(iWall) = den(ijp) * (Vtp/Uplblend)**2
 
-        ! Varijanta 2, u originalnoj referenci...
-        tau(iWall) = den(ijp) * Vtp*Utau/Uplblend
+        ! ! Varijanta 2, u originalnoj referenci...
+        ! tau(iWall) = den(ijp) * Vtp*Utau/Uplblend
 
-        !*** END: Enhanced wall treatment - Reichardt blending ***
+        ! !*** END: Enhanced wall treatment - Reichardt blending ***
 
-        ! ! *** Enhanced wall treatment - Kader blending ***
+        ! *** Enhanced wall treatment - Kader blending ***
 
-        ! ! Below is a variant where we use Kader blending only for 3 < y+ < 10,
-        ! ! and for other ( y+ < 3 and y+ > 11.225 or ctrans ) we use viscous
-        ! ! or logarithmic profiles respectively.
-        ! ! We can use Kader function for the whole region, because it approximates it.
-        ! ! Some authors say though that Kader blending function isn't that great because
-        ! ! it underestimates velocity in buffer region, and has some unusual kink there.
+        ! Below is a variant where we use Kader blending only for 3 < y+ < 10,
+        ! and for other ( y+ < 3 and y+ > 11.225 or ctrans ) we use viscous
+        ! or logarithmic profiles respectively.
+        ! We can use Kader function for the whole region, because it approximates it.
+        ! Some authors say though that Kader blending function isn't that great because
+        ! it underestimates velocity in buffer region, and has some unusual kink there.
 
-        ! if(ypl(iWall) > ctrans) then
+        if(ypl(iWall) > ctrans) then
 
-        !   viscw = ypl(iWall)*viscos*cappa/log(Elog*ypl(iWall))
+          viscw = ypl(iWall)*viscos*cappa/log(Elog*ypl(iWall))
 
-        !   ! Shear stress for log region
-        !   tau(iwall) = cappa*den(ijp)*Vtp*cmu25*sqrt(te(ijp))/log(Elog*ypl(iWall))
+          ! Shear stress for log region
+          tau(iwall) = cappa*den(ijp)*Vtp*cmu25*sqrt(te(ijp))/log(Elog*ypl(iWall))
 
-        !   elseif( ypl(iWall) > 3.0 ) then
+          elseif( ypl(iWall) > 3.0 ) then
 
-        !   !
-        !   ! Enhanced wall treatment - Kader blending.
-        !   !
-        !   Upvisc = ypl(iWall)
-        !   Uplog  = log(Elog*ypl(iWall))/cappa
-        !   Gmblend = -0.01_dp*ypl(iWall)**4/(1.+5*ypl(iWall))        
-        !   Uplblend = exp(Gmblend)*Upvisc + exp(1./Gmblend)*Uplog          
-        !   viscw = ypl(iWall)*viscos/Uplblend  
+          !
+          ! Enhanced wall treatment - Kader blending.
+          !
+          Upvisc = ypl(iWall)
+          Uplog  = log(Elog*ypl(iWall))/cappa
+          Gmblend = -0.01_dp*ypl(iWall)**4/(1.+5*ypl(iWall))        
+          Uplblend = exp(Gmblend)*Upvisc + exp(1./Gmblend)*Uplog          
+          viscw = ypl(iWall)*viscos/Uplblend  
 
-        !   ! Blended version of shear stress
-        !   tau(iwall) = den(ijp) * (Vtp/Uplblend)**2
+          ! Blended version of shear stress
+          tau(iwall) = den(ijp) * (Vtp/Uplblend)**2
 
-        ! else
+        else
 
-        !   ! Shear stress for viscous region
-        !   tau(iWall) = viscos*Ut2/dnw(iWall)
-        !   Utau = sqrt( Tau(iWall) / den(ijp) )
-        !   ypl(iWall) = den(ijp)*Utau*dnw(iWall)/viscos
+          ! Shear stress for viscous region
+          tau(iWall) = viscos*Ut2/dnw(iWall)
+          Utau = sqrt( Tau(iWall) / den(ijp) )
+          ypl(iWall) = den(ijp)*Utau*dnw(iWall)/viscos
 
-        ! endif
+        endif
 
         visw(iWall) = max(viscos,viscw)
         vis(ijb) = visw(iWall)

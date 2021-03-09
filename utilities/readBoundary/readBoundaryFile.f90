@@ -96,8 +96,9 @@ logical :: lpar = .false.
     !--------------------------------------------------------
     close( boundary_file )
     
-    ! ! Create template files for vector and scalar fields in 0/ folder
-    ! call create_field_init_files(bcName,NMARK)
+
+    ! Create template files for vector and scalar fields in 0/ folder
+    call create_field_init_files
 
   endif
 

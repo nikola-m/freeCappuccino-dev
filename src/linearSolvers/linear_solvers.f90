@@ -35,7 +35,7 @@ module linear_solvers
 contains
 
 
-subroutine spsolve(solver, fi, rhs, res0, itr_max, tol_abs, tol_rel, chvar)
+subroutine csrsolve(solver, fi, rhs, res0, itr_max, tol_abs, tol_rel, chvar)
 !
 !  Purpose:
 !   Main routine for solution of sparse linear systems, adjusted to use global variables of freeCappuccino.
@@ -61,7 +61,7 @@ subroutine spsolve(solver, fi, rhs, res0, itr_max, tol_abs, tol_rel, chvar)
 
     call GaussSeidel( numCells, nnz, ioffset, ja, a, diag, fi(1:numCells), rhs, res0, itr_max, tol_abs, tol_rel, chvar, ltest )
 
-  elseif( solver .eq. 'dcg' ) then
+  elseif( solver .eq. 'dpcg' ) then
 
     call dpcg( numCells, nnz, ioffset, ja, a, diag, fi(1:numCells), rhs, res0, itr_max, tol_abs, tol_rel, chvar, ltest )
 
@@ -69,15 +69,15 @@ subroutine spsolve(solver, fi, rhs, res0, itr_max, tol_abs, tol_rel, chvar)
 
     call iccg( numCells, nnz, ioffset, ja, a, diag, fi(1:numCells), rhs, res0, itr_max, tol_abs, tol_rel, chvar, ltest )
 
-  elseif( solver .eq. 'bicgstab_ilu' ) then  
+  elseif( solver .eq. 'bicgstab' ) then  
 
     call bicgstab( numCells, nnz, ioffset, ja, a, diag, fi(1:numCells), rhs, res0, itr_max, tol_abs, tol_rel, chvar, ltest ) 
 
-  elseif( solver .eq. 'pmgmres_ilu' ) then 
+  elseif( solver .eq. 'pmgmres' ) then 
 
     ! ** NOTE for GMRES(m) **
     ! Here we have hardcoded the restart parameter - m in restarted GMRES algorithm - GMRES(m), to m=4. 
-    ! Play with this number if you want, the greaer like m=20, better the convergence, but much more memory is required.
+    ! Play with this number if you want, the greater like m=20, better the convergence, but much more memory is required.
 
     call pmgmres_ilu( numCells, nnz, ioffset, ja, a, diag, fi(1:numCells), rhs, res0, itr_max, 4, tol_abs, tol_rel, chvar, ltest )
     
@@ -89,7 +89,7 @@ end subroutine
 
 !***********************************************************************
 !
-subroutine GaussSeidel( n, nnz, ioffset, ja, a, diag, fi, rhs, res0, itr_max, tol_abs, tol_rel, chvar, verbose )
+subroutine GaussSeidel( n, nnz, ioffset, ja, a, diag, fi, rhs, resor, itr_max, tol_abs, tol_rel, chvar, verbose )
 !
 !***********************************************************************
 !
@@ -112,7 +112,7 @@ subroutine GaussSeidel( n, nnz, ioffset, ja, a, diag, fi, rhs, res0, itr_max, to
   integer, dimension(n), intent(in) :: diag             ! Position of diagonal elements in coeff. array
   real(dp), dimension(n), intent(inout) :: fi           ! On input-current field; on output-the solution vector
   real(dp), dimension(n), intent(in) :: rhs             ! The right hand side of the linear system
-  real(dp), intent(out) :: res0                         ! Output - initial residual of the linear system in L1 norm
+  real(dp), intent(out) :: resor                        ! Output - initial residual of the linear system in L1 norm
   integer, intent(in) :: itr_max                        ! Maximum number of iterations
   real(dp), intent(in) :: tol_abs                       ! Absolute tolerance level for residual
   real(dp), intent(in) :: tol_rel                       ! Relative tolerance level for residual
@@ -123,7 +123,7 @@ subroutine GaussSeidel( n, nnz, ioffset, ja, a, diag, fi, rhs, res0, itr_max, to
 ! Local variables
 !
   integer :: i, k, l, itr_used
-  real(dp) :: rsm, resl
+  real(dp) :: res0, rsm, resl, factor
   real(dp), dimension(n) :: res                         ! Residual vector
 
 !
@@ -131,6 +131,7 @@ subroutine GaussSeidel( n, nnz, ioffset, ja, a, diag, fi, rhs, res0, itr_max, to
 !
 
   itr_used = 0
+  factor = 0.0
 
   do l=1,itr_max
 
@@ -168,7 +169,14 @@ subroutine GaussSeidel( n, nnz, ioffset, ja, a, diag, fi, rhs, res0, itr_max, to
 !
 ! Check convergence
 !
+  if (l.eq.1) then
+    factor = sum( abs( a(diag(1:n)) * fi(1:n) )) + small
+    ! Initial normalized residual - for convergence report
+    resor = res0/factor
+  endif
+
   rsm = resl/(res0+small)
+
   if( verbose ) write(*,'(19x,3a,i4,a,1pe10.3,a,1pe10.3)') ' fi=',trim( chvar ),' sweep = ',l,' resl = ',resl,' rsm = ',rsm
   if( rsm.lt.tol_rel .or. resl.lt.tol_abs ) exit ! Criteria for exiting iterations.
 
@@ -180,14 +188,14 @@ subroutine GaussSeidel( n, nnz, ioffset, ja, a, diag, fi, rhs, res0, itr_max, to
 
 ! Write linear solver report:
   write(*,'(3a,1PE10.3,a,1PE10.3,a,I0)') '  Gauss-Seidel:  Solving for ',trim( chvar ), &
-  ', Initial residual = ',res0,', Final residual = ',resl,', No Iterations ',itr_used 
+  ', Initial residual = ',resor,', Final residual = ',resl/factor,', No Iterations ',itr_used 
 
 end subroutine
 
 
 !***********************************************************************
 !
-subroutine dpcg( n, nnz, ioffset, ja, a, diag, fi, rhs, res0, itr_max, tol_abs, tol_rel, chvar, verbose )
+subroutine dpcg( n, nnz, ioffset, ja, a, diag, fi, rhs, resor, itr_max, tol_abs, tol_rel, chvar, verbose )
 !
 !***********************************************************************
 !
@@ -210,7 +218,7 @@ subroutine dpcg( n, nnz, ioffset, ja, a, diag, fi, rhs, res0, itr_max, tol_abs, 
   integer, dimension(n), intent(in) :: diag             ! Position of diagonal elements in coeff. array
   real(dp), dimension(n), intent(inout) :: fi           ! On input-current field; on output-the solution vector
   real(dp), dimension(n), intent(in) :: rhs             ! The right hand side of the linear system
-  real(dp), intent(out) :: res0                         ! Output - initial residual of the linear system in L1 norm
+  real(dp), intent(out) :: resor                        ! Output - initial residual of the linear system in L1 norm
   integer, intent(in) :: itr_max                        ! Maximum number of iterations
   real(dp), intent(in) :: tol_abs                       ! Absolute tolerance level for residual
   real(dp), intent(in) :: tol_rel                       ! Relative tolerance level for residual
@@ -221,13 +229,14 @@ subroutine dpcg( n, nnz, ioffset, ja, a, diag, fi, rhs, res0, itr_max, tol_abs, 
 !
   integer :: i, k, l, itr_used
   real(dp), dimension(n) :: pk,zk
-  real(dp) :: rsm, resl
+  real(dp) :: res0, rsm, resl, factor
   real(dp) :: s0, sk, alf, bet, pkapk
   real(dp), dimension(n) :: res                         ! Residual vector
 
 !
 ! Initalize working arrays
 !
+  factor = 0.0_dp
   pk = 0.0_dp
   zk = 0.0_dp
   res = 0.0_dp
@@ -315,6 +324,11 @@ subroutine dpcg( n, nnz, ioffset, ja, a, diag, fi, rhs, res0, itr_max, tol_abs, 
 !
 ! Check convergence
 !
+  if (l.eq.1) then
+    factor = sum( abs( a(diag(1:n)) * fi(1:n) )) + small
+    ! Initial normalized residual - for convergence report
+    resor = res0/factor
+  endif
 
   rsm = resl/(res0+small) ! Relative residual - current value
 
@@ -328,15 +342,15 @@ subroutine dpcg( n, nnz, ioffset, ja, a, diag, fi, rhs, res0, itr_max, tol_abs, 
   end do
 
 ! Write linear solver report:
-  write(*,'(3a,1PE10.3,a,1PE10.3,a,I0)') &
-  '  PCG(Jacobi):  Solving for ',trim(chvar),', Initial residual = ',res0,', Final residual = ',resl,', No Iterations ',itr_used
+  write(*,'(3a,1PE10.3,a,1PE10.3,a,I0)') '  PCG(Jacobi):  Solving for ',trim(chvar),', Initial residual = ',resor, &
+  ', Final residual = ',resl/factor,', No Iterations ',itr_used
 
 end subroutine
 
 
 !***********************************************************************
 !
-subroutine iccg( n, nnz, ioffset, ja, a, diag, fi, rhs, res0, itr_max, tol_abs, tol_rel, chvar, verbose )
+subroutine iccg( n, nnz, ioffset, ja, a, diag, fi, rhs, resor, itr_max, tol_abs, tol_rel, chvar, verbose )
 !
 !***********************************************************************
 !
@@ -359,7 +373,7 @@ subroutine iccg( n, nnz, ioffset, ja, a, diag, fi, rhs, res0, itr_max, tol_abs, 
   integer, dimension(n), intent(in) :: diag             ! Position of diagonal elements in coeff. array
   real(dp), dimension(n), intent(inout) :: fi           ! On input-current field; on output-the solution vector
   real(dp), dimension(n), intent(in) :: rhs             ! The right hand side of the linear system
-  real(dp), intent(out) :: res0                         ! Output - initial residual of the linear system in L1 norm
+  real(dp), intent(out) :: resor                        ! Output - initial residual of the linear system in L1 norm
   integer, intent(in) :: itr_max                        ! Maximum number of iterations
   real(dp), intent(in) :: tol_abs                       ! Absolute tolerance level for residual
   real(dp), intent(in) :: tol_rel                       ! Relative tolerance level for residual
@@ -370,7 +384,7 @@ subroutine iccg( n, nnz, ioffset, ja, a, diag, fi, rhs, res0, itr_max, tol_abs, 
 ! Local variables
 !
   integer :: i, k, l, itr_used
-  real(dp) :: rsm, resl
+  real(dp) :: res0, rsm, resl, factor
   real(dp) :: s0, sk, alf, bet, pkapk
   real(dp), dimension(n) :: pk,zk,d
   real(dp), dimension(n) :: res                         ! Residual vector
@@ -378,6 +392,7 @@ subroutine iccg( n, nnz, ioffset, ja, a, diag, fi, rhs, res0, itr_max, tol_abs, 
 !
 ! Initalize working arrays
 !
+  factor = 0.0_dp
   pk = 0.0_dp
   zk = 0.0_dp
   d = 0.0_dp
@@ -395,6 +410,7 @@ subroutine iccg( n, nnz, ioffset, ja, a, diag, fi, rhs, res0, itr_max, tol_abs, 
 
   ! L^1-norm of residual
   res0=sum( abs(res) )
+  ! res0 = sqrt( sum( (res**2)/dble(n)) )
 
     ! Initially converged solution
     if( res0.lt.tol_abs ) then
@@ -491,6 +507,12 @@ subroutine iccg( n, nnz, ioffset, ja, a, diag, fi, rhs, res0, itr_max, tol_abs, 
 ! Check convergence
 !
 
+  if (l.eq.1) then
+    factor = sum( abs( a(diag(1:n)) * fi(1:n) )) + small
+    ! Initial normalized residual - for convergence report
+    resor = res0/factor
+  endif
+
   rsm = resl/(res0+small)
 
   if( verbose ) write(*,'(19x,3a,i4,a,1pe10.3,a,1pe10.3)') ' fi=',trim( chvar),' sweep = ',l,' resl = ',resl,' rsm = ',rsm
@@ -504,12 +526,12 @@ subroutine iccg( n, nnz, ioffset, ja, a, diag, fi, rhs, res0, itr_max, tol_abs, 
 
 ! Write linear solver report:
   write(*,'(3a,1PE10.3,a,1PE10.3,a,I0)') '  PCG(IC0):  Solving for ',trim( chvar ), &
-  ', Initial residual = ',res0,', Final residual = ',resl,', No Iterations ',itr_used
+  ', Initial residual = ',resor,', Final residual = ',resl/factor,', No Iterations ',itr_used
 
 end subroutine
 
 
-subroutine bicgstab( n, nnz, ioffset, ja, a, diag, fi, rhs, res0, itr_max, tol_abs, tol_rel, chvar, verbose )
+subroutine bicgstab( n, nnz, ioffset, ja, a, diag, fi, rhs, resor, itr_max, tol_abs, tol_rel, chvar, verbose )
 !
 !***********************************************************************
 !
@@ -532,7 +554,7 @@ subroutine bicgstab( n, nnz, ioffset, ja, a, diag, fi, rhs, res0, itr_max, tol_a
   integer, dimension(n), intent(in) :: diag             ! Position of diagonal elements in coeff. array
   real(dp), dimension(n), intent(inout) :: fi           ! On input-current field; on output-the solution vector
   real(dp), dimension(n), intent(in) :: rhs             ! The right hand side of the linear system
-  real(dp), intent(out) :: res0                         ! Output - initial residual of the linear system in L1 norm
+  real(dp), intent(out) :: resor                        ! Output - initial residual of the linear system in L1 norm
   integer, intent(in) :: itr_max                        ! Maximum number of iterations
   real(dp), intent(in) :: tol_abs                       ! Absolute tolerance level for residual
   real(dp), intent(in) :: tol_rel                       ! Relative tolerance level for residual
@@ -543,7 +565,7 @@ subroutine bicgstab( n, nnz, ioffset, ja, a, diag, fi, rhs, res0, itr_max, tol_a
 !     Local variables
 !
   integer :: i, k, l, itr_used
-  real(dp) :: rsm, resl
+  real(dp) :: res0, rsm, resl, factor
   real(dp) :: alf, beto, gam, bet, om, ukreso
   real(dp), dimension(n) :: reso,pk,uk,zk,vk,d
   real(dp), dimension(n) :: res                         ! Residual vector
@@ -551,9 +573,6 @@ subroutine bicgstab( n, nnz, ioffset, ja, a, diag, fi, rhs, res0, itr_max, tol_a
 !
 ! Calculate initial residual vector and the norm
 !
-
-  ! Vector form
-  ! res = rhs - a( ioffset(i),ioffset(i+1)-1 ) * fi( ja( ioffset(i),ioffset(i+1)-1 ) )
 
   do i=1,n
     res(i) = rhs(i) 
@@ -564,6 +583,7 @@ subroutine bicgstab( n, nnz, ioffset, ja, a, diag, fi, rhs, res0, itr_max, tol_a
 
   ! L1-norm of residual
   res0=sum(abs(res))
+  ! res0 = sqrt( sum( (res**2)/dble(n)) )
 
     if(res0.lt.tol_abs) then
       write(*,'(3a,1PE10.3,a,1PE10.3,a)') '  BiCGStab(ILU(0)):  Solving for ',trim(chvar), &
@@ -597,6 +617,7 @@ subroutine bicgstab( n, nnz, ioffset, ja, a, diag, fi, rhs, res0, itr_max, tol_a
   uk = 0.0_dp
   zk = 0.0_dp
   vk = 0.0_dp
+  factor = 0.0_dp
 
   alf = 1.0_dp
   beto = 1.0_dp
@@ -725,6 +746,11 @@ subroutine bicgstab( n, nnz, ioffset, ja, a, diag, fi, rhs, res0, itr_max, tol_a
 !
 ! Check convergence
 !
+  if (l.eq.1) then
+    factor = sum( abs( a(diag(1:n)) * fi(1:n) )) + small
+    ! Initial normalized residual - for convergence report
+    resor = res0/factor
+  endif
 
   rsm = resl/(res0+small)
 
@@ -739,12 +765,12 @@ subroutine bicgstab( n, nnz, ioffset, ja, a, diag, fi, rhs, res0, itr_max, tol_a
 
 ! Write linear solver report:
   write(*,'(3a,1PE10.3,a,1PE10.3,a,I0)') '  BiCGStab(ILU(0)):  Solving for ',trim(chvar), &
-  ', Initial residual = ',res0,', Final residual = ',resl,', No Iterations ',itr_used
+  ', Initial residual = ',resor,', Final residual = ',resl/factor,', No Iterations ',itr_used
 
 end subroutine
 
 
-subroutine pmgmres_ilu ( n, nz_num, ia, ja, a, ua, x, rhs, res0, itr_max, mr, &
+subroutine pmgmres_ilu ( n, nz_num, ia, ja, a, ua, x, rhs, resor, itr_max, mr, &
   tol_abs, tol_rel, chvar, verbose )
 
 !*****************************************************************************80
@@ -824,7 +850,7 @@ subroutine pmgmres_ilu ( n, nz_num, ia, ja, a, ua, x, rhs, res0, itr_max, mr, &
 !    Input/output, real ( kind = 8 ) X(N); on input, an approximation to
 !    the solution.  On output, an improved approximation.
 !
-!    Output, real ( kind = 8 ) RES0, initial residual (L1) norm.
+!    Output, real ( kind = 8 ) RESOR, initial normalized residual (L1) norm.
 !
 !    Input, real ( kind = 8 ) RHS(N), the right hand side of the linear system.
 !
@@ -851,11 +877,11 @@ subroutine pmgmres_ilu ( n, nz_num, ia, ja, a, ua, x, rhs, res0, itr_max, mr, &
 
   character( len = * ) :: chvar
 
-  integer ( kind = 4 ) mr
-  integer ( kind = 4 ) n
-  integer ( kind = 4 ) nz_num
+  integer ( kind = 4 ), intent(in) :: mr
+  integer ( kind = 4 ), intent(in) :: n
+  integer ( kind = 4 ), intent(in) :: nz_num
 
-  real ( kind = 8 ) a(nz_num)
+  real ( kind = 8 ), intent(in) :: a(nz_num)
   real ( kind = 8 ) av
   real ( kind = 8 ) c(mr+1)
   real ( kind = 8 ), parameter :: delta = 1.0D-03
@@ -863,34 +889,36 @@ subroutine pmgmres_ilu ( n, nz_num, ia, ja, a, ua, x, rhs, res0, itr_max, mr, &
   real ( kind = 8 ) h(mr+1,mr)
   real ( kind = 8 ) htmp
   integer ( kind = 4 ) i
-  integer ( kind = 4 ) ia(n+1)
+  integer ( kind = 4 ), intent(in) :: ia(n+1)
   integer ( kind = 4 ) itr
-  integer ( kind = 4 ) itr_max
+  integer ( kind = 4 ), intent(in) :: itr_max
   integer ( kind = 4 ) itr_used
   integer ( kind = 4 ) j
-  integer ( kind = 4 ) ja(nz_num)
+  integer ( kind = 4 ), intent(in) :: ja(nz_num)
   integer ( kind = 4 ) k
   integer ( kind = 4 ) k_copy
   real ( kind = 8 ) l(ia(n+1)+1)
   real ( kind = 8 ) mu
   real ( kind = 8 ) r(n)
   real ( kind = 8 ) rho
-  real ( kind = 8 ) res0
+  real ( kind = 8 ), intent(out) :: resor
+  real ( kind = 8 ) factor
   real ( kind = 8 ) rho_tol
-  real ( kind = 8 ) rhs(n)
+  real ( kind = 8 ), intent(in) :: rhs(n)
   real ( kind = 8 ) s(mr+1)
-  real ( kind = 8 ) tol_abs
-  real ( kind = 8 ) tol_rel
-  integer ( kind = 4 ) ua(n)
-  real ( kind = 8 ) v(n,mr+1);
+  real ( kind = 8 ), intent(in) :: tol_abs
+  real ( kind = 8 ), intent(in) :: tol_rel
+  integer ( kind = 4 ), intent(in) :: ua(n)
+  real ( kind = 8 ) v(n,mr+1)
   logical verbose
-  real ( kind = 8 ) x(n)
+  real ( kind = 8 ), intent(inout) :: x(n)
   real ( kind = 8 ) y(mr+1)
 
 
   itr_used = 0
   rho_tol = 0. ! To eliminate 'uninitialized' warning.
   k_copy = 0   ! To eliminate 'uninitialized' warning.
+  factor = 0.
 
   ! NOTE: In our case the elements are already aranged
   ! call rearrange_cr ( n, nz_num, ia, ja, a )
@@ -901,27 +929,41 @@ subroutine pmgmres_ilu ( n, nz_num, ia, ja, a, ua, x, rhs, res0, itr_max, mr, &
   call ilu_cr ( n, nz_num, ia, ja, a, ua, l )
 
 
-  do itr = 1, itr_max
+  iter_loop: do itr = 1, itr_max
 
-    call ax_cr ( n, nz_num, ia, ja, a, x, r )
+    ! do i=1,n
+    !   r(i) = rhs(i) 
+    !   do k = ia(i),ia(i+1)-1
+    !     r(i) = r(i) -  a(k) * x( ja(k) ) 
+    !   enddo
+    ! enddo
 
-    r(1:n) = rhs(1:n) - r(1:n)
+    do i=1,n
+      r(i) = rhs(i) - sum( a( ia(i) : (ia(i+1)-1) ) * x( ja( ia(i) : (ia(i+1)-1) ) ) )
+    end do
 
-    call lus_cr ( n, nz_num, ia, ja, l, ua, r, r )
+    ! call ax_cr ( n, nz_num, ia, ja, a, x, r )
+    ! r(1:n) = rhs(1:n) - r(1:n)
 
-    rho = sqrt ( dot_product ( r, r ) )
+    ! ! rho = sqrt ( dot_product ( r, r ) )
+    rho = sum ( abs ( r ) )
 
     if ( itr == 1 ) then
-      res0 = rho
+
+      ! Normalization factor for scaled residuals
+      factor = sum( abs( a( ua(1:n) ) * x(1:n) )) + 1e-20
+
+      resor = rho / factor
+
+      rho_tol = rho * tol_rel
+
     endif
 
     if ( verbose ) then
       write ( *, '(a,i4,a,g14.6)' ) '  ITR = ', itr, '  Residual = ', rho
     end if
 
-    if ( itr == 1 ) then
-      rho_tol = rho * tol_rel
-    end if
+    call lus_cr ( n, nz_num, ia, ja, l, ua, r, r )
 
     v(1:n,1) = r(1:n) / rho
 
@@ -930,7 +972,7 @@ subroutine pmgmres_ilu ( n, nz_num, ia, ja, a, ua, x, rhs, res0, itr_max, mr, &
 
     h(1:mr+1,1:mr) = 0.0D+00
 
-    do k = 1, mr
+    mr_loop: do k = 1, mr
 
       k_copy = k
 
@@ -984,11 +1026,11 @@ subroutine pmgmres_ilu ( n, nz_num, ia, ja, a, ua, x, rhs, res0, itr_max, mr, &
         write ( *, '(a,i4,a,g14.6)' ) '  K = ', k, '  Residual = ', rho
       end if
 
-      if ( rho <= rho_tol .and. rho <= tol_abs ) then
-        exit
+      if ( rho <= rho_tol .or. rho <= tol_abs ) then
+        exit mr_loop
       end if
 
-    end do
+    end do mr_loop
 
     k = k_copy - 1
 
@@ -1002,11 +1044,11 @@ subroutine pmgmres_ilu ( n, nz_num, ia, ja, a, ua, x, rhs, res0, itr_max, mr, &
       x(i) = x(i) + dot_product ( v(i,1:k+1), y(1:k+1) )
     end do
 
-    if ( rho <= rho_tol .and. rho <= tol_abs ) then
-      exit
+    if ( rho <= rho_tol .or. rho <= tol_abs ) then
+      exit iter_loop
     end if
 
-  end do
+  end do iter_loop
 
   if ( verbose ) then
     write ( *, '(a)' ) ' '
@@ -1016,8 +1058,8 @@ subroutine pmgmres_ilu ( n, nz_num, ia, ja, a, ua, x, rhs, res0, itr_max, mr, &
   end if
 
   ! Write linear solver report:
-  write(*,'(a,i2,3a,1PE10.3,a,1PE10.3,a,I0)') '  PMGMRES_ILU(',mr,'):  Solving for ',trim(chvar), &
-  ', Initial residual = ',res0,', Final residual = ',rho,', No Iterations ',itr_used
+  write(*,'(a,i0,3a,1PE10.3,a,1PE10.3,a,I0)') '  PMGMRES_ILU(',mr,'):  Solving for ',trim(chvar), &
+  ', Initial residual = ',resor,', Final residual = ',rho/factor,', No Iterations ',itr_used
 
 
   return
@@ -1593,6 +1635,184 @@ subroutine r8vec_uniform_01 ( n, seed, r )
 
   return
 end
+subroutine diagonal_pointer_cr ( n, nz_num, ia, ja, ua )
 
+!*****************************************************************************80
+!
+!! DIAGONAL_POINTER_CR finds diagonal entries in a sparse compressed row matrix.
+!
+!  Discussion:
+!
+!    The matrix A is assumed to be stored in compressed row format.  Only
+!    the nonzero entries of A are stored.  The vector JA stores the
+!    column index of the nonzero value.  The nonzero values are sorted
+!    by row, and the compressed row vector IA then has the property that
+!    the entries in A and JA that correspond to row I occur in indices
+!    IA[I] through IA[I+1]-1.
+!
+!    The array UA can be used to locate the diagonal elements of the matrix.
+!
+!    It is assumed that every row of the matrix includes a diagonal element,
+!    and that the elements of each row have been ascending sorted.
+!
+!  Licensing:
+!
+!    This code is distributed under the GNU LGPL license.
+!
+!  Modified:
+!
+!    18 July 2007
+!
+!  Author:
+!
+!    Original C version by Lili Ju.
+!    FORTRAN90 version by John Burkardt.
+!
+!  Parameters:
+!
+!    Input, integer ( kind = 4 ) N, the order of the system.
+!
+!    Input, integer ( kind = 4 ) NZ_NUM, the number of nonzeros.
+!
+!    Input, integer ( kind = 4 ) IA(N+1), JA(NZ_NUM), the row and column
+!    indices of the matrix values.  The row vector has been compressed.
+!    On output, the order of the entries of JA may have changed because of
+!    the sorting.
+!
+!    Output, integer ( kind = 4 ) UA(N), the index of the diagonal element
+!    of each row.
+!
+  implicit none
+
+  integer ( kind = 4 ) n
+  integer ( kind = 4 ) nz_num
+
+  integer ( kind = 4 ) i
+  integer ( kind = 4 ) ia(n+1)
+  integer ( kind = 4 ) k
+  integer ( kind = 4 ) ja(nz_num)
+  integer ( kind = 4 ) ua(n)
+
+  ua(1:n) = -1
+
+  do i = 1, n
+    do k = ia(i), ia(i+1) - 1
+      if ( ja(k) == i ) then
+        ua(i) = k
+      end if
+    end do
+  end do
+
+  return
+end
+subroutine rearrange_cr ( n, nz_num, ia, ja, a )
+
+!*****************************************************************************80
+!
+!! REARRANGE_CR sorts a sparse compressed row matrix.
+!
+!  Discussion:
+!
+!    This routine guarantees that the entries in the CR matrix
+!    are properly sorted.
+!
+!    After the sorting, the entries of the matrix are rearranged in such
+!    a way that the entries of each column are listed in ascending order
+!    of their column values.
+!
+!    The matrix A is assumed to be stored in compressed row format.  Only
+!    the nonzero entries of A are stored.  The vector JA stores the
+!    column index of the nonzero value.  The nonzero values are sorted
+!    by row, and the compressed row vector IA then has the property that
+!    the entries in A and JA that correspond to row I occur in indices
+!    IA(I) through IA(I+1)-1.
+!
+!  Licensing:
+!
+!    This code is distributed under the GNU LGPL license.
+!
+!  Modified:
+!
+!    17 July 2007
+!
+!  Author:
+!
+!    Original C version by Lili Ju.
+!    FORTRAN90 version by John Burkardt.
+!
+!  Reference:
+!
+!    Richard Barrett, Michael Berry, Tony Chan, James Demmel,
+!    June Donato, Jack Dongarra, Victor Eijkhout, Roidan Pozo,
+!    Charles Romine, Henk van der Vorst,
+!    Templates for the Solution of Linear Systems:
+!    Building Blocks for Iterative Methods,
+!    SIAM, 1994.
+!    ISBN: 0898714710,
+!    LC: QA297.8.T45.
+!
+!    Tim Kelley,
+!    Iterative Methods for Linear and Nonlinear Equations,
+!    SIAM, 2004,
+!    ISBN: 0898713528,
+!    LC: QA297.8.K45.
+!
+!    Yousef Saad,
+!    Iterative Methods for Sparse Linear Systems,
+!    Second Edition,
+!    SIAM, 2003,
+!    ISBN: 0898715342,
+!    LC: QA188.S17.
+!
+!  Parameters:
+!
+!    Input, integer ( kind = 4 ) N, the order of the system.
+!
+!    Input, integer ( kind = 4 ) NZ_NUM, the number of nonzeros.
+!
+!    Input, integer ( kind = 4 ) IA(N+1), the compressed row indices.
+!
+!    Input/output, integer ( kind = 4 ) JA(NZ_NUM), the column indices.
+!    On output, these may have been rearranged by the sorting.
+!
+!    Input/output, real ( kind = 8 ) A(NZ_NUM), the matrix values.  On output,
+!    the matrix values may have been moved somewhat because of the sorting.
+!
+  implicit none
+
+  integer ( kind = 4 ) n
+  integer ( kind = 4 ) nz_num
+
+  real ( kind = 8 ) a(nz_num)
+  integer ( kind = 4 ) i
+  integer ( kind = 4 ) ia(n+1)
+  integer ( kind = 4 ) i4temp
+  integer ( kind = 4 ) ja(nz_num)
+  integer ( kind = 4 ) k
+  integer ( kind = 4 ) l
+  real ( kind = 8 ) r8temp
+
+  do i = 1, n
+
+    do k = ia(i), ia(i+1) - 2
+      do l = k + 1, ia(i+1) - 1
+
+        if ( ja(l) < ja(k) ) then
+          i4temp = ja(l)
+          ja(l)  = ja(k)
+          ja(k)  = i4temp
+
+          r8temp = a(l)
+          a(l)   = a(k)
+          a(k)   = r8temp
+        end if
+
+      end do
+    end do
+
+  end do
+
+  return
+end
 
 end module linear_solvers

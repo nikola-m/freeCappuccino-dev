@@ -1,106 +1,126 @@
-\hypertarget{continuityErrors_8h}{\section{src-\/par/continuity\-Errors.h File Reference}
-\label{continuityErrors_8h}\index{src-\/par/continuity\-Errors.\-h@{src-\/par/continuity\-Errors.\-h}}
-}
-\subsection*{Functions}
+\hypertarget{continuityErrors_8h}{}\doxysection{src-\/par/continuity\+Errors.h File Reference}
+\label{continuityErrors_8h}\index{src-\/par/continuityErrors.h@{src-\/par/continuityErrors.h}}
+\doxysubsection*{Functions}
 \begin{DoxyCompactItemize}
 \item 
-!Calculates and prints the \\*
-continuity errors!\-Initialize \\*
-array with zero value \\*
-num\-Inner\-Faces num\-Boundaries \hyperlink{continuityErrors_8h_a2cf12d8bd5a66a9ef7176d1b084741db}{if} (bctype(ib)== 'inlet') then!\-Inlet boundaries(mass fluxes prescribed in routine '\hyperlink{bcin_8f90_ab684c0ecdb42e468c7e066d8ef85d416}{bcin}') do i
+! Calculates and prints the continuity \mbox{\hyperlink{continuityErrors_8h_acc79e69a7a34648ad9eced07edda161b}{errors}} ! Initialize array with zero value num\+Inner\+Faces num\+Boundaries \mbox{\hyperlink{continuityErrors_8h_a90393e3a2c60de2c268f136529d97a94}{if}} (bctype(ib)==\textquotesingle{}inlet\textquotesingle{}) then ! Inlet boundaries(mass fluxes prescribed in routine \textquotesingle{}\mbox{\hyperlink{bcin_8f90_ab684c0ecdb42e468c7e066d8ef85d416}{bcin}}\textquotesingle{}) do i
 \item 
-!Calculates and prints the \\*
-continuity errors!\-Initialize \\*
-array with zero value \\*
-num\-Inner\-Faces num\-Boundaries \hyperlink{continuityErrors_8h_a19cbc190a1e0c99367ace992bda3cc11}{nfaces} (ib) iface
+! Calculates and prints the continuity \mbox{\hyperlink{continuityErrors_8h_acc79e69a7a34648ad9eced07edda161b}{errors}} ! Initialize array with zero value num\+Inner\+Faces num\+Boundaries \mbox{\hyperlink{continuityErrors_8h_a2986c05eb78056a519ec353fc7d88b6d}{nfaces}} (ib) iface
+\item 
+! Calculates and prints the continuity \mbox{\hyperlink{continuityErrors_8h_acc79e69a7a34648ad9eced07edda161b}{errors}} ! Initialize array with zero value num\+Inner\+Faces num\+Boundaries global\+Cont\+Err \mbox{\hyperlink{continuityErrors_8h_a68de056e2c4e958387057855a56c2f61}{if}} (myid .eq. 0) write(6
 \end{DoxyCompactItemize}
-\subsection*{Variables}
+\doxysubsection*{Variables}
 \begin{DoxyCompactItemize}
 \item 
-!Calculates and prints the \\*
-continuity errors!\-Initialize \\*
-array with zero value \hyperlink{continuityErrors_8h_a27b34b60e2a0817ff13e65f7a8d36cf6}{res}
+! Calculates and prints the continuity \mbox{\hyperlink{continuityErrors_8h_acc79e69a7a34648ad9eced07edda161b}{errors}} ! Initialize array with zero value \mbox{\hyperlink{continuityErrors_8h_a27b34b60e2a0817ff13e65f7a8d36cf6}{res}}
 \item 
-!Calculates and prints the \\*
-continuity errors!\-Initialize \\*
-array with zero value \\*
-num\-Inner\-Faces \hyperlink{continuityErrors_8h_a98d39d1a0facae2c522f172814c11a20}{ijp}
+! Calculates and prints the continuity \mbox{\hyperlink{continuityErrors_8h_acc79e69a7a34648ad9eced07edda161b}{errors}} ! Initialize array with zero value num\+Inner\+Faces \mbox{\hyperlink{continuityErrors_8h_a98d39d1a0facae2c522f172814c11a20}{ijp}}
 \item 
-!Calculates and prints the \\*
-continuity errors!\-Initialize \\*
-array with zero value \\*
-num\-Inner\-Faces num\-Boundaries \hyperlink{continuityErrors_8h_a27f8955611be5142688729b7e0cd4d77}{sum\-Local\-Cont\-Err}
+! Calculates and prints the continuity \mbox{\hyperlink{continuityErrors_8h_acc79e69a7a34648ad9eced07edda161b}{errors}} ! Initialize array with zero value num\+Inner\+Faces num\+Boundaries \mbox{\hyperlink{continuityErrors_8h_aaf2b5f95add947722a0ab0bf05e3bfcb}{sum\+Local\+Cont\+Err}}
 \item 
-!Calculates and prints the \\*
-continuity errors!\-Initialize \\*
-array with zero value \\*
-num\-Inner\-Faces num\-Boundaries \hyperlink{continuityErrors_8h_a998a60dc8795d9b0ca98843235246d82}{global}
+! Calculates and prints the continuity \mbox{\hyperlink{continuityErrors_8h_acc79e69a7a34648ad9eced07edda161b}{errors}} ! Initialize array with zero value num\+Inner\+Faces num\+Boundaries global\+Cont\+Err \mbox{\hyperlink{continuityErrors_8h_aebc75a2f6fb142c1482778e65b948569}{a}}
+\item 
+! Calculates and prints the continuity errors ! Initialize array with zero value num\+Inner\+Faces num\+Boundaries global\+Cont\+Err es10 time step continuity \mbox{\hyperlink{continuityErrors_8h_acc79e69a7a34648ad9eced07edda161b}{errors}}
+\item 
+! Calculates and prints the continuity \mbox{\hyperlink{continuityErrors_8h_acc79e69a7a34648ad9eced07edda161b}{errors}} ! Initialize array with zero value num\+Inner\+Faces num\+Boundaries global\+Cont\+Err es10 time step continuity \mbox{\hyperlink{continuityErrors_8h_a19e73c55f1965db69284032ea48d9f86}{global}}
 \end{DoxyCompactItemize}
 
 
-\subsection{Function Documentation}
-\hypertarget{continuityErrors_8h_a2cf12d8bd5a66a9ef7176d1b084741db}{\index{continuity\-Errors.\-h@{continuity\-Errors.\-h}!if@{if}}
-\index{if@{if}!continuityErrors.h@{continuity\-Errors.\-h}}
-\subsubsection[{if}]{\setlength{\rightskip}{0pt plus 5cm}! Calculates and prints the continuity errors ! Initialize array with zero value num\-Inner\-Faces num\-Boundaries if (
-\begin{DoxyParamCaption}
-\item[{bctype(ib)}]{ = {\ttfamily =~'inlet'}}
-\end{DoxyParamCaption}
-)}}\label{continuityErrors_8h_a2cf12d8bd5a66a9ef7176d1b084741db}
-\hypertarget{continuityErrors_8h_a19cbc190a1e0c99367ace992bda3cc11}{\index{continuity\-Errors.\-h@{continuity\-Errors.\-h}!nfaces@{nfaces}}
-\index{nfaces@{nfaces}!continuityErrors.h@{continuity\-Errors.\-h}}
-\subsubsection[{nfaces}]{\setlength{\rightskip}{0pt plus 5cm}!Calculate and {\bf output} the mean and maximum Courant Numbers over inner faces num\-Inner\-Faces npro num\-Boundaries nfaces (
-\begin{DoxyParamCaption}
-\item[{ib}]{}
-\end{DoxyParamCaption}
-)}}\label{continuityErrors_8h_a19cbc190a1e0c99367ace992bda3cc11}
-{\bfseries Initial value\-:}
-\begin{DoxyCode}
-= startFace(ib) + i
-        \hyperlink{continuityErrors_8h_a98d39d1a0facae2c522f172814c11a20}{ijp} = owner(iface)
-        \hyperlink{continuityErrors_8h_a27b34b60e2a0817ff13e65f7a8d36cf6}{res}(\hyperlink{continuityErrors_8h_a98d39d1a0facae2c522f172814c11a20}{ijp})=\hyperlink{continuityErrors_8h_a27b34b60e2a0817ff13e65f7a8d36cf6}{res}(\hyperlink{continuityErrors_8h_a98d39d1a0facae2c522f172814c11a20}{ijp})-flmass(iface)
+\doxysubsection{Function Documentation}
+\mbox{\Hypertarget{continuityErrors_8h_a90393e3a2c60de2c268f136529d97a94}\label{continuityErrors_8h_a90393e3a2c60de2c268f136529d97a94}} 
+\index{continuityErrors.h@{continuityErrors.h}!if@{if}}
+\index{if@{if}!continuityErrors.h@{continuityErrors.h}}
+\doxysubsubsection{\texorpdfstring{if()}{if()}\hspace{0.1cm}{\footnotesize\ttfamily [1/2]}}
+{\footnotesize\ttfamily ! Calculates and prints the continuity \mbox{\hyperlink{continuityErrors_8h_acc79e69a7a34648ad9eced07edda161b}{errors}} ! Initialize array with zero value num\+Inner\+Faces num\+Boundaries if (\begin{DoxyParamCaption}\item[{bctype(ib)}]{ = {\ttfamily =~\textquotesingle{}inlet\textquotesingle{}} }\end{DoxyParamCaption})}
 
-      enddo
+\mbox{\Hypertarget{continuityErrors_8h_a68de056e2c4e958387057855a56c2f61}\label{continuityErrors_8h_a68de056e2c4e958387057855a56c2f61}} 
+\index{continuityErrors.h@{continuityErrors.h}!if@{if}}
+\index{if@{if}!continuityErrors.h@{continuityErrors.h}}
+\doxysubsubsection{\texorpdfstring{if()}{if()}\hspace{0.1cm}{\footnotesize\ttfamily [2/2]}}
+{\footnotesize\ttfamily ! Calculates and prints the continuity \mbox{\hyperlink{continuityErrors_8h_acc79e69a7a34648ad9eced07edda161b}{errors}} ! Initialize array with zero value num\+Inner\+Faces num\+Boundaries global\+Cont\+Err if (\begin{DoxyParamCaption}\item[{myid .eq.}]{0 }\end{DoxyParamCaption})}
 
-    elseif ( bctype(ib) == 'process' ) then
+\mbox{\Hypertarget{continuityErrors_8h_a2986c05eb78056a519ec353fc7d88b6d}\label{continuityErrors_8h_a2986c05eb78056a519ec353fc7d88b6d}} 
+\index{continuityErrors.h@{continuityErrors.h}!nfaces@{nfaces}}
+\index{nfaces@{nfaces}!continuityErrors.h@{continuityErrors.h}}
+\doxysubsubsection{\texorpdfstring{nfaces()}{nfaces()}}
+{\footnotesize\ttfamily ! Calculates and prints the continuity \mbox{\hyperlink{continuityErrors_8h_acc79e69a7a34648ad9eced07edda161b}{errors}} ! Initialize array with zero value num\+Inner\+Faces num\+Boundaries nfaces (\begin{DoxyParamCaption}\item[{ib}]{ }\end{DoxyParamCaption})}
 
-      do i=1
+{\bfseries Initial value\+:}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{= startFace(ib) + i}
+\DoxyCodeLine{        \mbox{\hyperlink{continuityErrors_8h_a98d39d1a0facae2c522f172814c11a20}{ijp}} = \mbox{\hyperlink{namespacegeometry_ae59df205a86f69d3cc7ecf9917b3fc8d}{owner}}(iface)}
+\DoxyCodeLine{        \mbox{\hyperlink{continuityErrors_8h_a27b34b60e2a0817ff13e65f7a8d36cf6}{res}}(\mbox{\hyperlink{continuityErrors_8h_a98d39d1a0facae2c522f172814c11a20}{ijp}})=\mbox{\hyperlink{continuityErrors_8h_a27b34b60e2a0817ff13e65f7a8d36cf6}{res}}(\mbox{\hyperlink{continuityErrors_8h_a98d39d1a0facae2c522f172814c11a20}{ijp}})-\/\mbox{\hyperlink{namespacevariables_a785014a6b534cef9da96697952e877ea}{flmass}}(iface)}
+\DoxyCodeLine{}
+\DoxyCodeLine{      enddo}
+\DoxyCodeLine{}
+\DoxyCodeLine{    elseif ( \mbox{\hyperlink{namespacegeometry_a0fb7fcb1d34e9c6f85cf96f7a5022022}{bctype}}(ib) == \textcolor{stringliteral}{'process'} ) then}
+\DoxyCodeLine{}
+\DoxyCodeLine{      do i=1}
+
 \end{DoxyCode}
 
 
-\subsection{Variable Documentation}
-\hypertarget{continuityErrors_8h_a998a60dc8795d9b0ca98843235246d82}{\index{continuity\-Errors.\-h@{continuity\-Errors.\-h}!global@{global}}
-\index{global@{global}!continuityErrors.h@{continuity\-Errors.\-h}}
-\subsubsection[{global}]{\setlength{\rightskip}{0pt plus 5cm}! Calculates and prints the continuity errors ! Initialize array with zero value num\-Inner\-Faces num\-Boundaries global}}\label{continuityErrors_8h_a998a60dc8795d9b0ca98843235246d82}
-{\bfseries Initial value\-:}
-\begin{DoxyCode}
-= \textcolor{stringliteral}{", globalContErr, &}
-\textcolor{stringliteral}{ &                                            "}
-\end{DoxyCode}
-\hypertarget{continuityErrors_8h_a98d39d1a0facae2c522f172814c11a20}{\index{continuity\-Errors.\-h@{continuity\-Errors.\-h}!ijp@{ijp}}
-\index{ijp@{ijp}!continuityErrors.h@{continuity\-Errors.\-h}}
-\subsubsection[{ijp}]{\setlength{\rightskip}{0pt plus 5cm}! Calculates and prints the continuity errors ! Initialize array with zero value num\-Inner\-Faces ijp}}\label{continuityErrors_8h_a98d39d1a0facae2c522f172814c11a20}
-{\bfseries Initial value\-:}
-\begin{DoxyCode}
-= owner(i)
-    ijn = neighbour(i)
-    \hyperlink{continuityErrors_8h_a27b34b60e2a0817ff13e65f7a8d36cf6}{res}(\hyperlink{continuityErrors_8h_a98d39d1a0facae2c522f172814c11a20}{ijp}) = \hyperlink{continuityErrors_8h_a27b34b60e2a0817ff13e65f7a8d36cf6}{res}(\hyperlink{continuityErrors_8h_a98d39d1a0facae2c522f172814c11a20}{ijp})-flmass(\hyperlink{continuityErrors_8h_a98d39d1a0facae2c522f172814c11a20}{ijp})
-    \hyperlink{continuityErrors_8h_a27b34b60e2a0817ff13e65f7a8d36cf6}{res}(ijn) = \hyperlink{continuityErrors_8h_a27b34b60e2a0817ff13e65f7a8d36cf6}{res}(ijn)+flmass(\hyperlink{continuityErrors_8h_a98d39d1a0facae2c522f172814c11a20}{ijp})
-  enddo  
+\doxysubsection{Variable Documentation}
+\mbox{\Hypertarget{continuityErrors_8h_aebc75a2f6fb142c1482778e65b948569}\label{continuityErrors_8h_aebc75a2f6fb142c1482778e65b948569}} 
+\index{continuityErrors.h@{continuityErrors.h}!a@{a}}
+\index{a@{a}!continuityErrors.h@{continuityErrors.h}}
+\doxysubsubsection{\texorpdfstring{a}{a}}
+{\footnotesize\ttfamily ! Calculates and prints the continuity \mbox{\hyperlink{continuityErrors_8h_acc79e69a7a34648ad9eced07edda161b}{errors}} ! Initialize array with zero value num\+Inner\+Faces num\+Boundaries global\+Cont\+Err a}
 
+\mbox{\Hypertarget{continuityErrors_8h_acc79e69a7a34648ad9eced07edda161b}\label{continuityErrors_8h_acc79e69a7a34648ad9eced07edda161b}} 
+\index{continuityErrors.h@{continuityErrors.h}!errors@{errors}}
+\index{errors@{errors}!continuityErrors.h@{continuityErrors.h}}
+\doxysubsubsection{\texorpdfstring{errors}{errors}}
+{\footnotesize\ttfamily ! Calculates and prints the continuity errors ! Initialize array with zero value num\+Inner\+Faces num\+Boundaries global\+Cont\+Err es10 time step continuity errors}
 
-  ! Boundary faces
-  do ib=1
-\end{DoxyCode}
-\hypertarget{continuityErrors_8h_a27b34b60e2a0817ff13e65f7a8d36cf6}{\index{continuity\-Errors.\-h@{continuity\-Errors.\-h}!res@{res}}
-\index{res@{res}!continuityErrors.h@{continuity\-Errors.\-h}}
-\subsubsection[{res}]{\setlength{\rightskip}{0pt plus 5cm}! Calculates and prints the continuity errors ! Initialize array with zero value res}}\label{continuityErrors_8h_a27b34b60e2a0817ff13e65f7a8d36cf6}
-{\bfseries Initial value\-:}
-\begin{DoxyCode}
-= 0.0\_dp
+\mbox{\Hypertarget{continuityErrors_8h_a19e73c55f1965db69284032ea48d9f86}\label{continuityErrors_8h_a19e73c55f1965db69284032ea48d9f86}} 
+\index{continuityErrors.h@{continuityErrors.h}!global@{global}}
+\index{global@{global}!continuityErrors.h@{continuityErrors.h}}
+\doxysubsubsection{\texorpdfstring{global}{global}}
+{\footnotesize\ttfamily ! Calculates and prints the continuity \mbox{\hyperlink{continuityErrors_8h_acc79e69a7a34648ad9eced07edda161b}{errors}} ! Initialize array with zero value num\+Inner\+Faces num\+Boundaries global\+Cont\+Err es10 time step continuity global}
 
-  ! Inner faces                                               
-  \textcolor{keywordflow}{do} i=1
+{\bfseries Initial value\+:}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{= \textcolor{stringliteral}{", globalContErr, \&}}
+\DoxyCodeLine{\textcolor{stringliteral}{ \&                                            "}}
+
 \end{DoxyCode}
-\hypertarget{continuityErrors_8h_a27f8955611be5142688729b7e0cd4d77}{\index{continuity\-Errors.\-h@{continuity\-Errors.\-h}!sum\-Local\-Cont\-Err@{sum\-Local\-Cont\-Err}}
-\index{sum\-Local\-Cont\-Err@{sum\-Local\-Cont\-Err}!continuityErrors.h@{continuity\-Errors.\-h}}
-\subsubsection[{sum\-Local\-Cont\-Err}]{\setlength{\rightskip}{0pt plus 5cm}! Calculates and prints the continuity errors ! Initialize array with zero value num\-Inner\-Faces num\-Boundaries sum\-Local\-Cont\-Err}}\label{continuityErrors_8h_a27f8955611be5142688729b7e0cd4d77}
+\mbox{\Hypertarget{continuityErrors_8h_a98d39d1a0facae2c522f172814c11a20}\label{continuityErrors_8h_a98d39d1a0facae2c522f172814c11a20}} 
+\index{continuityErrors.h@{continuityErrors.h}!ijp@{ijp}}
+\index{ijp@{ijp}!continuityErrors.h@{continuityErrors.h}}
+\doxysubsubsection{\texorpdfstring{ijp}{ijp}}
+{\footnotesize\ttfamily ! Calculates and prints the continuity \mbox{\hyperlink{continuityErrors_8h_acc79e69a7a34648ad9eced07edda161b}{errors}} ! Initialize array with zero value num\+Inner\+Faces ijp}
+
+{\bfseries Initial value\+:}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{= \mbox{\hyperlink{namespacegeometry_ae59df205a86f69d3cc7ecf9917b3fc8d}{owner}}(i)}
+\DoxyCodeLine{    ijn = \mbox{\hyperlink{namespacegeometry_afc765695937174a634f048738ae0dc8e}{neighbour}}(i)}
+\DoxyCodeLine{    \mbox{\hyperlink{continuityErrors_8h_a27b34b60e2a0817ff13e65f7a8d36cf6}{res}}(\mbox{\hyperlink{continuityErrors_8h_a98d39d1a0facae2c522f172814c11a20}{ijp}}) = \mbox{\hyperlink{continuityErrors_8h_a27b34b60e2a0817ff13e65f7a8d36cf6}{res}}(\mbox{\hyperlink{continuityErrors_8h_a98d39d1a0facae2c522f172814c11a20}{ijp}})-\/\mbox{\hyperlink{namespacevariables_a785014a6b534cef9da96697952e877ea}{flmass}}(\mbox{\hyperlink{continuityErrors_8h_a98d39d1a0facae2c522f172814c11a20}{ijp}})}
+\DoxyCodeLine{    \mbox{\hyperlink{continuityErrors_8h_a27b34b60e2a0817ff13e65f7a8d36cf6}{res}}(ijn) = \mbox{\hyperlink{continuityErrors_8h_a27b34b60e2a0817ff13e65f7a8d36cf6}{res}}(ijn)+\mbox{\hyperlink{namespacevariables_a785014a6b534cef9da96697952e877ea}{flmass}}(\mbox{\hyperlink{continuityErrors_8h_a98d39d1a0facae2c522f172814c11a20}{ijp}})}
+\DoxyCodeLine{  enddo  }
+\DoxyCodeLine{}
+\DoxyCodeLine{}
+\DoxyCodeLine{  ! Boundary faces}
+\DoxyCodeLine{  \textcolor{keywordflow}{do} ib=1}
+
+\end{DoxyCode}
+\mbox{\Hypertarget{continuityErrors_8h_a27b34b60e2a0817ff13e65f7a8d36cf6}\label{continuityErrors_8h_a27b34b60e2a0817ff13e65f7a8d36cf6}} 
+\index{continuityErrors.h@{continuityErrors.h}!res@{res}}
+\index{res@{res}!continuityErrors.h@{continuityErrors.h}}
+\doxysubsubsection{\texorpdfstring{res}{res}}
+{\footnotesize\ttfamily ! Calculates and prints the continuity \mbox{\hyperlink{continuityErrors_8h_acc79e69a7a34648ad9eced07edda161b}{errors}} ! Initialize array with zero value res}
+
+{\bfseries Initial value\+:}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{= 0.0\_dp}
+\DoxyCodeLine{}
+\DoxyCodeLine{  ! Inner faces                                               }
+\DoxyCodeLine{  \textcolor{keywordflow}{do} i=1}
+
+\end{DoxyCode}
+\mbox{\Hypertarget{continuityErrors_8h_aaf2b5f95add947722a0ab0bf05e3bfcb}\label{continuityErrors_8h_aaf2b5f95add947722a0ab0bf05e3bfcb}} 
+\index{continuityErrors.h@{continuityErrors.h}!sumLocalContErr@{sumLocalContErr}}
+\index{sumLocalContErr@{sumLocalContErr}!continuityErrors.h@{continuityErrors.h}}
+\doxysubsubsection{\texorpdfstring{sumLocalContErr}{sumLocalContErr}}
+{\footnotesize\ttfamily ! Calculates and prints the continuity \mbox{\hyperlink{continuityErrors_8h_acc79e69a7a34648ad9eced07edda161b}{errors}} ! Initialize array with zero value num\+Inner\+Faces num\+Boundaries global\+Cont\+Err es10 time step continuity sum\+Local\+Cont\+Err}
+

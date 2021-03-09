@@ -150,10 +150,10 @@ subroutine writefiles
   !
   ! > Identification of vortices
   !
-  if( lturb ) then
-    call setQvortex
-    call vtu_write_XML_scalar_field ( output_unit, 'Qcrit', Qvortex )
-  endif
+  ! if( lturb ) then
+  !   call setQvortex
+  !   call vtu_write_XML_scalar_field ( output_unit, 'Qcrit', Qvortex )
+  ! endif
 
 
 !
