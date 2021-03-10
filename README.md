@@ -92,11 +92,19 @@ Clone the git repository or download the zip archive of the most recent source, 
 
 To compile the code just run
 `make`
-from the root directory. The binary file _cappuccino_ will be created in _/bin_ directory.
+from the root directory. The binary file _cappuccino_ will be created in _/bin_ directory. Don't forget to make _bin_ directory first.
+```
+mkdir bin
+make
+```
+It is not bad idea to update your $PATH environment variable to point to _bin/_ directory where all executables will be stored. In Linux one could add following line to the _.bashrc_ file
+```
+export PATH=$PATH:/path/to/where/it/is/freeCappuccino-dev/bin
+```
 
 To create some utility programs, go to specific folder and run 'make' there. For example
 ```
-cd utilities/su2ToCappuccino/`
+cd utilities/su2ToCappuccino/
 make
 ```
 The binary for 'su2ToCappuccino' will be created in '/bin' folder.
