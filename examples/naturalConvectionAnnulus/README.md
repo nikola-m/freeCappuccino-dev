@@ -37,6 +37,7 @@ Mesh conversion utility will also create template files for initial conditions i
 Rename file with template for scalar field initialization to 'T' for temperature
 `mv 0/T.template 0/T`
 
+```
 Copy settings provided below:  
 internalField  
   uniform  
@@ -56,8 +57,9 @@ wallOuter
    Dirichlet  
     uniform  
      300.0  
-
+```
 In 'U' file, change settings to these:  
+```
 internalField  
   uniform  
   0.0 0.0 0.0  
@@ -76,7 +78,7 @@ wallOuter
    Dirichlet  
     uniform  
      0. 0. 0.  
-
+```
 
 Now we are ready to go!
 

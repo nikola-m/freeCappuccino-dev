@@ -22,4 +22,4 @@ To run this case do the following:
 
 * Open solution files located in vtk folder in Paraview.
 
-__A FEW NOTES:__ In our settings in _input.nml_ file we have enalbed solution of momentum and pressure fields, which is solution setup for laminar viscous flow. Turbulence model is set to _none_  by default. Simulation is stady state by default but we show whole block starting with LTRANSIENT option just to be clar. Solution method is SIMPLE. Number of steps for steady state is controled either by NUMSTEP or by MAXIT. Simulation stops when normalised residuals reach level below _tolerance_ set in the _input.nml_ file.
+__A FEW NOTES:__ In our settings in _input.nml_ file we have enabled solution of momentum and pressure, which is solution setup for laminar viscous flow. Turbulence model is set to _none_  by default. Simulation is steady state by default but we show the whole block starting with LTRANSIENT option just to be clear. Solution method is SIMPLE. Number of steps for steady state is controled either by NUMSTEP or by MAXIT. Simulation stops when normalised residuals reach level below _tolerance_ set in the _input.nml_ file.

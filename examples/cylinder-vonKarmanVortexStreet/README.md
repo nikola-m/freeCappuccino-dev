@@ -6,7 +6,7 @@ Create the mesh with Gmsh (it is advised to install Gmsh https://gmsh.info/):
 
 `gmsh cylinder_ogrid.geo -3 -o cylinder_ogrid.su2`
 
-Note: We have saved mesh in su2 format - which is possible in Gmsh. We do that becasue of the conversion utility that we have, and which we will call in following step. If you haven't done it - you will need to compile this utility - which is located in 'utilities' folder of freeCappuccino. This program will create mesh files for our simulation. 
+Note: We have saved mesh in _SU2_ format - which is possible in Gmsh. We do that becasue of the mesh conversion program that we have, and which we will call in the following step. If you haven't done it - you will need to compile _su2ToCappuccino_ which is located in 'utilities' folder of freeCappuccino. This program will create mesh files for our simulation. 
 
 Create the folders:  
 `mkdir polyMesh vtk vtk/mesh 0`
@@ -30,6 +30,7 @@ Mesh conversion utility will also create template files for initial conditions i
 
 In 'U' file, change settings to these:  
 
+```
 internalField
   uniform
     0.0 0.0 0.0
@@ -51,7 +52,7 @@ Inlet
   Dirichlet
     uniform
       0.2 0.0 0.0
-
+```
 
 Now we are ready to go!
 
