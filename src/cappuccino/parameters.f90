@@ -66,7 +66,7 @@ module parameters
   integer :: icorr                   ! PISO iteration no.: icorr=1..ncorr
   integer :: npcor                   ! No. of pressure-corrections; non-orthogonality correctors
   integer :: ipcorr                  ! Iteration no.: ipcorr=1..npcor
-  integer :: nigrad                  ! No. of iters. for iterative cell-centered gradient calculation
+  integer :: nigrad = 1              ! No. of iters. for iterative cell-centered gradient calculation
   integer, parameter :: nipgrad = 2  ! No. of stages for 'pressure extrapolation at boundary + pressure gradient update' loop
 
   ! logical :: roughWall          ! Is aerodynamically rough wall assumed

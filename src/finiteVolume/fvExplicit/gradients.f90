@@ -1332,18 +1332,15 @@ subroutine grad_gauss(u,dudxi)
   real(dp) :: volr,dfxe, dfye, dfze
   real(dp), dimension(:), allocatable :: dfxo,dfyo,dfzo
 
-  if ( nigrad > 1 ) then
 
-    allocate( dfxo(numCells) )
-    allocate( dfyo(numCells) )
-    allocate( dfzo(numCells) )
+  allocate( dfxo(numCells) )
+  allocate( dfyo(numCells) )
+  allocate( dfzo(numCells) )
 
-    ! Initialize
-    dfxo = 0.0_dp
-    dfyo = 0.0_dp
-    dfzo = 0.0_dp
-
-  endif
+  ! Initialize
+  dfxo = 0.0_dp
+  dfyo = 0.0_dp
+  dfzo = 0.0_dp
 
 
   ! Start iterative calculation of gradients
@@ -1394,22 +1391,21 @@ subroutine grad_gauss(u,dudxi)
 
     enddo
 
-    ! Set old gradient = new gradient for the next iteration
-    if(lc.le.nigrad) then
-      dfxo = dudxi(1,1:numCells)
-      dfyo = dudxi(2,1:numCells)
-      dfzo = dudxi(3,1:numCells)
-    endif
+      ! Set old gradient = new gradient for the next iteration
+      if(lc.le.nigrad) then
+        dfxo = dudxi(1,1:numCells)
+        dfyo = dudxi(2,1:numCells)
+        dfzo = dudxi(3,1:numCells)
+      endif
+
 
   enddo ! lc-loop
 
-  if ( nigrad > 1 ) then
 
-    deallocate( dfxo )
-    deallocate( dfyo )
-    deallocate( dfzo )
+  deallocate( dfxo )
+  deallocate( dfyo )
+  deallocate( dfzo )
 
-  endif
 
 end subroutine
 

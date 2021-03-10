@@ -155,6 +155,7 @@ non_newtonian_model = 'PowerLaw'  ! Self-explanatory
            lstsq_qr = F           !@ |Least square gradients based on thin QR decomposition, or...
            lstsq_dm = F           !@ |Distance-square weighted version of Least-Square Gradient, or...
               gauss = T           !@ |Cell based Gauss gradient with simple linear interpolation.
+             nigrad = 1              ! Number of iterations for Gauss gradient approximation.   
             limiter = 'no-limit'     ! Gradient limiter - default for all gradients (no-limit, Barth-Jespersen, Venkatakishnan, MDL)
         !
         ! Solution method: pressure-velocity coupling
