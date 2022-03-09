@@ -1,6 +1,6 @@
 subroutine modify_viscosity_inlet
 
-  use turbulence, only : TurbModel
+  use TurbModelData, only : TurbModel
   use k_epsilon_std
   use k_epsilon_std_2lewt  
   use k_epsilon_rng
@@ -11,14 +11,14 @@ subroutine modify_viscosity_inlet
   use IDDES_k_omega_SST
   use k_eqn_eddy
   use spalart_allmaras
-  use smagorinsky
-  use wale_sgs
+  ! use smagorinsky
+  ! use wale_sgs
   
   implicit none
 
 !+----------------------------------------------------------------------------+!
 
-  select case (TurbModel)
+  select case ( TurbModel%name )
 
     case ('k_epsilon_std')
       call modify_viscosity_inlet_k_epsilon_std

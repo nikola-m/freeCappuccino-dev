@@ -1,0 +1,23 @@
+internalField
+  uniform
+    0.0 0.0 0.0
+boundaryField
+wall-top
+  Dirichlet
+    uniform
+      0.0 0.0 0.0
+wall-left
+  Dirichlet
+    uniform
+      0.0 0.0 0.0
+wall-bottom
+  Dirichlet
+    uniform
+      0.0 0.0 0.0
+wall-right
+  Dirichlet
+    uniform
+      0.0 0.0 0.0
+front-back
+  Neumann
+    zeroGradient

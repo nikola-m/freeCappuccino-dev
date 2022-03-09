@@ -1,0 +1,53 @@
+&input_parameters
+              title = 'Numerical difussion test.' ! Descriptive name of the case which will be written in monitor file.                                      
+        mesh_format = 'nativeMesh'  ! Mesh format 'nativeMesh' for native polyMesh format or 'foamMesh' for OpenFOAM polyMesh.
+              lread = F           ! Read restart file - continue simulation from saved state?  True/False.
+        !
+        ! Approximation details for velocity field.
+        !
+              calcU = F             ! Activate Velocity field caculation? True/False.
+        !
+        ! Approximation details for pressure/pressure correction.
+        !
+              calcP = F             ! Activate Pressure field caculation? True/False.  
+        !
+        ! Physical model: Heat transfer, Temperature as energy equation, Activation and model details.
+        !
+              calcT = T              ! Activate Temperature equation calculation? True/False.
+               urfT = 1.0            ! Under-relaxation factors.
+               gdsT = 1.0            ! Deferred correction factor.
+           cSchemeT = 'muscl'          !  Convection scheme. ### EDIT HERE TO TEST SCHEMES! ###
+           dSchemeT = 'uncorrected'     ! Diffusion scheme, i.e. the method for normal gradient at face skewness/offset.
+             nrelaxT = 0             ! Relaxation parameter non-orthogonal correction for face gradient.
+            lSolverT = 'iccg'        ! Linear algebraic solver.
+            maxiterT = 300           ! Max number of iterations in linear solver.
+             tolAbsT = 1e-6         ! Absolute residual level.
+             tolRelT = 1e-6         ! Relative drop in residual to exit linear solver.
+                sigt = 1.0           ! sigma_t - Prandtl-Schmid number for temperature 
+        !
+        ! Definition of physical properties of fluid.
+        !
+             densit = 1.0                 ! Fluid density [kg/m3]
+             viscos = 0.0                 ! Molecular dynamic viscosity [Pa.s]  !# NOTE: I'm targeting viscos/pranl = 4e-5 as diff. coef. #!    
+              pranl = 1e+30               ! Prandtl coefficient for specific fluid
+        !
+        ! Unsteady simulation options
+        !
+         ltransient = T           !% |Unsteady simulation True/False and chose ONE algorithm  below
+                bdf = T           !% |Backward-Euler; First-Order Implicit, or...
+        !
+        ! Gradient computation
+        ! 
+              lstsq = F           !@ |Gradient approximation, chose ONE: Unweighted Least-Square gradient approximation, or...
+           lstsq_qr = F           !@ |Least square gradients based on thin QR decomposition, or...
+           lstsq_dm = F           !@ |Distance-square weighted version of Least-Square Gradient, or...
+              gauss = T           !@ |Cell based Gauss gradient with simple linear interpolation.       
+            limiter = 'none'      ! Gradient limiter - default for all gradients  
+        !
+        ! Simulation run details
+        !
+            numstep = 500     ! Total number of timesteps.                   
+           timestep = 0.005   ! Timestep size  - also known as dt.
+             nzapis = 500    ! Program writes output files every NZAPIS timesteps.
+              maxit = 1     ! Number of iterations in SIMPLE/PISO sequential equation solution loop. 
+/

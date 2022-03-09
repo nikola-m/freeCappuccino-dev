@@ -14,6 +14,7 @@
            maxiterU = 5             ! Max no of iterations for linear U-V-W equations
             tolAbsU = 1e-15         ! Absolute tolerance level for residual for linear U-V-W equations
             tolRelU = 0.01          ! Relative tolerance level for residual for linear U-V-W equations
+            pscheme = 'linear'      ! pressure interpolation scheme 
 !
               calcP = T             ! Activate Pressure field caculation? True/False.
                urfP = 0.3           ! Under-relaxation factor for pressure

@@ -16,7 +16,7 @@ Create the mesh with Gmsh (it is advised to install Gmsh https://gmsh.info/):
 
 `gmsh cylinder_annular.geo -3 -o cylinder_annular.su2`
 
-Note: We have saved mesh in su2 format - which is possible in Gmsh. We do that becasue of the conversion utility that we have, and which we will call in following step. If you haven't done it - you will need to compile this utility - which is located in 'utilities' folder of freeCappuccino. This program will create mesh files for our simulation:
+Note: We have saved mesh in su2 format - which is possible in Gmsh. We do that becasue of the conversion utility that we have, and which we will call in following step. If you haven't done it - you will need to compile _su2ToCappuccino_ which is located in 'utilities' folder of freeCappuccino. This program will create mesh files for our simulation:
 
 `mkdir polyMesh vtk vtk/mesh 0`  
 `su2ToCappuccino cylinder_annular`  
@@ -37,8 +37,9 @@ Mesh conversion utility will also create template files for initial conditions i
 Rename file with template for scalar field initialization to 'T' for temperature
 `mv 0/T.template 0/T`
 
-```
-Copy settings provided below:  
+Copy settings provided below:
+
+```  
 internalField  
   uniform  
   300.0  
@@ -79,6 +80,8 @@ wallOuter
     uniform  
      0. 0. 0.  
 ```
+
+Simulation configuration can be found in the 'input.nml' file.
 
 Now we are ready to go!
 

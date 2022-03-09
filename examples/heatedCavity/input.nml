@@ -1,0 +1,87 @@
+&input_parameters
+              title = 'Heated cavity'    ! Descriptive name of the case which will be written in monitor file.                      
+        mesh_format = 'nativeMesh'             ! Mesh format 'nativeMesh' for native polyMesh format or 'foamMesh' for OpenFOAM polyMesh.
+              lread = F                      ! Read restart file - continue simulation from saved state?  True/False.
+              ltest = F                      ! Verbosity for linear solver convergence (for troubleshooting) True/False. 
+!
+              calcU = T             ! Activate Velocity field caculation? True/False.
+               urfU = 0.6, 0.6, 0.6 ! Under-relaxation factor for momentum eq
+               gdsU = 1.0           ! gamma-deferred correction parameter for velocity
+           cSchemeU = 'boundedLinearUpwind02'         ! Convection scheme for momentun eq
+           dSchemeU = 'uncorrected'    ! Difussion scheme for momentum eq
+            nrelaxU = 0             ! Integer parameter for difussion scheme - advanced
+           lSolverU = 'bicgstab'    ! Linear algebraic solver for momentum eq
+           maxiterU = 5             ! Max no of iterations for linear U-V-W equations
+            tolAbsU = 1e-15         ! Absolute tolerance level for residual for linear U-V-W equations
+            tolRelU = 0.01          ! Relative tolerance level for residual for linear U-V-W equations
+            pscheme = 'linear'      ! pressure interpolation scheme 
+!
+              calcP = T             ! Activate Pressure field caculation? True/False.
+               urfP = 0.3           ! Under-relaxation factor for pressure
+           lSolverP = 'iccg'        ! Linear algebraic solver for pressure/pressure correction (For LIS e.g. '-i cg -p jacobi -maxiter 80')
+           maxiterP = 20            ! Max no of iterations for pressure/pressure correction
+            tolAbsP = 1e-15         ! Absolute tolerance level for residual for pressure/pressure correction
+            tolRelP = 0.025           ! Relative tolerance level for residual for pressure/pressure correction  
+        !
+        ! Physical model: Heat transfer, Temperature as energy equation, Activation and model details.
+        !
+              calcT = T              ! Activate Temperature equation calculation? True/False.
+               urfT = 0.7            ! Under-relaxation factors.
+               gdsT = 1.0            ! Deferred correction factor.
+           cSchemeT = 'boundedLinearUpwind02' ! Convection scheme - default is second order upwind.
+           dSchemeT = 'uncorrected'     ! Diffusion scheme, i.e. the method for normal gradient at face skewness/offset.
+             nrelaxT = 0             ! Relaxation parameter non-orthogonal correction for face gradient.
+            lSolverT = 'bicgstab'    ! Linear algebraic solver.
+            maxiterT = 20            ! Max number of iterations in linear solver.
+             tolAbsT = 1e-15         ! Absolute residual level.
+             tolRelT = 0.01          ! Relative drop in residual to exit linear solver.
+                sigt = 0.9           ! sigma_t - Prandtl-Schmid number for temperature 
+!
+! Physical model: Buoyancy 
+!
+               lbuoy = T             !g Buoyancy activated True/False
+          boussinesq = T             !g Bousinesq approximation for buoyancy
+                tref = 300.0         !  Reference temperature for buoyant flows
+               gravx = 0.0           !g Three components of gravity vector
+               gravy = -9.81         !g -
+               gravz = 0.0           !g -
+!
+! Material properties
+!
+             densit = 1.0                ! Fluid density [kg/m3]
+             viscos = 0.01              ! Molecular dynamic viscosity [Pa.s]       
+              pranl = 1.0                ! Prandtl coefficient for specific fluid
+               beta = 1e-3               ! Thermal expansion coefficient
+!
+! Unsteady simulation options
+!
+         ltransient = F           !% |Unsteady simulation True/False and chose ONE algorithm  below
+                bdf = F           !% |Backward-Euler; First-Order Implicit, or...
+               bdf2 = F           !% |Second-Order Backward Euler; Second-Order Implicit, or...
+               bdf3 = F           !% |Third-order backard, or...
+                 CN = F           !% |Crank-Nicolson.
+!
+! Gradient computation
+! 
+              lstsq = F           !@ |Gradient approximation, chose ONE: Unweighted Least-Square gradient approximation, or...
+           lstsq_qr = F           !@ |Least square gradients based on thin QR decomposition, or...
+           lstsq_dm = F           !@ |Distance-square weighted version of Least-Square Gradient, or...
+              gauss = T           !@ |Cell based Gauss gradient with simple linear interpolation.       
+            limiter = 'no-limit'     ! Gradient limiter - default for all gradients
+!
+! Solution method: pressure-velocity coupling
+!   
+             SIMPLE = T       !# |Pressure-velocity coupling method - SIMPLE, or...
+               PISO = F       !# |Pressure-velocity coupling method - PISO.
+              ncorr = 1       !# |Number of PISO corrections - only relevant for PISO.
+              npcor = 1       ! Number of iterations for pressure/pressure correction equation - Number of Nonorthogonal corrections.  
+           pRefCell = 1       ! Reference cell for setting pressure level (since we have pure Neumann problem)
+          tolerance = 1e-5    ! Lower tolerance bound for outer (SIMPLE/PISO) iterations
+!
+! Simulation run details
+!
+            NUMSTEP = 500     ! Total number of timesteps.      
+           TIMESTEP = 1.0     ! Timestep size  - also known as dt.
+             NZAPIS = 500     ! Program writes output files every NZAPIS timesteps. 
+              MAXIT = 1       ! Number of iterations in SIMPLE/PISO sequential equation solution loop.
+/

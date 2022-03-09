@@ -80,6 +80,9 @@ module rheology
   ! from Newtonian to power-law behavior)  
   real(dp) :: lamtime = 10.0_dp     
 
+  ! Parameter governing the transition area in Carreau-Yasuda model (usually denoted 'a' in the literature)
+  real(dp) :: acy = 2.0_dp
+
   ! Under-relaxation for recalculated viscosity  
   real(dp) :: urfVis = 1.0        
 
@@ -89,7 +92,7 @@ module rheology
 
   ! Params - change defaults through input.nml file
   public :: npow, Consst, shearmin, Tau_0, megp,  &
-            muplastic, muzero, muinfty, lamtime, &   
+            muplastic, muzero, muinfty, lamtime, acy, &   
             mumin, mumax, shearcr, & 
             calcVis, urfVis, non_newtonian_model                           
 
@@ -110,8 +113,10 @@ subroutine modifyViscosityNonNewtonianFluid
 !    Options are,
 !    'PowerLaw'             : Power law constitutive Model (Ostwald)
 !    'HerschelBulkley'      : Herschel-Bulkley constitutive regularized (Papanastasiou) Model
+!    'Bingham'              : Bingham model
 !    'BinghamPapanastasiou' : Bingham-Papanastasiou model
 !    'Carreau'              : Carreau constitutive model
+!    'CarreauYasuda'        : Carreau-Yasuda constitutive model
 !    'CassonPapanastasiou'  : Casson constitutive regularized (Papanastasiou) Model with consistency temperature dependance
 !    'CrossModel'           : Cross constitutive model
 !
@@ -156,6 +161,10 @@ subroutine modifyViscosityNonNewtonianFluid
     case( 'Carreau' )
 
       call CarreauModel
+
+    case( 'CarreauYasuda' )
+
+      call CarreauYasudaModel
 
     case( 'Casson' )
 
@@ -268,6 +277,8 @@ subroutine PowerLawModel
 
   enddo
 
+  write(*,*) " Recalculated effective viscosity - PowerLaw model."
+
 end subroutine
 
 
@@ -373,6 +384,8 @@ subroutine HerschelBulkleyModel
 
   enddo
 
+  write(*,*) " Recalculated effective viscosity - Herschel-Bulkley model."
+
 end subroutine
 
 
@@ -425,9 +438,8 @@ subroutine BinghamModel
   shear = sqrt2*(.mag.(.symm.( gradU ) ))
 
   ! Now return to array based storage of variables
-  vis(1:numCells) = urfVis * &
-   ( muplastic + Tau_0/( shear%mag(1:numCells) + 1e-20 )  ) &
-                   + (1.0_dp-urfVis)*vis(1:numCells)
+  vis(1:numCells) = urfVis * ( muplastic + Tau_0/( shear%mag(1:numCells) + 1e-20 )  ) &
+         + (1.0_dp-urfVis) * vis(1:numCells)
 
   !
   ! Boundary faces 
@@ -473,6 +485,8 @@ subroutine BinghamModel
 
   enddo
 
+  write(*,*) " Recalculated effective viscosity - Bingham model."
+
 end subroutine
 
 
@@ -503,6 +517,12 @@ subroutine BinghamPapanastasiouModel
 !  Reference:
 !    
 !    Non-Newtonian constitutive models implementation by Seif-Eddine, COMSOL theory, Fluent theory, etc.
+!
+!
+!  Parameters for the model:
+!    muplastic: Plastic viscosity [kg/m-s]
+!    Tau_0  : Yield stress  
+!    megp : exponential growth parameter in Papanastasious regularization    
 !
 
   implicit none
@@ -572,6 +592,8 @@ subroutine BinghamPapanastasiouModel
     endif 
 
   enddo
+
+  write(*,*) " Recalculated effective viscosity - Bingham-Papanastasiou model."
 
 end subroutine
 
@@ -672,8 +694,109 @@ subroutine CarreauModel
 
   enddo
 
+  write(*,*) " Recalculated effective viscosity - Carreau model."
+
 end subroutine
 
+subroutine CarreauYasudaModel
+!
+!  Purpose: 
+!
+!    Carreau-Yasuda constitutive model.
+!
+!  Discussion:
+!
+!    We use tensor field manipulation, not as efficient but very elegant.
+!
+!  Licensing:
+!
+!    This code is distributed under the GNU GPL license. 
+!
+!  Modified:
+!
+!    09/12/2020
+!
+!  Author:
+!
+!    Nikola Mirkov/Email: nikolamirkov@yahoo.com
+!
+!  Reference:
+!
+!    Non-Newtonian constitutive models implementation in COMSOL theory, Fluent theory, etc.
+!
+!
+
+  implicit none
+
+!
+! Local variables
+!
+  integer :: i,iface,ijp,ijb,ib,iWall
+
+  type(volVectorField) :: Uvec
+  type(volTensorField) :: gradU
+  type(volScalarField) :: shear
+
+  Uvec = volVectorField( "VelocityVec",   &
+                          U, &
+                          V, &
+                          W  &
+                        )
+  gradU = Grad( Uvec )
+  shear = sqrt2*(.mag.(.symm.( gradU ) ))
+
+  ! Now return to array based storage of variables
+  vis(1:numCells) = urfVis * &
+    ( muinfty + ( muzero - muinfty ) * ( 1.0_dp + ( lamtime * shear%mag(1:numCells) )**acy ) ** ( (npow-1.0_dp)/acy ) ) &
+                   + (1.0_dp-urfVis)*vis(1:numCells)
+
+  !
+  ! Boundary faces 
+  !
+  iWall = 0
+
+  do ib=1,numBoundaries
+
+    if ( bctype(ib) == 'inlet' .or. &
+         bctype(ib) == 'outlet' .or. &
+         bctype(ib) == 'symmetry' .or. &
+         bctype(ib) == 'pressure' ) then
+
+      do i=1,nfaces(ib)
+
+        iface = startFace(ib) + i
+        ijp = owner(iface)
+        ijb = iBndValueStart(ib) + i
+
+        Vis(ijb) = Vis(ijp)
+
+      end do
+
+    elseif ( bctype(ib) == 'wall') then
+    !
+    ! Here we calculate modified viscosity stored for wall face, which will
+    ! be used in expression for wall shear in momentum equation - calcuvw.
+    !
+
+      do i=1,nfaces(ib)
+        
+        iface = startFace(ib) + i
+        ijp = owner(iface)
+        ijb = iBndValueStart(ib) + i
+        iWall = iWall + 1
+
+        visw(iWall) = max(vis(ijp),1e-20)
+        vis(ijb) = visw(iWall)
+
+      enddo
+
+    endif 
+
+  enddo
+
+  write(*,*) "  Updated effective viscosity: Carreau-Yasuda model."
+
+end subroutine
 
 subroutine CassonModel
 !
@@ -774,6 +897,8 @@ subroutine CassonModel
     endif 
 
   enddo
+
+  write(*,*) " Recalculated effective viscosity - Casson model."
 
 end subroutine
 
@@ -879,6 +1004,8 @@ subroutine CassonPapanastasiouModel
 
   enddo
 
+  write(*,*) " Recalculated effective viscosity - Casson-Papanastasiou model."
+
 end subroutine
 
 
@@ -932,6 +1059,7 @@ subroutine CrossModel
   ! Now return to array based storage of variables
   vis(1:numCells) = urfVis * &
                     muzero / (1.0_dp + ( lamtime * shear%mag(1:numCells) ) ** (1.0_dp-npow) ) &
+                    ! muinfty + ( muzero - muinfty ) / (1.0_dp + ( lamtime * shear%mag(1:numCells) ) ** npow ) &
                    + (1.0_dp-urfVis)*vis(1:numCells)
 
   !
@@ -944,6 +1072,7 @@ subroutine CrossModel
     if ( bctype(ib) == 'inlet' .or. &
          bctype(ib) == 'outlet' .or. &
          bctype(ib) == 'symmetry' .or. &
+         bctype(ib) == 'empty' .or. &
          bctype(ib) == 'pressure' ) then
 
       do i=1,nfaces(ib)
@@ -977,6 +1106,8 @@ subroutine CrossModel
     endif 
 
   enddo
+  
+  write(*,*) " Recalculated effective viscosity - Cross model."
 
 end subroutine
 

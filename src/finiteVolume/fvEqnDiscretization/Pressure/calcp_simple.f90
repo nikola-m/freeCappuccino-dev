@@ -47,7 +47,6 @@ subroutine calcp_simple
   use variables
   use gradients
   use linear_solvers
-  ! use LIS_linear_solvers
   use fieldManipulation
   use faceflux_mass
   use nablap
@@ -62,24 +61,12 @@ subroutine calcp_simple
   integer :: iPer, l, if, iftwin
   real(dp) :: ppref, cap, can, fmcor,suma
 
-  ! integer :: icmf
-  ! real(dp) :: denom,numer,fmstar,fmtrue
-  ! real(dp), dimension(:), allocatable :: acmf
-
   ! For compressible flows
   real(dp) :: Crho, suadd
-  real(dp), parameter :: Rvozd = 287.058  ! J/(kg K)
-
 
   ! Clear matrix coefficient and default rhs vector arrays
   a = 0.0_dp
   su = 0.0_dp
-
-  ! allocate( acmf(numFaces) )  
-  ! acmf = 0.0_dp
-
-  ! For const mass flux flows
-  ! gradPcmfCorr = 0.0_dp
 
 
   ! Tentative (!) velocity gradients used for velocity interpolation: 
@@ -95,10 +82,10 @@ subroutine calcp_simple
     ijp = owner(i)
     ijn = neighbour(i)
 
-    if ( ScndOrderPressIntrp ) then 
-      call facefluxmass( ijp, ijn, xf(i), yf(i), zf(i), arx(i), ary(i), arz(i), facint(i), cap, can, flmass(i) )
-    else
+    if ( pscheme == 'weighted' ) then 
       call facefluxmass2( ijp, ijn, arx(i), ary(i), arz(i), facint(i), cap, can, flmass(i) )
+    else
+      call facefluxmass( ijp, ijn, xf(i), yf(i), zf(i), arx(i), ary(i), arz(i), facint(i), cap, can, flmass(i) )
     endif
 
     ! > Off-diagonal elements:
@@ -106,9 +93,6 @@ subroutine calcp_simple
     ! (icell,jcell) matrix element:
     k = icell_jcell_csr_index(i)
     a(k) = cap
-  
-    ! !///
-    ! acmf(i) = can
 
     ! (jcell,icell) matrix element:
     k = jcell_icell_csr_index(i)
@@ -131,12 +115,12 @@ subroutine calcp_simple
   end do
 
 
-  ! Scaled mass flow at outlet
-  if(.not.const_mflux) call adjustMassFlow
-
 
   ! Add contributions to source of the boundaries.
 
+  ! Scaled mass flow at outlet
+  if(.not.const_mflux) call adjustMassFlow
+ 
   iPer = 0
   l = numInnerFaces
 
@@ -220,9 +204,6 @@ subroutine calcp_simple
         ! (icell,jcell) matrix element:
         k = icell_jcell_csr_index(l)
         a(k) = cap
-        
-        ! !///
-        ! acmf(if) = can
 
         ! (jcell,icell) matrix element:
         k = jcell_icell_csr_index(l)
@@ -249,17 +230,17 @@ subroutine calcp_simple
 
   enddo 
 
- 
+
   !
   ! > Additional matrix and RHS terms for compressible flows.
   !
 
-  if (AllSpeedsSIMPLE) then
-
+  if (compressible) then
+ 
     ! Volumetric sources time-stepping sources
     do inp = 1,numCells
 
-      Crho = 1./(Rvozd*T(inp))  ! rho = p/(RT) = Crho*p
+      Crho = 1./(Rair*T(inp)+small)  ! rho = p/(RT) = Crho*p
 
       ! First order
       sp(inp) = sp(inp) + Crho*vol(inp)/timestep        ! <- goes to main diagonal
@@ -271,23 +252,39 @@ subroutine calcp_simple
 
     end do
 
+    ! Pressure correction gradient for high-resolution bounded interpolation in facefluxCompressible.
+    do istage=1,nipgrad
+
+      ! Pressure corr. at boundaries (for correct calculation of pp gradient)
+      call bpres(pp,istage)
+
+      ! Calculate pressure-correction gradient and store it in pressure gradient field.
+      call grad(pp,dPdxi)
+
+    end do
+
+
     ! Internal faces:
     do i = 1,numInnerFaces
 
       ijp = owner(i)
       ijn = neighbour(i)
 
-      call facefluxCompressible( ijp, ijn, xf(i), yf(i), zf(i), flmass(i), facint(i), p, dpdxi, cap, can, suadd )
+      call facefluxCompressible( ijp, ijn, xf(i), yf(i), zf(i), flmass(i), facint(i), pp, dpdxi, cap, can, suadd )
 
       ! > Off-diagonal elements:
 
       ! (icell,jcell) matrix element:
       k = icell_jcell_csr_index(i)
-      a(k) = can
+      ! a(k) already keeps coefficients of the pressure correction eqn. just add compressible part
+      ! so that below when we perfom mass flux correction we hav included also contribution due to
+      ! compressibility.
+      a(k) = a(k) + can  
 
       ! (jcell,icell) matrix element:
       k = jcell_icell_csr_index(i)
-      a(k) = cap
+
+      a(k) = a(k) + cap
 
       ! > Elements on main diagonal:
 
@@ -310,7 +307,6 @@ subroutine calcp_simple
 
   ! > END: Additional matrix and RHS terms for compressible flows.
 
-
     
   if(ltest) then  
     suma = sum(su)
@@ -326,7 +322,6 @@ subroutine calcp_simple
 
     ! Solving pressure correction equation
     call csrsolve( lSolverP, pp, su, resor(4), maxiterP, tolAbsP, tolRelP, 'p' ) 
-    ! call lis_spsolve( lsolverp, pp, su, 'p')
        
     ! SECOND STEP *** CORRECTOR STAGE
    
@@ -339,52 +334,6 @@ subroutine calcp_simple
       call grad(pp,dPdxi)
 
     end do
-
-    ! ! If simulation uses least-squares gradients call this to get conservative pressure correction gradients.
-    ! if ( lstsq_qr .or. lstsq_dm .or. lstsq_qr ) call grad(pp,dPdxi,'gauss_corrected','nolimit')
-
-
-
-      ! iPer = 0
-      ! fmstar = 0.
-      ! fmtrue = 0.
-      ! numer = 0.
-      ! denom = 0.
-     
-      ! do ib=1,numBoundaries
-      
-      !   if (  bctype(ib) == 'periodic' ) then
-
-      !     iPer = iPer + 1
-
-      !     ! Faces trough periodic boundaries
-      !     do i=1,nfaces(ib)
-
-      !       if = startFace(ib) + i
-      !       ijp = owner(if)
-
-      !       iftwin = startFaceTwin(iPer) + i
-      !       ijn = owner(iftwin)
-
-      !       call facefluxmass2_periodic(ijp, ijn, xf(if), yf(if), zf(if), arx(if), ary(if), arz(if), half, cap, can, flmass(if))
-
-      !       !/// Related to mathur-murthy approach to periodic const mass flux flow forcing            
-      !       fmstar = fmstar + flmass(if)
-      !       fmtrue = fmtrue + den(if)*arx(if)*magUbar
-      !       numer = numer + cap*(pp(ijn)-pp(ijp))
-      !       denom = denom + can
-
-      !     end do 
-          
-      !     ! Now we can calculate the correction to pressure gradient that drives the constant gradient flow
-      !     gradPcmfCorr = -(fmtrue-fmstar+numer)/denom
-
-      !   endif 
-
-      ! enddo
-
-      ! write(*,*) "Nova vrednost: ", gradPcmfCorr
-
 
     !
     ! Correct mass fluxes
@@ -399,7 +348,7 @@ subroutine calcp_simple
       ! (icell,jcell) matrix element:
       k = icell_jcell_csr_index(iface)
 
-      flmass(iface) = flmass(iface) + a(k) * (pp(ijn)-pp(ijp)) ! + acmf(iface)*gradPcmfCorr
+      flmass(iface) = flmass(iface) + a(k) * (pp(ijn)-pp(ijp)) 
   
     enddo
 
@@ -430,8 +379,8 @@ subroutine calcp_simple
           ! since pressure poisson equation is symmetric:
           k = icell_jcell_csr_index(l)
 
-          ! Correct mass fluxes  trough these faces
-          flmass(iface)  = flmass(iface)  + a(k) * (pp(ijn)-pp(ijp)) ! + acmf(iface)*gradPcmfCorr
+          ! Correct mass fluxes trough these faces mj = mj* + mj' (where j is the face index)
+          flmass(iface)  = flmass(iface)  + a(k) * (pp(ijn)-pp(ijp)) 
           flmass(iftwin) = flmass(iface)
 
         end do 
@@ -463,18 +412,13 @@ subroutine calcp_simple
 
     ! If there is a pressure boundary then set p'=0
     do ib=1,numBoundaries 
-      if ( bctype(ib) == 'pressure' ) ppref = 0.0_dp
+      if ( bctype(ib) == 'pressure' ) then 
+        ppref = 0.0_dp
+        exit
+      endif
     enddo
 
-    ! do inp=1,numCells
-    !   u(inp) = u(inp) - dPdxi(1,inp) * vol(inp)*apu(inp)
-    !   v(inp) = v(inp) - dPdxi(2,inp) * vol(inp)*apv(inp)
-    !   w(inp) = w(inp) - dPdxi(3,inp) * vol(inp)*apw(inp)
-    !   p(inp) = p(inp) + urfP*(pp(inp)-ppref)
-    ! enddo
 
-
-    ! ...or like this ...
     ! Do it in consistent way to how pressure was treated in calcuvw
     su = 0.0_dp
     sv = 0.0_dp
@@ -485,16 +429,16 @@ subroutine calcp_simple
 
     ! Correction is: u = u* + sum_f {-p'}_f * S_fi / ap.
 
-    u(1:numCells) = u(1:numCells) + su*apu ! - vol*apu*gradPcmfCorr
+    u(1:numCells) = u(1:numCells) + su*apu
     v(1:numCells) = v(1:numCells) + sv*apv
     w(1:numCells) = w(1:numCells) + sw*apw
-    p(1:numCells) = p(1:numCells) + urfP*(pp(1:numCells)-ppref)
+    p(1:numCells) = p(1:numCells) + urfp*(pp(1:numCells)-ppref)
 
 
-    ! Correct density for variable density flows:    
-    if ( AllSpeedsSIMPLE ) then
-      den(1:numCells) = den(1:numCells) + 0.9*( pp(1:numCells)-ppref )/( Rvozd*T(1:numCells) ) !urfDen = 0.9
-    end if
+  
+    ! > Recalculate density from equation of state:
+    if ( compressible ) den = p / ( Rair*T + small ) 
+
 
 
     ! Explicit correction of velocity at symmetry boundaries
@@ -544,7 +488,9 @@ subroutine calcp_simple
   ! Write continuity error report:
   call continuityErrors
 
-  ! deallocate(acmf)
+
+  ! Correct driving force for a constant mass flow rate simulation:
+  if(const_mflux) call constant_mass_flow_forcing
 
 end subroutine
 

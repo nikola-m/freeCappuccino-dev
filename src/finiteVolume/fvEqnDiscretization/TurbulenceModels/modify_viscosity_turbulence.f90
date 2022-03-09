@@ -1,6 +1,6 @@
 subroutine modify_viscosity_turbulence
 
-  use turbulence, only: TurbModel
+  use TurbModelData, only: TurbModel
   use variables, only: u,v,w,dUdxi,dVdxi,dWdxi
   use gradients, only: grad
   use k_epsilon_std
@@ -13,7 +13,7 @@ subroutine modify_viscosity_turbulence
   use IDDES_k_omega_SST
   use k_eqn_eddy
   use spalart_allmaras
-  use smagorinsky
+  ! use smagorinsky
   use wale_sgs
 
   implicit none
@@ -30,7 +30,7 @@ subroutine modify_viscosity_turbulence
 
   call calc_strain_and_vorticity
 
-  select case (TurbModel)
+  select case ( TurbModel%name ) 
 
     case ('k_epsilon_std')
       call modify_viscosity_k_epsilon_std
@@ -62,8 +62,8 @@ subroutine modify_viscosity_turbulence
     case ('IDDES_k_omega_sst')
       call modify_viscosity_IDDES_k_omega_sst
 
-    case ('Smagorinsky')
-      call modify_viscosity_smagorinsky
+    ! case ('Smagorinsky')
+    !   call modify_viscosity_smagorinsky
 
     case ('WALE')
       call modify_viscosity_wale_sgs

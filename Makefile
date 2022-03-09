@@ -39,9 +39,12 @@ execut = bin/cappuccino
 
 FC = gfortran
 
-LDFLAGS = -O2 -Wall #-cpp
+# The -cpp flag is here becasue of LIS library, if you compile without it
+# you don't have to use this flag
+LDFLAGS = -O3 -Wall -cpp
 
-LDLIBS = -llapack # -llis -fopenmp
+# Lapack is used for LSTSQ_QR gradients, LIS may be used for linear systems
+LDLIBS = -llapack -llis -fopenmp
 
 # Extend known suffixes:
 # (if the suffixes are not ".f" or ".F")

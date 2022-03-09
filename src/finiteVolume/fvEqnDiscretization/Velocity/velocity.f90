@@ -19,22 +19,26 @@ module velocity
   implicit none
 
   !
-  ! Discrtetization and solution parameters - modified trough input.nml file
+  ! Discrretization and solution parameters - modified trough input.nml file
   !
   logical  :: calcU = .True.                         ! To activate the solution of this field in the main function. 
   real(dp) :: urfU(3) = (/ 0.5, 0.5, 0.5 /)          ! Under-relaxation factors.
   real(dp) :: gdsU = 1.0                             ! Deferred correction factor.
   character ( len=30 ) :: cSchemeU = 'linearUpwind'  ! Convection scheme - default is second order upwind.
   character ( len=12 ) :: dSchemeU = 'skewness'      ! Difussion scheme, i.e. the method for normal gradient at face skewness/offset.
-  integer :: nrelaxU = 0  ! Type of non-orthogonal correction for face gradient minimal/orthogonal/over-relaxed.
+  integer :: nrelaxU = 0  ! Type of non-orthogonal correction for face gradient minimal/orthogonal/over-relaxed (-1/0/1).
   character ( len=12 ) :: lSolverU = 'bicgstab'  ! Linear algebraic solver.
   integer  :: maxiterU = 5                       ! Max number of iterations in linear solver.
   real(dp) :: tolAbsU = 1e-13                    ! Absolute residual level.
   real(dp) :: tolRelU = 0.025                    ! Relative drop in residual to exit linear solver.
+
+  ! !...or =>
+  ! type( FieldEquation ) :: Momentum
+  ! ! Now access data as: Momentum%urf, Monentum%cScheme, Momentum%maxiter,...etc.
   
   private 
 
-  public :: calcuvw, updateVelocityAtBoundary
+  public :: calcuvw, updateVelocityAtBoundary, calc_wall_shear
   public :: calcU, urfU, gdsU, cSchemeU, dSchemeU, nrelaxU, lSolverU, maxiterU, tolAbsU, tolRelU ! params
 
 
@@ -108,10 +112,11 @@ subroutine calcuvw
   real(dp) :: Upb, Vpb, Wpb ! Velocity difference
   real(dp) :: viss
   real(dp) :: urfr,urfm
-  ! logical :: ScndOrderWallBC_Model
+
+  ! logical :: ScndOrderWallBC_Model = .false.
   ! real(dp) :: FdUi,FdVi,FdWi! Diffusive flux auxiliary
   ! real(dp) :: Utp, Vtp, Wtp
-  ! real(dp) :: Vnp
+  ! real(dp) :: Vnp,fdne
 
   ! Initialize sources
   su = 0.0_dp
@@ -267,21 +272,6 @@ subroutine calcuvw
 
   end do
 
-  !----------------------------------------------------------------------------
-  ! Calculate Reynols stresses explicitly and additional asm terms:
-  !----------------------------------------------------------------------------
-  ! if(lturb) then
-  !   call calcstress
-  !   if (lasm) call Additional_algebraic_stress_terms
-  ! end if
-
-
-
-
-  !----------------------------------------------------------------------------
-  ! CALCULATE TERMS INTEGRATED OVER FACES
-  !----------------------------------------------------------------------------
-
   !
   ! > Fluxes trough faces:
   !
@@ -390,6 +380,51 @@ subroutine calcuvw
 
 
       end do
+
+
+    elseif (  bctype(ib) == 'periodic' ) then
+
+      iPer = iPer + 1 ! count periodic boundary pairs
+
+      ! Faces trough periodic boundaries
+      do i=1,nfaces(ib)
+
+        if = startFace(ib) + i
+        ijp = owner(if)
+
+        iftwin = startFaceTwin(iPer) + i ! Where does the face data for twin start, looking at periodic boundary pair with index iPer.
+        ijn = owner(iftwin)              ! Owner cell of the twin periodic face
+
+
+        call facefluxuvw_periodic(ijp, ijn, xf(if), yf(if), zf(if), arx(if), ary(if), arz(if), flmass(if), gdsU, &
+          cap, can, sup, svp, swp)
+
+        ! > Off-diagonal elements:
+
+        ! l is in interval [numInnerFaces+1, numInnerFaces+numPeriodic]
+        l = l + 1
+
+        ! (icell,jcell) matrix element:
+        k = icell_jcell_csr_index(l)
+        a(k) = can
+
+        ! (jcell,icell) matrix element:
+        k = jcell_icell_csr_index(l)
+        a(k) = cap
+
+        ! > Sources: 
+
+        su(ijp) = su(ijp) + sup
+        sv(ijp) = sv(ijp) + svp
+        sw(ijp) = sw(ijp) + swp
+
+        su(ijn) = su(ijn) - sup
+        sv(ijn) = sv(ijn) - svp
+        sw(ijn) = sw(ijn) - swp
+
+
+      end do 
+
 
     elseif ( bctype(ib) == 'wall') then
 
@@ -513,49 +548,6 @@ subroutine calcuvw
 
       ! enddo
 
-    elseif (  bctype(ib) == 'periodic' ) then
-
-      iPer = iPer + 1 ! count periodic boundary pairs
-
-      ! Faces trough periodic boundaries
-      do i=1,nfaces(ib)
-
-        if = startFace(ib) + i
-        ijp = owner(if)
-
-        iftwin = startFaceTwin(iPer) + i ! Where does the face data for twin start, looking at periodic bnd pair with index iPer.
-        ijn = owner(iftwin)              ! Owner cell of the twin peridoic face
-
-
-        call facefluxuvw_periodic(ijp, ijn, xf(if), yf(if), zf(if), arx(if), ary(if), arz(if), flmass(if), gdsU, &
-          cap, can, sup, svp, swp)
-
-        ! > Off-diagonal elements:
-
-        ! l is in interval [numInnerFaces+1, numInnerFaces+numPeriodic]
-        l = l + 1
-
-        ! (icell,jcell) matrix element:
-        k = icell_jcell_csr_index(l)
-        a(k) = can
-
-        ! (jcell,icell) matrix element:
-        k = jcell_icell_csr_index(l)
-        a(k) = cap
-
-        ! > Sources: 
-
-        su(ijp) = su(ijp) + sup
-        sv(ijp) = sv(ijp) + svp
-        sw(ijp) = sw(ijp) + swp
-
-        su(ijn) = su(ijn) - sup
-        sv(ijn) = sv(ijn) - svp
-        sw(ijn) = sw(ijn) - swp
-
-
-      end do 
-
 
     endif 
 
@@ -570,9 +562,9 @@ subroutine calcuvw
   endif
 
   !
-  ! If flow is compressible and AllSpeed SIMPLE algorithm is used add 2/3*mu*div(U) to pressure field
+  ! If flow is compressible add 2/3*mu*div(U) to pressure field
   !
-  if (AllSpeedsSIMPLE) p(1:numCells) = p(1:numCells) + 2./3.*vis(1:numCells)*explDiv( U, V, W )
+  if (compressible) p(1:numCells) = p(1:numCells) + 2./3.*vis(1:numCells)*explDiv( U, V, W )
 
 
   ! Contribution to source of the -grad(p) term
@@ -628,19 +620,23 @@ subroutine calcuvw
     ! we substract it from the sum, to eliminate it from the sum.
     ! We could also write sum( a(ioffset(inp)) : a(ioffset(inp+1)-1) ) because all diagonal terms are zero.
     sum_off_diagonal_terms  = sum( a(ioffset(inp) : ioffset(inp+1)-1) ) - a(diag(inp)) 
+    
     a(diag(inp)) = spu(inp) - sum_off_diagonal_terms
 
+    apu(inp) = 1./(a(diag(inp))+small)
+
+    ! Alternative way, loop instead of array slice:
     ! a(diag(inp)) = spu(inp) 
     ! do k = ioffset(inp),ioffset(inp+1)-1
     !   if (k.eq.diag(inp)) cycle
     !   a(diag(inp)) = a(diag(inp)) -  a(k)
     ! enddo
 
+
     ! Underelaxation:
     a(diag(inp)) = a(diag(inp))*urfr
     su(inp) = su(inp) + urfm*a(diag(inp))*u(inp)
 
-    apu(inp) = 1./(a(diag(inp))+small)
 
   enddo
 
@@ -674,21 +670,26 @@ subroutine calcuvw
 
   endif
 
-  
+  ! Clear main diagonal and source vector
   do inp=1,numCells
     a(diag(inp)) = 0.0_dp
     su(inp) = 0.0_dp
   enddo
 
+  ! Under-relaxation factors
   urfr = 1.0_dp/urfU(2)
   urfm = 1.0_dp-urfU(2)
 
   do inp = 1,numCells
 
     ! Main diagonal term assembly:
-    sum_off_diagonal_terms  = sum( a(ioffset(inp) : ioffset(inp+1)-1) )! - a(diag(inp))
+    sum_off_diagonal_terms  = sum( a(ioffset(inp) : ioffset(inp+1)-1) ) - a(diag(inp))
+
     a(diag(inp)) = spv(inp) - sum_off_diagonal_terms
 
+    apv(inp) = 1./(a(diag(inp))+small)
+
+    ! Alternative way, loop instead of array slice:
     ! a(diag(inp)) = spv(inp) 
     ! do k = ioffset(inp),ioffset(inp+1)-1
     !   if (k.eq.diag(inp)) cycle
@@ -698,8 +699,6 @@ subroutine calcuvw
     ! Underelaxation:
     a(diag(inp)) = a(diag(inp))*urfr
     su(inp) = sv(inp) + urfm*a(diag(inp))*v(inp)
-
-    apv(inp) = 1./(a(diag(inp))+small)
 
   enddo
 
@@ -733,21 +732,26 @@ subroutine calcuvw
 
   endif 
 
-
+  ! Clear main diagonal and source vector
   do inp=1,numCells
     a(diag(inp)) = 0.0_dp
     su(inp) = 0.0_dp
   enddo
   
+  ! Set under-relaxation factors
   urfr = 1.0_dp/urfU(3)
   urfm = 1.0_dp-urfU(3)
 
   do inp = 1,numCells
 
     ! Main diagonal term assembly:
-    sum_off_diagonal_terms  = sum( a(ioffset(inp) : ioffset(inp+1)-1) )! - a(diag(inp)) 
+    sum_off_diagonal_terms  = sum( a(ioffset(inp) : ioffset(inp+1)-1) ) - a(diag(inp)) 
+   
     a(diag(inp)) = sp(inp) - sum_off_diagonal_terms
 
+    apw(inp) = 1./(a(diag(inp))+small)
+
+    ! Alternative way, loop instead of array slice:
     ! a(diag(inp)) = sp(inp) 
     ! do k = ioffset(inp),ioffset(inp+1)-1
     !   if (k.eq.diag(inp)) cycle
@@ -757,9 +761,6 @@ subroutine calcuvw
     ! Underelaxation:
     a(diag(inp)) = a(diag(inp))*urfr
     su(inp) = sw(inp) + urfm*a(diag(inp))*w(inp)
-
-    apw(inp) = 1./(a(diag(inp))+small)
-
 
   enddo
 
@@ -890,10 +891,6 @@ subroutine facefluxuvw(ijp, ijn, xf, yf, zf, arx, ary, arz, flomass, lambda, gam
   fuuds = cp*u(ijp)+ce*u(ijn)
   fvuds = cp*v(ijp)+ce*v(ijn)
   fwuds = cp*w(ijp)+ce*w(ijn)
-  
-  ! fuuds = max(flomass,zero)*u(ijp)+min(flomass,zero)*u(ijn)
-  ! fvuds = max(flomass,zero)*v(ijp)+min(flomass,zero)*v(ijn)
-  ! fwuds = max(flomass,zero)*w(ijp)+min(flomass,zero)*w(ijn)
 
 
 ! EXPLICIT CONVECTIVE FLUXES FOR HIGH ORDER BOUNDED SCHEMES
@@ -1055,7 +1052,7 @@ subroutine facefluxuvw_bnd(ijp, ijb, xf, yf, zf, arx, ary, arz, flomass, cap, ca
   zi = zf
 
 
-  !.....interpolate gradients defined at cv centers to faces
+  ! interpolate gradients defined at cv centers to faces
 
   ![NOTE]: Commented out version is for inner faces..
   !        fxn = 1.0, so we should take values of gradient from
@@ -1071,7 +1068,7 @@ subroutine facefluxuvw_bnd(ijp, ijb, xf, yf, zf, arx, ary, arz, flomass, cap, ca
   duyi = dUdxi(2,ijp)
   duzi = dUdxi(3,ijp) !...because constant gradient
 
-  !.....du/dx_i interpolated at cell face:
+  ! du/dx_i interpolated at cell face:
   duxii = duxi*d1x + arx/vole*( u(ijb)-u(ijp)-duxi*d2x-duyi*d2y-duzi*d2z ) 
   duyii = duyi*d1y + ary/vole*( u(ijb)-u(ijp)-duxi*d2x-duyi*d2y-duzi*d2z ) 
   duzii = duzi*d1z + arz/vole*( u(ijb)-u(ijp)-duxi*d2x-duyi*d2y-duzi*d2z ) 
@@ -1084,7 +1081,7 @@ subroutine facefluxuvw_bnd(ijp, ijb, xf, yf, zf, arx, ary, arz, flomass, cap, ca
   dvyi = dVdxi(2,ijp)
   dvzi = dVdxi(3,ijp) !...because constant gradient
 
-  !.....dv/dx_i interpolated at cell face:
+  ! dv/dx_i interpolated at cell face:
   dvxii = dvxi*d1x + arx/vole*( v(ijb)-v(ijp)-dvxi*d2x-dvyi*d2y-dvzi*d2z ) 
   dvyii = dvyi*d1y + ary/vole*( v(ijb)-v(ijp)-dvxi*d2x-dvyi*d2y-dvzi*d2z ) 
   dvzii = dvzi*d1z + arz/vole*( v(ijb)-v(ijp)-dvxi*d2x-dvyi*d2y-dvzi*d2z ) 
@@ -1097,7 +1094,7 @@ subroutine facefluxuvw_bnd(ijp, ijb, xf, yf, zf, arx, ary, arz, flomass, cap, ca
   dwyi = dWdxi(2,ijp)
   dwzi = dWdxi(3,ijp) !...because constant gradient
 
-  !.....dw/dx_i interpolated at cell face:
+  ! dw/dx_i interpolated at cell face:
   dwxii = dwxi*d1x + arx/vole*( w(ijb)-w(ijp)-dwxi*d2x-dwyi*d2y-dwzi*d2z ) 
   dwyii = dwyi*d1y + ary/vole*( w(ijb)-w(ijp)-dwxi*d2x-dwyi*d2y-dwzi*d2z ) 
   dwzii = dwzi*d1z + arz/vole*( w(ijb)-w(ijp)-dwxi*d2x-dwyi*d2y-dwzi*d2z ) 
@@ -1303,7 +1300,7 @@ subroutine updateVelocityAtBoundary
 !
 !     Local variables
 !
-  integer :: i,ijp,ijb,ijbt,ijn,ib,iface,iper
+  integer :: i,ijp,ijb,ib,iface,iper
   real(dp) :: Unmag,flowo
 
   ! Update velocity components along outlet boundaries
@@ -1315,7 +1312,7 @@ subroutine updateVelocityAtBoundary
 
   do ib=1,numBoundaries
 
-    if ( bctype(ib) == 'empty' ) then
+    if ( bctype(ib) == 'empty' .or. bctype(ib) == 'periodic' ) then
 
       do i=1,nfaces(ib)
 
@@ -1347,65 +1344,106 @@ subroutine updateVelocityAtBoundary
 
       end do
 
-    elseif (  bctype(ib) == 'periodic' ) then
+    ! elseif (  bctype(ib) == 'periodic' ) then
 
-      iPer = iPer + 1
+    !   iPer = iPer + 1
 
-      ! Faces trough periodic boundaries, Taiwo first
-      do i=1,nfaces(ib)
+    !   ! Faces trough periodic boundaries, Taiwo first
+    !   do i=1,nfaces(ib)
 
-        iface = startFace(ib) + i
-        ijp = owner(iface)
-        ijb = iBndValueStart(ib) + i
+    !     iface = startFace(ib) + i
+    !     ijp = owner(iface)
+    !     ijb = iBndValueStart(ib) + i
 
-        iface = startFaceTwin(iPer) + i
-        ijn = owner(iface)
+    !     iface = startFaceTwin(iPer) + i
+    !     ijn = owner(iface)
 
-        U(ijb) = half*( U(ijp)+U(ijn) )
-        V(ijb) = half*( U(ijp)+U(ijn) )
-        W(ijb) = half*( U(ijp)+U(ijn) )
+    !     U(ijb) = half*( U(ijp)+U(ijn) )
+    !     V(ijb) = half*( U(ijp)+U(ijn) )
+    !     W(ijb) = half*( U(ijp)+U(ijn) )
 
-        ! Now find where is the twin in field array
-        ijbt = numCells + ( startFaceTwin(iPer) - numInnerFaces ) + i
+    !     ! Now find where is the twin in field array
+    !     ijbt = numCells + ( startFaceTwin(iPer) - numInnerFaces ) + i
         
-        ! Twin takes the same values
-        U(ijbt) = U(ijb)
-        V(ijbt) = V(ijb)
-        W(ijbt) = W(ijb)
+    !     ! Twin takes the same values
+    !     U(ijbt) = U(ijb)
+    !     V(ijbt) = V(ijb)
+    !     W(ijbt) = W(ijb)
 
-      enddo
+    !   enddo
 
 
     endif 
 
   enddo
 
-  ! ! Ratio of inflow and outflow mass flux
-  ! fac = flomas/(flowo+small)
+end subroutine
 
-  ! do ib=1,numBoundaries
+subroutine calc_wall_shear
+!
+! Purpose: 
+! Returns wall shear stress - tau and non-dimensional wall distance of the first cell layer - y+.
+! Usually needed for post processing.
+!
+  use types
+  use parameters
+  use geometry
+  use variables
 
-  !   if ( bctype(ib) == 'outlet' ) then
+  implicit none 
 
-  !     do i=1,nfaces(ib)
+  integer :: iWall, ib, i, iface, ijp, ijb
+  real(dp) :: are 
+  real(dp) :: nxf,nyf,nzf 
+  real(dp) :: upb,vpb,wpb,vsol,fshearx,fsheary,fshearz
 
-  !       iface = startFace(ib) + i
-  !       ijb = iBndValueStart(ib) + i
+  iWall = 0
 
-  !       flmass(iface) = flmass(iface)*fac
+  do ib=1,numBoundaries
 
-  !       u(ijb) = u(ijb)*fac
-  !       v(ijb) = v(ijb)*fac
-  !       w(ijb) = w(ijb)*fac
+    if ( bctype(ib) == 'wall') then
 
-  !     enddo
+      do i=1,nfaces(ib)
 
-  !   endif 
+        iface = startFace(ib) + i
+        ijp = owner(iface)
+        ijb = iBndValueStart(ib) + i
+        iWall = iWall + 1
 
-  ! enddo
+        ! Face area 
+        are = sqrt(arx(iface)**2+ary(iface)**2+arz(iface)**2)
+
+        ! Face normals
+        nxf = arx(iface)/are
+        nyf = ary(iface)/are
+        nzf = arz(iface)/are
+
+        ! Velocity difference vector components
+        upb = u(ijp)-u(ijb)
+        vpb = v(ijp)-v(ijb)
+        wpb = w(ijp)-w(ijb)
+
+        vsol = max(viscos,visw(iWall))*srdw(iWall)
+
+        ! Shear forces at wall in x, y and z direction.
+        fshearx = vsol * ( (u(ijb)-u(ijp))*(1.-nxf**2) + vpb*nyf*nxf                  + wpb*nzf*nxf )
+        fsheary = vsol * ( upb*nxf*nyf                 + (v(ijb)-v(ijp))*(1.-nyf**2)  + wpb*nzf*nyf )
+        fshearz = vsol * ( upb*nxf*nzf                 + vpb*nyf*nzf                  + (w(ijb)-w(ijp))*(1.-nzf**2) )
+
+        tau(iWall) = sqrt(fshearx**2+fsheary**2+fshearz**2)/are
+
+        ! ypl(iWall) = den(ijb)*sqrt( Tau(iWall) / den(ijb) )*dnw(iWall)/viscos ! reduce to =>
+          ypl(iWall) =          sqrt( Tau(iWall) * den(ijb) )*dnw(iWall)/viscos
+
+      enddo
+
+    endif 
+
+  enddo
 
 
 end subroutine
+
 
 end module
 

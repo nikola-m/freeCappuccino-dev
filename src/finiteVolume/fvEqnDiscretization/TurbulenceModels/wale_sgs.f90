@@ -22,7 +22,7 @@ module wale_sgs
   use parameters
   use geometry
   use variables, only: u,v,w,den,vis,visw
-  use turbulence, only: ivis,urf
+  use TurbModelData, only: TurbModel
 
   implicit none
 
@@ -73,6 +73,8 @@ subroutine modify_viscosity_wale_sgs
 !
   integer :: i, ib, iface, ijp, ijn, ijb, ijbt, iWall, iPer
 
+  real(dp) :: urf
+
   real(dp), parameter :: r13 = 1./3._dp
 
   type(volScalarField) :: magSqrSd
@@ -99,10 +101,10 @@ subroutine modify_viscosity_wale_sgs
            /  ( power( .magSq.(.symm.D), 5./2._dp ) + power( magSqrSd, 5./4._dp )  ) 
 
 
+  urf = TurbModel%urfVis
 
   ! Update of the effective viscosity and underelaxation
-  vis( 1:numCells ) = urf(ivis)*( magSqrSd%mag(1:numCells) + viscos ) &
-               + (1.0-urf(ivis)) * vis( 1:numCells )
+  vis( 1:numCells ) = urf*( magSqrSd%mag(1:numCells) + viscos ) + (1.0-urf) * vis( 1:numCells )
 
 
   ! Boundary faces 
@@ -170,6 +172,8 @@ subroutine modify_viscosity_wale_sgs
     endif 
 
   enddo
+
+  write(*,*) " Updated effective viscosity - WALE model."
 
 end subroutine
 

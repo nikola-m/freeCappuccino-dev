@@ -61,21 +61,23 @@ subroutine calcp_piso
   use linear_solvers
   use fieldmanipulation
   use faceflux_mass
+  use nablap
   use velocity, only: updateVelocityAtBoundary
 
   implicit none
 !
 !***********************************************************************
 !
-  integer :: i, k, inp, ib, iface, istage
+  integer :: i, k, ib, iface, istage
   integer :: ijp, ijn, ijb
+  ! integer :: inp
   real(dp) :: cap, can
   real(dp) :: pavg, fmcor
 
   ! Before entering the corection loop backup a_nb coefficient arrays:
   h = a  
 
-  if( const_mflux ) call constant_mass_flow_forcing
+  ! if( const_mflux ) call constant_mass_flow_forcing
 
   !== PISO Corrector loop =============================================
   do icorr=1,ncorr
@@ -142,7 +144,9 @@ subroutine calcp_piso
       ijp = owner(i)
       ijn = neighbour(i)
 
-      call facefluxmass_piso( ijp, ijn, xf(i), yf(i), zf(i), arx(i), ary(i), arz(i), facint(i), &
+      call facefluxmass_piso( ijp, ijn, &
+                              xf(i), yf(i), zf(i), &
+                              arx(i), ary(i), arz(i), facint(i), &
                               cap, can, flmass(i) )!, flmasso(i), flmassoo(i),flmassooo(i) )
 
       ! > Off-diagonal elements:
@@ -233,6 +237,55 @@ subroutine calcp_piso
               
         end do
 
+
+      ! elseif (  bctype(ib) == 'periodic' ) then
+
+      !   iPer = iPer + 1
+
+      !   ! Faces trough periodic boundaries
+      !   do i=1,nfaces(ib)
+
+      !     if = startFace(ib) + i
+      !     ijp = owner(if)
+
+      !     iftwin = startFaceTwin(iPer) + i
+      !     ijn = owner(iftwin)
+
+
+      !     call facefluxmass2_periodic(ijp, ijn, xf(if), yf(if), zf(if), arx(if), ary(if), arz(if), half, cap, can, flmass(if))
+
+
+      !     ! > Off-diagonal elements:
+
+      !     ! l is in interval [numInnerFaces+1, numInnerFaces+numPeriodic]
+      !     l = l + 1
+
+      !     ! (icell,jcell) matrix element:
+      !     k = icell_jcell_csr_index(l)
+      !     a(k) = cap
+
+      !     ! (jcell,icell) matrix element:
+      !     k = jcell_icell_csr_index(l)
+      !     a(k) = cap
+
+      !     ! > Elements on main diagonal:
+
+      !     ! (icell,icell) main diagonal element
+      !     k = diag(ijp)
+      !     a(k) = a(k) - cap
+
+      !     ! (jcell,jcell) main diagonal element
+      !     k = diag(ijn)
+      !     a(k) = a(k) - cap
+
+      !     ! > Sources:
+      !     su(ijp) = su(ijp) - flmass(if)
+      !     su(ijn) = su(ijn) + flmass(if) 
+
+
+      !   end do 
+
+
       endif 
 
     enddo 
@@ -272,10 +325,10 @@ subroutine calcp_piso
       ! Pressure gradient
       do istage=1,nipgrad
 
-        ! Pressure corr. at boundaries (for correct calculation of p gradient)
+        ! Pressure at boundaries (for correct calculation of p gradient)
         call bpres(p,istage)
 
-        ! Calculate pressure-correction gradient and store it in pressure gradient field.
+        ! Calculate pressure gradient.
         call grad(p,dPdxi)
 
       end do
@@ -365,11 +418,26 @@ subroutine calcp_piso
     !
     ! Correct velocities
     !      
-    do inp=1,numCells
-      u(inp) = u(inp) - apu(inp)*dPdxi(1,inp)*vol(inp)
-      v(inp) = v(inp) - apv(inp)*dPdxi(2,inp)*vol(inp)
-      w(inp) = w(inp) - apw(inp)*dPdxi(3,inp)*vol(inp)
-    enddo 
+    ! do inp=1,numCells
+    !   u(inp) = u(inp) - apu(inp)*dPdxi(1,inp)*vol(inp)
+    !   v(inp) = v(inp) - apv(inp)*dPdxi(2,inp)*vol(inp)
+    !   w(inp) = w(inp) - apw(inp)*dPdxi(3,inp)*vol(inp)
+    ! enddo 
+
+    ! ...or like this ...
+    ! Do it in consistent way to how pressure was treated in calcuvw
+    su = 0.0_dp
+    sv = 0.0_dp
+    sw = 0.0_dp   
+
+    ! Use this to get: Source(u_i) = sum_f {-p}_f * S_fi.
+    call surfaceIntegratePressure
+
+    ! Correction is: u = u* + sum_f {-p}_f * S_fi / ap.
+
+    u(1:numCells) = u(1:numCells) + su*apu
+    v(1:numCells) = v(1:numCells) + sv*apv
+    w(1:numCells) = w(1:numCells) + sw*apw
 
     ! 
     ! Correct mass fluxes (and velocity) at pressure boundaries
@@ -400,6 +468,8 @@ subroutine calcp_piso
 
   !== END: PISO Corrector loop =========================================
   enddo
-                                                                                                                       
+               
+  ! Correct driving force for a constant mass flow rate simulation:
+  if(const_mflux) call constant_mass_flow_forcing                                                                                                        
       
 end subroutine

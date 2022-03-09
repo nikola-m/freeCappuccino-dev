@@ -122,17 +122,17 @@ subroutine facefluxmass(ijp, ijn, xf, yf, zf, arx, ary, arz, lambda, cap, can, f
   ! UI-> (U)f -> second order interpolation at face
   !+Interpolate velocities to face center:
 
-  ! ui = face_value_cds( ijp, ijn, lambda, u )
-  ! vi = face_value_cds( ijp, ijn, lambda, v )
-  ! wi = face_value_cds( ijp, ijn, lambda, w )
+  ui = face_value_cds( ijp, ijn, lambda, u )
+  vi = face_value_cds( ijp, ijn, lambda, v )
+  wi = face_value_cds( ijp, ijn, lambda, w )
   
   ! ui = face_value_cds_corrected( ijp, ijn, xf, yf, zf, lambda, u, dUdxi )
   ! vi = face_value_cds_corrected( ijp, ijn, xf, yf, zf, lambda, v, dVdxi )
   ! wi = face_value_cds_corrected( ijp, ijn, xf, yf, zf, lambda, w, dWdxi )
 
-  ui = face_value_central( ijp,ijn, xf, yf, zf, u, dUdxi )
-  vi = face_value_central( ijp,ijn, xf, yf, zf, v, dVdxi )
-  wi = face_value_central( ijp,ijn, xf, yf, zf, w, dWdxi )
+  ! ui = face_value_central( ijp,ijn, xf, yf, zf, u, dUdxi )
+  ! vi = face_value_central( ijp,ijn, xf, yf, zf, v, dVdxi )
+  ! wi = face_value_central( ijp,ijn, xf, yf, zf, w, dWdxi )
 
   ! Try this - like in Fluent Theory Guide
   ! ui = ( u(ijp)/Apu(ijp)+u(ijn)/Apu(ijn) ) / ( 1./Apu(ijp) + 1./Apu(ijn) )
@@ -251,6 +251,15 @@ subroutine facefluxmass2(ijp, ijn, arx, ary, arz, lambda, cap, can, fluxmass)
 
 
   ! UI-> (U)f -> second order interpolation at face
+
+  ! ui = face_value_cds( ijp, ijn, lambda, u )
+  ! vi = face_value_cds( ijp, ijn, lambda, v )
+  ! wi = face_value_cds( ijp, ijn, lambda, w )
+
+  ! ui = face_value_cds_corrected( ijp, ijn, xf, yf, zf, lambda, u, dUdxi )
+  ! vi = face_value_cds_corrected( ijp, ijn, xf, yf, zf, lambda, v, dVdxi )
+  ! wi = face_value_cds_corrected( ijp, ijn, xf, yf, zf, lambda, w, dWdxi )
+
   ! ui = face_value_central( ijp,ijn, xf, yf, zf, u, dUdxi )
   ! vi = face_value_central( ijp,ijn, xf, yf, zf, v, dVdxi )
   ! wi = face_value_central( ijp,ijn, xf, yf, zf, w, dWdxi )
@@ -267,10 +276,6 @@ subroutine facefluxmass2(ijp, ijn, arx, ary, arz, lambda, cap, can, fluxmass)
   ! MASS FLUX via Rhie-Chow Interpolation
   fluxmass = dene*(ui*arx+vi*ary+wi*arz) + cap*(p(ijn)-p(ijp)-dpxi-dpyi-dpzi)
 
-  !///
-  !/// Additional term - For periodic flows with constant mass flow along x-axis direction.
-  !///
-  ! fluxmass = fluxmass + dene*Kj*arx*gradPcmfCorr
 
 end subroutine
 
@@ -335,8 +340,12 @@ subroutine facefluxmass2_periodic(ijp, ijn, xf, yf, zf, arx, ary, arz, lambda, c
   !     RHIE-CHOW velocity interpolation at face
   !////////////////////////////////////////////////////////
 
-
   ! UI-> (U)f -> second order interpolation at face
+
+  ! ui = face_value_cds( ijp, ijn, half, u )
+  ! vi = face_value_cds( ijp, ijn, half, v )
+  ! wi = face_value_cds( ijp, ijn, half, w )
+
   ! ui = face_value_central( ijp,ijn, xf, yf, zf, u, dUdxi )
   ! vi = face_value_central( ijp,ijn, xf, yf, zf, v, dVdxi )
   ! wi = face_value_central( ijp,ijn, xf, yf, zf, w, dWdxi )
@@ -353,13 +362,8 @@ subroutine facefluxmass2_periodic(ijp, ijn, xf, yf, zf, arx, ary, arz, lambda, c
   ! MASS FLUX via Rhie-Chow Interpolation
   fluxmass = dene*(ui*arx+vi*ary+wi*arz) + cap*(p(ijn)-p(ijp)-dpxi-dpyi-dpzi)
 
-  !///
-  !/// Additional term - For periodic flows with constant mass flow along x-axis direction.
-  !///
-  ! fluxmass = fluxmass + dene*Kj*arx*gradPcmfCorr
 
 end subroutine
-
 
 
 !***********************************************************************
@@ -428,6 +432,10 @@ subroutine facefluxmass_piso(ijp, ijn, xf, yf, zf, arx, ary, arz, lambda, cap, c
   can = cap
 
   ! Interpolate velocities (H/Ap) to face center:
+
+  ! ui = face_value_cds( ijp, ijn, lambda, u )
+  ! vi = face_value_cds( ijp, ijn, lambda, v )
+  ! wi = face_value_cds( ijp, ijn, lambda, w )
 
   ui = face_value_central( ijp,ijn, xf, yf, zf, u, dUdxi )
   vi = face_value_central( ijp,ijn, xf, yf, zf, v, dVdxi )
@@ -843,7 +851,7 @@ subroutine adjustMassFlow
 end subroutine
 
 
-subroutine facefluxCompressible( ijp, ijn, xf, yf, zf, fm, lambda, FI, dFidxi, cap, can, suadd )
+subroutine facefluxCompressible( ijp, ijn, xf, yf, zf, fm, lambda, fi, dfidxi, cap, can, suadd )
 !
 !  Purpose:
 !    Compressible contribution to mass fluxes for All Speeds SIMPLE algorithm.
@@ -855,21 +863,20 @@ subroutine facefluxCompressible( ijp, ijn, xf, yf, zf, fm, lambda, FI, dFidxi, c
 
   implicit none
 
-  integer, intent(in) :: ijp, ijn
-  real(dp), intent(in) :: xf,yf,zf
-  real(dp), intent(in) :: fm
-  real(dp), intent(in) :: lambda
-  real(dp), dimension(numTotal), intent(in) :: fi
-  real(dp), dimension(3,numCells), intent(in) :: dfidxi
-  real(dp), intent(inout) :: cap, can, suadd
+  integer, intent(in) :: ijp, ijn       ! owner and neighbor cell indices
+  real(dp), intent(in) :: xf,yf,zf      ! Face centroid coordinates
+  real(dp), intent(in) :: fm            ! mass flow
+  real(dp), intent(in) :: lambda        ! interpolation factor
+  real(dp), dimension(numTotal), intent(in) :: fi ! this is pressure correction of course...
+  real(dp), dimension(3,numCells), intent(in) :: dfidxi ! pressure gradient
+  real(dp), intent(inout) :: cap, can, suadd   ! matrix elements and source value to add to rhs vector su.
 
 
 ! Local variables
   real(dp) :: fii
   real(dp) :: fcfie,fcfii
   real(dp) :: fxp,fxn
-  real(dp) :: Crhof
-  real(dp), parameter :: Rvozd = 287.058  ! J/(kg K)
+  ! real(dp) :: Crhof
   character ( len=30 ) :: cScheme = 'muscl'
 !----------------------------------------------------------------------
 
@@ -879,13 +886,12 @@ subroutine facefluxCompressible( ijp, ijn, xf, yf, zf, fm, lambda, FI, dFidxi, c
   fxp=1.0_dp-lambda
 
   ! Coeff in convection-like term
-  Crhof = 1./( RVOZD*T(ijp)*den(ijp) )*fxp + 1./( RVOZD*T(ijn)*den(ijn) )*fxn
+  ! Crhof = fxp/( Rair*T(ijp) + small ) + fxn/( Rair*T(ijn) + small ) 
 
-  ! Convection fluxes - uds
  
   ! System matrix coefficients
-  cap = min(fm*Crhof,zero)
-  can = max(fm*Crhof,zero)
+  cap = min( fm/( Rair*T(ijn) + small ) ,zero )
+  can = max( fm/( Rair*T(ijp) + small ), zero )
 
 
   ! Explicit higher order convection

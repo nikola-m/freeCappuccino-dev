@@ -13,7 +13,8 @@ module Spalart_Allmaras
   use parameters
   use geometry
   use variables
-  use turbulence
+  use gradients
+  use TurbModelData, only: TurbModel
 
   implicit none
 
@@ -21,8 +22,8 @@ module Spalart_Allmaras
   ! Turbulence model constants
   real(dp), parameter :: Cb1 = 0.1355_dp
   real(dp), parameter :: Cb2 = 0.622_dp
-  real(dp), parameter :: sigma = 2.0_dp/3.0_dp
-  real(dp), parameter :: Cw1 = 3.2390678167757287 ! = Cb1/cappa**2 + (1.0_dp+Cb2)/sigma
+  real(dp), parameter :: sigma = twothirds
+  real(dp), parameter :: Cw1 = 3.2390678167757287_dp ! = Cb1/cappa**2 + (1.0_dp+Cb2)/sigma
   real(dp), parameter :: Cw2 = 0.3_dp
   real(dp), parameter :: Cw3 = 2.0_dp
   real(dp), parameter :: Cv1 = 7.1_dp
@@ -31,7 +32,6 @@ module Spalart_Allmaras
 
   real(dp), parameter :: one_sixth = 1._dp/6._dp
   logical :: notf2 = .false. ! Set to .true. for SA model without f_t2 term. Also for DES and DDES.
-  
 
   private 
 
@@ -49,42 +49,21 @@ subroutine modify_viscosity_spalart_allmaras()
 ! * NOTE: We use TKE array to store nu_tilda here!
 ! ***
 !
-  use types
-  use parameters
-  use variables
-  use gradients
 
   implicit none
 
-  call calcsc(TE,dTEdxi,ite) ! Assemble and solve nu_tilda eq.
+  call calcsc(TE,dTEdxi,1) ! Assemble and solve nu_tilda eq.
   call modify_mu_eff()
 
 end subroutine
-
-
-
-subroutine modify_viscosity_inlet_spalart_allmaras()
-!
-! Update effective viscosity at inlet
-!
-  implicit none
-
-  call modify_mu_eff_inlet()
-
-end subroutine
-
 
 
 subroutine calcsc(Fi,dFidxi,ifi)
 !
 ! Assemble and solve transport equation for scalar field.
 !
-  use types
-  use parameters
-  use geometry
-  use variables
+
   use sparse_matrix
-  use gradients
   use linear_solvers
   
   implicit none
@@ -96,18 +75,23 @@ subroutine calcsc(Fi,dFidxi,ifi)
 !
 ! Local variables
 !
-  integer ::  i, k, inp, ijp, ijn, ijb, ib, iwall, iface
-  real(dp) :: gam, prtr, apotime, urfrs, urfms, &
-              genp, genn
+  integer ::  i, k, l, inp, ijp, ijn, ijb, iper, ib, iwall, iface, if, iftwin
+  real(dp) :: prtr, apotime, urfrs, urfms, genp, genn
   real(dp) :: cap, can, suadd
   real(dp) :: off_diagonal_terms
   real(dp) :: fimax,fimin
   real(dp) :: nu_tilda,nu,xi,fv1,fv2,ft2,r,g,fw,strain_tilda
   real(dp) :: dnutdx,dnutdy,dnutdz
-
+  real(dp) :: urf, tolAbs, tolRel
+  integer :: maxiter
+  character( len=12 ) :: lSolver 
 
 ! Variable specific coefficients:
-  gam=gds(ifi)
+  urf = TurbModel%Scalar(ifi)%urf
+  lSolver = TurbModel%Scalar(ifi)%lSolver 
+  maxiter = TurbModel%Scalar(ifi)%maxiter
+  tolAbs = TurbModel%Scalar(ifi)%tolAbs
+  tolRel = TurbModel%Scalar(ifi)%tolRel
 
   prtr=1./sigma
 
@@ -197,8 +181,9 @@ subroutine calcsc(Fi,dFidxi,ifi)
     ijn = neighbour(i)
 
     call facefluxsc( ijp, ijn, &
-                     xf(i), yf(i), zf(i), arx(i), ary(i), arz(i), &
-                     flmass(i), facint(i), gam, &
+                     xf(i), yf(i), zf(i), &
+                     arx(i), ary(i), arz(i), &
+                     flmass(i), facint(i), TurbModel%Scalar(ifi)%gds, &
                      fi, dFidxi, prtr, cap, can, suadd )
 
     ! > Off-diagonal elements:
@@ -233,10 +218,14 @@ subroutine calcsc(Fi,dFidxi,ifi)
   !
 
   iWall = 0
+  iPer = 0
+  l = numInnerFaces
 
   do ib=1,numBoundaries
 
-    if ( bctype(ib) == 'inlet' .or. bctype(ib) == 'outlet' ) then
+    if ( bctype(ib) == 'inlet' .or. &
+         bctype(ib) == 'outlet' .or. &
+         bctype(ib) == 'pressure' ) then
 
       do i=1,nfaces(ib)
 
@@ -245,7 +234,8 @@ subroutine calcsc(Fi,dFidxi,ifi)
         ijb = iBndValueStart(ib) + i
 
         call facefluxsc_boundary( ijp, ijb, &
-                                  xf(iface), yf(iface), zf(iface), arx(iface), ary(iface), arz(iface), &
+                                  xf(iface), yf(iface), zf(iface), &
+                                  arx(iface), ary(iface), arz(iface), &
                                   flmass(iface), &
                                   Fi, dFidxi, prtr, cap, can, suadd )
 
@@ -256,25 +246,82 @@ subroutine calcsc(Fi,dFidxi,ifi)
       end do
 
 
-    elseif ( bctype(ib) == 'wall') then
+    ! elseif ( bctype(ib) == 'wall') then
 
+    !   do i=1,nfaces(ib)
+
+    !     iface = startFace(ib) + i
+    !     ijp = owner(iface)
+    !     ijb = iBndValueStart(ib) + i
+    !     iWall = iWall + 1
+
+    !     call facefluxsc_boundary( ijp, ijb, &
+    !                               xf(iface), yf(iface), zf(iface), &
+    !                               arx(iface), ary(iface), arz(iface), &
+    !                               flmass(iface), &
+    !                               FI, dFidxi, prtr, cap, can, suadd )
+
+    !     Sp(ijp) = Sp(ijp)-can
+
+    !     Su(ijp) = Su(ijp)-can*Fi(ijb) + suadd
+
+    !   enddo
+
+
+    elseif (  bctype(ib) == 'periodic' ) then
+
+      iPer = iPer + 1 ! count periodic boundary pairs
+
+      ! Faces trough periodic boundaries
       do i=1,nfaces(ib)
 
-        iface = startFace(ib) + i
-        ijp = owner(iface)
-        ijb = iBndValueStart(ib) + i
-        iWall = iWall + 1
+        if = startFace(ib) + i
+        ijp = owner(if)
 
-        call facefluxsc_boundary( ijp, ijb, &
-                                  xf(iface), yf(iface), zf(iface), arx(iface), ary(iface), arz(iface), &
-                                  flmass(iface), &
-                                  FI, dFidxi, prtr, cap, can, suadd )
+        iftwin = startFaceTwin(iPer) + i ! Where does the face data for twin start, looking at periodic boundary pair with index iPer.
+        ijn = owner(iftwin)              ! Owner cell of the twin periodic face
 
-        Sp(ijp) = Sp(ijp)-can
 
-        Su(ijp) = Su(ijp)-can*Fi(ijb) + suadd
+        ! face flux scalar but for periodic boundaries - it will be recognized by arguments
+        call facefluxsc_periodic( ijp, ijn, &
+                                  xf(if), yf(if), zf(if), &
+                                  arx(if), ary(if), arz(if), &
+                                  flmass(if), &
+                                  TurbModel%Scalar(ifi)%gds, &
+                                  fi, dFidxi, prtr, cap, can, suadd )
 
-      enddo
+
+        ! > Off-diagonal elements:
+
+        ! l is in interval [numInnerFaces+1, numInnerFaces+numPeriodic]
+        l = l + 1
+
+        ! (icell,jcell) matrix element:
+        k = icell_jcell_csr_index(l)
+        a(k) = can
+
+        ! (jcell,icell) matrix element:
+        k = jcell_icell_csr_index(l)
+        a(k) = cap
+
+        ! > Elements on main diagonal:
+
+        ! ! (icell,icell) main diagonal element
+        k = diag(ijp)
+        a(k) = a(k) - can
+
+        ! ! (jcell,jcell) main diagonal element
+        k = diag(ijn)
+        a(k) = a(k) - cap
+
+        ! > Sources:
+
+        su(ijp) = su(ijp) + suadd
+        su(ijn) = su(ijn) - suadd 
+
+
+      end do 
+
 
     endif
     
@@ -282,49 +329,48 @@ subroutine calcsc(Fi,dFidxi,ifi)
 
 
 
-
   ! Modify coefficients for Crank-Nicolson
   if (cn) then
 
-      a = 0.5_dp*a ! Doesn't affect the main diagonal because it's still zero.
+    a = 0.5_dp*a ! Doesn't affect the main diagonal because it's still zero.
 
-        do i = 1,numInnerFaces
-            ijp = owner(i)
-            ijn = neighbour(i)
+    do i = 1,numInnerFaces
+        ijp = owner(i)
+        ijn = neighbour(i)
 
-            k = icell_jcell_csr_index(i)
-            su(ijp) = su(ijp) - a(k)*teo(ijn)
+        k = icell_jcell_csr_index(i)
+        su(ijp) = su(ijp) - a(k)*teo(ijn)
 
-            k = jcell_icell_csr_index(i)
-            su(ijn) = su(ijn) - a(k)*teo(ijp)
-        enddo
+        k = jcell_icell_csr_index(i)
+        su(ijn) = su(ijn) - a(k)*teo(ijp)
+    enddo
 
-        do ijp=1,numCells
-            apotime=den(ijp)*vol(ijp)/timestep
-            off_diagonal_terms = sum( a( ioffset(ijp) : ioffset(ijp+1)-1 ) ) - a(diag(ijp))
-            su(ijp) = su(ijp) + (apotime + off_diagonal_terms)*teo(ijp)
-            sp(ijp) = sp(ijp)+apotime
-        enddo
+    do ijp=1,numCells
+        apotime=den(ijp)*vol(ijp)/timestep
+        off_diagonal_terms = sum( a( ioffset(ijp) : ioffset(ijp+1)-1 ) ) - a(diag(ijp))
+        su(ijp) = su(ijp) + (apotime + off_diagonal_terms)*teo(ijp)
+        sp(ijp) = sp(ijp)+apotime
+    enddo
         
   endif
 
   ! Underrelaxation factors
-  urfrs=1.0_dp/urf(ifi)
-  urfms=1.0_dp-urf(ifi)
+  urfrs=1.0_dp/urf
+  urfms=1.0_dp-urf
 
   ! Main diagonal term assembly:
   do inp = 1,numCells
 
-        ! Main diagonal term assembly:
-        a(diag(inp)) = sp(inp) 
-        do k = ioffset(inp),ioffset(inp+1)-1
-          if (k.eq.diag(inp)) cycle
-          a(diag(inp)) = a(diag(inp)) -  a(k)
-        enddo
+    ! Main diagonal term assembly:
+    a(diag(inp)) = sp(inp) 
+    do k = ioffset(inp),ioffset(inp+1)-1
+      if (k.eq.diag(inp)) cycle
+      a(diag(inp)) = a(diag(inp)) -  a(k)
+    enddo
 
-        ! Underelaxation:
-        a(diag(inp)) = a(diag(inp))*urfrs
-        su(inp) = su(inp) + urfms*a(diag(inp))*fi(inp)
+    ! Underelaxation:
+    a(diag(inp)) = a(diag(inp))*urfrs
+    su(inp) = su(inp) + urfms*a(diag(inp))*fi(inp)
                     
   enddo
 
@@ -332,26 +378,56 @@ subroutine calcsc(Fi,dFidxi,ifi)
   call csrsolve(lSolver, fi, su, resor(5), maxiter, tolAbs, tolRel, 'nutilda' )
 
 
-  !
-  ! Update symmetry and outlet boundaries
-  !
-  do ib=1,numBoundaries
+  ! Update field values at boundaries
+  call updateBoundary( fi )
 
-    if ( bctype(ib) == 'outlet' .or. bctype(ib) == 'symmetry' ) then
+  ! iPer = 0
 
-      do i=1,nfaces(ib)
+  ! do ib=1,numBoundaries
 
-        iface = startFace(ib) + i
-        ijp = owner(iface)
-        ijb = iBndValueStart(ib) + i
+  !   if ( bctype(ib) == 'outlet' .or. &
+  !       bctype(ib) == 'symmetry' .or. &
+  !        bctype(ib) == 'pressure' .or. &
+  !       bctype(ib) == 'empty' ) then
 
-        fi(ijb)=fi(ijp)
+  !     do i=1,nfaces(ib)
 
-      enddo
+  !       iface = startFace(ib) + i
+  !       ijp = owner(iface)
+  !       ijb = iBndValueStart(ib) + i
 
-    endif
+  !       fi(ijb)=fi(ijp)
 
-  enddo
+  !     enddo
+
+  !   elseif (  bctype(ib) == 'periodic' ) then
+
+  !     iPer = iPer + 1
+
+  !     ! Faces trough periodic boundaries, Taiwo first
+  !     do i=1,nfaces(ib)
+
+  !       iface = startFace(ib) + i
+  !       ijp = owner(iface)
+  !       ijb = iBndValueStart(ib) + i
+
+  !       iface = startFaceTwin(iPer) + i
+  !       ijn = owner(iface)
+
+  !       fi(ijb) = half*( fi(ijp)+fi(ijn) )
+
+  !       ! Now find where is the twin in field array
+  !       ijbt = numCells + ( startFaceTwin(iPer) - numInnerFaces ) + i
+        
+  !       ! Twin takes the same values
+  !       fi(ijbt) = fi(ijb)
+
+  !     enddo
+
+  !   endif
+
+  ! enddo
+
 
 ! Report range of scalar values and clip if negative
   fimin = minval(fi)
@@ -369,23 +445,23 @@ subroutine modify_mu_eff()
 !
 ! Update turbulent and effective viscosity.
 !
-  use types
-  use parameters
-  use geometry
-  use variables
+
   implicit none
 
   integer :: i,ib,inp
-  integer :: iface, iwall, ijp,ijb
-  real(dp) :: visold
+  integer :: iface, iwall,ijp,ijb
+  real(dp) :: urf, visold
   real(dp) :: nxf,nyf,nzf,are
   real(dp) :: Vnp,Vtp,xtp,ytp,ztp
   real(dp) :: Ut2,Utau,viscw
+  ! real(dp) :: Utauvis,Utaulog,Upl
+  real(dp) :: Uplblend
   real(dp) :: nu_tilda,nu,xi,fv1
 
 !
 ! Loop trough cells 
 !
+  urf = TurbModel%urfVis
 
   do inp=1,numCells
 
@@ -400,7 +476,7 @@ subroutine modify_mu_eff()
     vis(inp)=viscos + den(inp)*nu_tilda*fv1
 
     ! Underelaxation
-    vis(inp)=urf(ivis)*vis(inp)+(1.0_dp-urf(ivis))*visold
+    vis(inp)=urf*vis(inp)+(1.0_dp-urf)*visold
 
   enddo
 
@@ -408,48 +484,14 @@ subroutine modify_mu_eff()
   ! Boundary faces 
   !
 
+  ! Update value at every bounary face type except 'wall', which is treated below.
+  call updateBoundary( vis )
+
   iWall = 0
 
   do ib=1,numBoundaries
 
-    if ( bctype(ib) == 'inlet' ) then
-
-      do i=1,nfaces(ib)
-
-        iface = startFace(ib) + i
-        ijp = owner(iface)
-        ijb = iBndValueStart(ib) + i
-
-        Vis(ijb) = Vis(ijp)
-
-      end do
-
-    elseif ( bctype(ib) == 'outlet' ) then
-
-      do i=1,nfaces(ib)
-
-        iface = startFace(ib) + i
-        ijp = owner(iface)
-        ijb = iBndValueStart(ib) + i
-
-        Vis(ijb) = Vis(ijp)
-
-      enddo
-
-    elseif ( bctype(ib) == 'symmetry') then
-
-      ! Symmetry
-      do i=1,nfaces(ib)
-
-        iface = startFace(ib) + i
-        ijp = owner(iface)
-        ijb = iBndValueStart(ib) + i
-
-        Vis(ijb) = Vis(ijp)
-
-      end do
-
-    elseif ( bctype(ib) == 'wall') then
+    if ( bctype(ib) == 'wall') then
 
       do i=1,nfaces(ib)
 
@@ -494,14 +536,61 @@ subroutine modify_mu_eff()
         ypl(iWall) = den(ijb)*Utau*dnw(iWall)/viscos
 
         ! ! Ima i ova varijanta u cisto turb. granicni sloj varijanti sa prvom celijom u log sloju
-        ! ypl(i) = den(ijb)*cmu25*sqrt(te(ijp))*dnw(i)/viscos
         ! ! ...ovo je tehnicki receno ystar iliti y* a ne y+
+        ! ypl(i) = den(ijb)*cmu25*sqrt(te(ijp))*dnw(i)/viscos
 
-        viscw = zero
+        ! viscw = zero
+        ! if(ypl(iWall) > ctrans) then
+        !   viscw = ypl(iWall)*viscos*cappa/log(Elog*ypl(iWall))
+        ! endif
 
-        if(ypl(iWall) > ctrans) then
-          viscw = ypl(iWall)*viscos*cappa/log(Elog*ypl(iWall))
-        endif
+        ! Potpuno neka druga logika sad
+
+        ! *** Automatic wall treatment ***
+ 
+        ! Ne mogu ove dve linije dole ako nemam TKE!!
+        ! utau = sqrt( viscos*Vtp/(densit*dnw(iWall)) + cmu25*te(ijp) ) ! It's actually u* in original reference...
+
+        ! ypl(iWall) = den(ijp)*Utau*dnw(iWall)/viscos 
+
+        ! Utauvis=ypl(iWall)
+        ! Utaulog=1.0/cappa*log(Elog*ypl(iWall)) 
+
+        ! Upl=sqrt(sqrt(Utauvis**4+Utaulog**4)) 
+          
+        ! viscw = den(ijp)*utau*dnw(iWall)/Upl 
+
+        ! Blended version of shear stress - probati ovo(!?)
+        ! tau(iWall) = den(ijp) * (Vtp/Uplblend)**2
+
+        ! Varijanta 2, u originalnoj referenci...
+        ! tau(iWall) = den(ijp) * Vtp*Utau/Upl
+
+        !*** END: Automatic wall treatment ***
+
+        ! *** Enhanced wall treatment - Reichardt blending ***
+
+        ! ! Below is a variant where we use Reichardt blending
+        ! ! for whole span of y+ values.
+        ! ! Some authors say that Reichardt function for u+ approximates
+        ! ! the composite u+(y+) curve, better that Kader blending function.
+ 
+        ! utau = sqrt( viscos*Vtp/(densit*dnw(iWall)) + cmu25*te(ijp) ) ! It's actually u* in original reference...
+
+        ! ypl(iWall) = den(ijp)*Utau*dnw(iWall)/viscos 
+
+        Uplblend = one/cappa*log(one+cappa*ypl(iWall)) + &
+                   7.8_dp*(1.-exp(-ypl(iWall)/11.0_dp)-(ypl(iWall)/11.0_dp)*exp(-ypl(iWall)/3.0_dp))
+          
+        viscw = den(ijp)*utau*dnw(iWall)/Uplblend  
+
+        ! ! Blended version of shear stress - probati ovo(!?)
+        ! ! tau(iWall) = den(ijp) * (Vtp/Uplblend)**2
+
+        ! Varijanta 2, u originalnoj referenci...
+        tau(iWall) = den(ijp) * Vtp*Utau/Uplblend
+
+        !*** END: Enhanced wall treatment - Reichardt blending ***
 
         visw(iWall) = max(viscos,viscw)
         vis(ijb) = visw(iWall)
@@ -516,14 +605,10 @@ subroutine modify_mu_eff()
 end subroutine
 
 
-subroutine modify_mu_eff_inlet()
+subroutine modify_viscosity_inlet_spalart_allmaras()
 !
 ! Update turbulent and effective viscosity at inlet.
 !
-  use types
-  use parameters
-  use geometry, only: numBoundaries,nfaces,iBndValueStart
-  use variables
 
   implicit none
 
@@ -567,10 +652,7 @@ subroutine facefluxsc(ijp, ijn, xf, yf, zf, arx, ary, arz, &
 !
 !***********************************************************************
 !
-  use types
-  use parameters
   use interpolation
-  use gradients
 
   implicit none
 !
@@ -646,7 +728,7 @@ subroutine facefluxsc(ijp, ijn, xf, yf, zf, arx, ary, arz, &
   !-------------------------------------------------------
 
   call sngrad(ijp, ijn, xf, yf, zf, arx, ary, arz, lambda, &
-              Fi, dFidxi, nrelax, dScheme, dfixi, dfiyi, dfizi, &
+              Fi, dFidxi, TurbModel%Scalar(1)%nrelax, TurbModel%Scalar(1)%dScheme, dfixi, dfiyi, dfizi, &
               dfixii, dfiyii, dfizii)
   
 
@@ -662,10 +744,10 @@ subroutine facefluxsc(ijp, ijn, xf, yf, zf, arx, ary, arz, &
   !-------------------------------------------------------
   if( fm .ge. zero ) then 
     ! Flow goes from p to pj - > p is the upwind node
-    fii = face_value(ijp, ijn, xf, yf, zf, fxp, fi, dFidxi, cScheme)
+    fii = face_value(ijp, ijn, xf, yf, zf, fxp, fi, dFidxi, TurbModel%Scalar(1)%cScheme)
   else
     ! Other way, flow goes from pj, to p -> pj is the upwind node.
-    fii = face_value(ijn, ijp, xf, yf, zf, fxn, fi, dFidxi, cScheme)
+    fii = face_value(ijn, ijp, xf, yf, zf, fxn, fi, dFidxi, TurbModel%Scalar(1)%cScheme)
   endif
 
   fcfie = fm*fii
@@ -688,14 +770,142 @@ subroutine facefluxsc(ijp, ijn, xf, yf, zf, arx, ary, arz, &
 end subroutine
 
 
+
+!***********************************************************************
+!
+subroutine facefluxsc_periodic(ijp, ijn, xf, yf, zf, arx, ary, arz, &
+                               flmass, gam, &
+                               FI, dFidxi, prtr, cap, can, suadd)
+!
+!***********************************************************************
+!
+  use interpolation
+
+  implicit none
+!
+!***********************************************************************
+! 
+
+  integer, intent(in) :: ijp, ijn
+  real(dp), intent(in) :: xf,yf,zf
+  real(dp), intent(in) :: arx, ary, arz
+  real(dp), intent(in) :: flmass
+  real(dp), intent(in) :: gam 
+  ! character( len=30 ), intent(in) :: cScheme ! Convection scheme.
+  real(dp), dimension(numTotal), intent(in) :: Fi
+  real(dp), dimension(3,numCells), intent(in) :: dFidxi
+  real(dp), intent(in) :: prtr
+  real(dp), intent(inout) :: cap, can, suadd
+
+
+! Local variables
+  real(dp) :: are
+  real(dp) :: xpn,ypn,zpn
+  real(dp) :: dpn
+  real(dp) :: Cp,Ce
+  real(dp) :: fii,fm
+  real(dp) :: fdfie,fdfii,fcfie,fcfii,ffic
+  real(dp) :: de, game, nu, nu_tilda
+  real(dp) :: fxp,fxn
+  real(dp) :: dfixi,dfiyi,dfizi
+!----------------------------------------------------------------------
+
+  ! > Geometry:
+
+  ! Face interpolation factor
+  fxn = 0.5_dp ! Assumption for periodic boundaries
+  fxp = fxn
+
+  ! Distance vector between cell centers
+  xpn = 2*( xf-xc(ijp) )
+  ypn = 2*( yf-yc(ijp) )
+  zpn = 2*( zf-zc(ijp) )
+
+  ! Distance from P to neighbor N
+  dpn=sqrt(xpn**2+ypn**2+zpn**2)     
+
+  ! cell face area
+  are=sqrt(arx**2+ary**2+arz**2)
+
+
+  ! Cell face diffussion coefficient
+
+  nu = viscos/den(ijp) 
+  nu_tilda = fi(ijp)*fxp+fi(ijn)*fxn
+  game = prtr*(nu+nu_tilda) ! prtr is 1/sigma, is set in calcsc above
+
+
+  ! Difusion coefficient for linear system
+  ! de = game*are/dpn
+  de = game*(arx*arx+ary*ary+arz*arz)/(xpn*arx+ypn*ary+zpn*arz)
+
+  ! Convection fluxes - uds
+  fm = flmass
+  ce = min(fm,zero) 
+  cp = max(fm,zero)
+
+  !-------------------------------------------------------
+  ! System matrix coefficients
+  !-------------------------------------------------------
+  cap = -de - max(fm,zero)
+  can = -de + min(fm,zero)
+  !-------------------------------------------------------
+
+
+  !-------------------------------------------------------
+  ! Explicit part of diffusion
+  !-------------------------------------------------------
+
+  dfixi = dFidxi(1,ijp)*fxp+dFidxi(1,ijn)*fxn
+  dfiyi = dFidxi(2,ijp)*fxp+dFidxi(2,ijn)*fxn
+  dfizi = dFidxi(3,ijp)*fxp+dFidxi(3,ijn)*fxn
+
+  ! Explicit diffusion
+  fdfie = game*(dfixi*arx + dfiyi*ary + dfizi*arz)  
+
+  ! Implicit diffussion 
+  fdfii = game*are/dpn*(dfixi*xpn+dfiyi*ypn+dfizi*zpn)
+
+
+  !-------------------------------------------------------
+  ! Explicit higher order convection, cSheme is set in input
+  !-------------------------------------------------------
+  if( flmass .ge. zero ) then 
+    ! Flow goes from p to pj - > p is the upwind node
+    fii = face_value_cds(ijp, ijn, fxp, fi)
+  else
+    ! Other way, flow goes from pj, to p -> pj is the upwind node.
+    fii = face_value_cds(ijn, ijp, fxn, fi)
+  endif
+
+  fcfie = fm*fii
+
+  !-------------------------------------------------------
+  ! Explicit first order convection
+  !-------------------------------------------------------
+  fcfii = ce*fi(ijn)+cp*fi(ijp)
+
+  !-------------------------------------------------------
+  ! Deffered correction for convection = gama_blending*(high-low)
+  !-------------------------------------------------------
+  ffic = gam*(fcfie-fcfii)
+
+  !-------------------------------------------------------
+  ! Explicit part of fluxes
+  !-------------------------------------------------------
+  suadd = -ffic+fdfie-fdfii 
+
+end subroutine
+
+
+
+
 !***********************************************************************
 !
 subroutine facefluxsc_boundary(ijp, ijn, xf, yf, zf, arx, ary, arz, fm, FI, dFidxi, prtr, cap, can, suadd)
 !
 !***********************************************************************
 !
-  use types
-  use parameters
 
   implicit none
 !

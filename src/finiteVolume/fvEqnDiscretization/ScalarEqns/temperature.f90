@@ -18,7 +18,7 @@ module temperature
   character ( len=12 ) :: lSolverT = 'bicgstab'      ! Linear algebraic solver.
   integer  :: maxiterT = 10                          ! Max number of iterations in linear solver.
   real(dp) :: tolAbsT = 1e-13                        ! Absolute residual level.
-  real(dp) :: tolRelT = 2.5e-2                       ! Relative drop in residual to exit linear solver.
+  real(dp) :: tolRelT = 0.02_dp                      ! Relative drop in residual to exit linear solver.
   real(dp) :: sigt = 1.0_dp                          ! sigma_t
 
 
@@ -51,6 +51,7 @@ subroutine calculate_temperature
 ! Local variables
 !
   integer ::  i, k, inp, ijp, ijn, ijb, ib, iface, iWall
+  integer :: iPer, l, if, iftwin
   real(dp) :: gam, prtr, apotime
   real(dp) :: cap, can, suadd
   real(dp) :: off_diagonal_terms
@@ -152,6 +153,8 @@ subroutine calculate_temperature
   !
 
   iWall = 0
+  iPer = 0
+  l = numInnerFaces
 
   do ib=1,numBoundaries
 
@@ -244,6 +247,57 @@ subroutine calculate_temperature
 
       enddo
 
+    elseif (  bctype(ib) == 'periodic' ) then
+
+      iPer = iPer + 1 ! count periodic boundary pairs
+
+      ! Faces trough periodic boundaries
+      do i=1,nfaces(ib)
+
+        if = startFace(ib) + i
+        ijp = owner(if)
+
+        iftwin = startFaceTwin(iPer) + i ! Where does the face data for twin start, looking at periodic boundary pair with index iPer.
+        ijn = owner(iftwin)              ! Owner cell of the twin periodic face
+
+
+        ! face flux scalar but for periodic boundaries - it will be recognized by arguments
+        call facefluxsc_periodic( ijp, ijn, xf(if), yf(if), zf(if), arx(if), ary(if), arz(if), &
+                                  flmass(if), gam, &
+                                  T, dTdxi, prtr, cap, can, suadd )
+
+
+        ! > Off-diagonal elements:
+
+        ! l is in interval [numInnerFaces+1, numInnerFaces+numPeriodic]
+        l = l + 1
+
+        ! (icell,jcell) matrix element:
+        k = icell_jcell_csr_index(l)
+        a(k) = can
+
+        ! (jcell,icell) matrix element:
+        k = jcell_icell_csr_index(l)
+        a(k) = cap
+
+        ! > Elements on main diagonal:
+
+        ! ! (icell,icell) main diagonal element
+        k = diag(ijp)
+        a(k) = a(k) - can
+
+        ! ! (jcell,jcell) main diagonal element
+        k = diag(ijn)
+        a(k) = a(k) - cap
+
+        ! > Sources:
+
+        su(ijp) = su(ijp) + suadd
+        su(ijn) = su(ijn) - suadd 
+
+
+      end do 
+
 
     endif
     
@@ -298,26 +352,54 @@ subroutine calculate_temperature
   ! Solve linear system:
   call csrsolve(lSolverT, T, su, resor(7), maxiterT, tolAbsT, tolRelT, 'Temp')
 
-  !
-  ! Update symmetry and outlet boundaries
-  !
-  do ib=1,numBoundaries
+  
+  ! Update field values at boundaries
+  call updateBoundary( T )
+  ! do ib=1,numBoundaries
 
-    if ( bctype(ib) == 'outlet' .or. bctype(ib) == 'symmetry' ) then
+  !   if ( bctype(ib) == 'outlet' .or. &
+  !        bctype(ib) == 'symmetry' .or. &
+  !        bctype(ib) == 'pressure' .or. &
+  !        bctype(ib) == 'empty' ) then
 
-      do i=1,nfaces(ib)
+  !     do i=1,nfaces(ib)
 
-        iface = startFace(ib) + i
-        ijp = owner(iface)
-        ijb = iBndValueStart(ib) + i
+  !       iface = startFace(ib) + i
+  !       ijp = owner(iface)
+  !       ijb = iBndValueStart(ib) + i
 
-        T(ijb) = T(ijp)
+  !       T(ijb) = T(ijp)
 
-      enddo
+  !     enddo
 
-    endif
+  !   elseif (  bctype(ib) == 'periodic' ) then
 
-  enddo
+  !   iPer = iPer + 1
+
+  !     ! Faces trough periodic boundaries, Taiwo first
+  !     do i=1,nfaces(ib)
+
+  !       iface = startFace(ib) + i
+  !       ijp = owner(iface)
+  !       ijb = iBndValueStart(ib) + i
+
+  !       iface = startFaceTwin(iPer) + i
+  !       ijn = owner(iface)
+
+  !       T(ijb) = half*( T(ijp)+T(ijn) )
+
+  !       ! Now find where is the twin in field array
+  !       ijbt = numCells + ( startFaceTwin(iPer) - numInnerFaces ) + i
+        
+  !       ! Twin takes the same values
+  !       T(ijbt) = T(ijb)
+
+  !     enddo
+
+
+  !   endif
+
+  ! enddo
 
 
 ! Report range of scalar values and clip if negative
@@ -604,5 +686,136 @@ subroutine facefluxsc_boundary(ijp, ijn, xf, yf, zf, arx, ary, arz, fm, FI, dFid
   suadd = fdfie-fdfii 
 
 end subroutine
+
+
+
+!***********************************************************************
+!
+subroutine facefluxsc_periodic(ijp, ijn, xf, yf, zf, arx, ary, arz, &
+                               flmass, gam, &
+                               FI, dFidxi, prtr, cap, can, suadd)
+!
+!***********************************************************************
+!
+  use types
+  use parameters
+  use variables, only: vis
+  use interpolation
+
+  implicit none
+!
+!***********************************************************************
+! 
+
+  integer, intent(in) :: ijp, ijn
+  real(dp), intent(in) :: xf,yf,zf
+  real(dp), intent(in) :: arx, ary, arz
+  real(dp), intent(in) :: flmass
+  real(dp), intent(in) :: gam 
+  ! character( len=30 ), intent(in) :: cScheme ! Convection scheme.
+  real(dp), dimension(numTotal), intent(in) :: Fi
+  real(dp), dimension(3,numCells), intent(in) :: dFidxi
+  real(dp), intent(in) :: prtr
+  real(dp), intent(inout) :: cap, can, suadd
+
+
+! Local variables
+  real(dp) :: are
+  real(dp) :: xpn,ypn,zpn
+  real(dp) :: dpn
+  real(dp) :: Cp,Ce
+  real(dp) :: fii,fm
+  real(dp) :: fdfie,fdfii,fcfie,fcfii,ffic
+  real(dp) :: de, game, viste
+  real(dp) :: fxp,fxn
+  real(dp) :: dfixi,dfiyi,dfizi
+!----------------------------------------------------------------------
+
+  ! > Geometry:
+
+  ! Face interpolation factor
+  fxn = 0.5_dp ! Assumption for periodic boundaries
+  fxp = fxn
+
+  ! Distance vector between cell centers
+  xpn = 2*( xf-xc(ijp) )
+  ypn = 2*( yf-yc(ijp) )
+  zpn = 2*( zf-zc(ijp) )
+
+  ! Distance from P to neighbor N
+  dpn=sqrt(xpn**2+ypn**2+zpn**2)     
+
+  ! cell face area
+  are=sqrt(arx**2+ary**2+arz**2)
+
+  !*******************************************
+  ! Cell face diffussion coefficient
+  viste = (vis(ijp)-viscos)*fxp+(vis(ijn)-viscos)*fxn
+  game = viscos*prtr+viste/sigt  
+  !*******************************************
+
+  ! Difusion coefficient for linear system
+  ! de = game*are/dpn
+  de = game*(arx*arx+ary*ary+arz*arz)/(xpn*arx+ypn*ary+zpn*arz)
+
+  ! Convection fluxes - uds
+  fm = flmass
+  ce = min(fm,zero) 
+  cp = max(fm,zero)
+
+  !-------------------------------------------------------
+  ! System matrix coefficients
+  !-------------------------------------------------------
+  cap = -de - max(fm,zero)
+  can = -de + min(fm,zero)
+  !-------------------------------------------------------
+
+
+  !-------------------------------------------------------
+  ! Explicit part of diffusion
+  !-------------------------------------------------------
+
+  dfixi = dFidxi(1,ijp)*fxp+dFidxi(1,ijn)*fxn
+  dfiyi = dFidxi(2,ijp)*fxp+dFidxi(2,ijn)*fxn
+  dfizi = dFidxi(3,ijp)*fxp+dFidxi(3,ijn)*fxn
+
+  ! Explicit diffusion
+  fdfie = game*(dfixi*arx + dfiyi*ary + dfizi*arz)  
+
+  ! Implicit diffussion 
+  fdfii = game*are/dpn*(dfixi*xpn+dfiyi*ypn+dfizi*zpn)
+
+
+  !-------------------------------------------------------
+  ! Explicit higher order convection, cSheme is set in input
+  !-------------------------------------------------------
+  if( flmass .ge. zero ) then 
+    ! Flow goes from p to pj - > p is the upwind node
+    fii = face_value_cds(ijp, ijn, fxp, fi)
+  else
+    ! Other way, flow goes from pj, to p -> pj is the upwind node.
+    fii = face_value_cds(ijn, ijp, fxn, fi)
+  endif
+
+  fcfie = fm*fii
+
+  !-------------------------------------------------------
+  ! Explicit first order convection
+  !-------------------------------------------------------
+  fcfii = ce*fi(ijn)+cp*fi(ijp)
+
+  !-------------------------------------------------------
+  ! Deffered correction for convection = gama_blending*(high-low)
+  !-------------------------------------------------------
+  ffic = gam*(fcfie-fcfii)
+
+  !-------------------------------------------------------
+  ! Explicit part of fluxes
+  !-------------------------------------------------------
+  suadd = -ffic+fdfie-fdfii 
+
+end subroutine
+
+
 
 end module temperature

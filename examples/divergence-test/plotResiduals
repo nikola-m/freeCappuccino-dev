@@ -1,0 +1,8 @@
+set logscale y
+set title "Residuals"
+set ylabel 'Residual'
+set xlabel 'Iteration'
+#set yrange[1e-7:1]
+plot "< cat monitor | grep 'Solving for Temp' | cut -d' ' -f12 | tr -d ','" title 'T' with lines
+pause 5
+reread

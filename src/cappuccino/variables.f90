@@ -27,7 +27,7 @@ module variables
     real(dp), dimension(:), allocatable :: teoo
     real(dp),dimension(:,:), allocatable :: dTEdxi
 
-    real(dp), dimension(:), allocatable :: ed                 ! TKE Dissipation rate,
+    real(dp), dimension(:), allocatable :: ed                 ! TKE Dissipation rate
     real(dp), dimension(:), allocatable :: edo
     real(dp), dimension(:), allocatable :: edoo
     real(dp),dimension(:,:), allocatable :: dEDdxi
@@ -39,10 +39,17 @@ module variables
 
     real(dp), dimension(:), allocatable :: gen                ! Turb. kin. energy generation (production)
 
-    real(dp), dimension(:), allocatable :: T                  ! Temperature in K
+    real(dp), dimension(:), allocatable :: T                  ! Temperature
     real(dp), dimension(:), allocatable :: to
     real(dp), dimension(:), allocatable :: too
     real(dp),dimension(:,:), allocatable :: dTdxi
+
+
+    real(dp), dimension(:), allocatable :: En                 ! Total energy, internal energy or enthaply
+    real(dp), dimension(:), allocatable :: Eno
+    real(dp), dimension(:), allocatable :: Enoo
+    real(dp),dimension(:,:), allocatable :: dEndxi
+
 
     real(dp), dimension(:), allocatable :: con                ! Concentration
     real(dp), dimension(:), allocatable :: cono

@@ -52,10 +52,6 @@ subroutine calcsc_tke
 ! Purpose:
 !  Assemble and solve turbulence kinetic energy eqn.
 !
-  use types
-  use parameters
-  use geometry
-  use variables
   use sparse_matrix
   use gradients
   use linear_solvers
@@ -96,26 +92,26 @@ subroutine calcsc_tke
 
   do inp=1,numCells
 
-    dudx = dudxi(1,inp)
-    dudy = dudxi(2,inp)
-    dudz = dudxi(3,inp)
+    ! dudx = dudxi(1,inp)
+    ! dudy = dudxi(2,inp)
+    ! dudz = dudxi(3,inp)
 
-    dvdx = dvdxi(1,inp)
-    dvdy = dvdxi(2,inp)
-    dvdz = dvdxi(3,inp)
+    ! dvdx = dvdxi(1,inp)
+    ! dvdy = dvdxi(2,inp)
+    ! dvdz = dvdxi(3,inp)
 
-    dwdx = dwdxi(1,inp)
-    dwdy = dwdxi(2,inp)
-    dwdz = dwdxi(3,inp)
+    ! dwdx = dwdxi(1,inp)
+    ! dwdy = dwdxi(2,inp)
+    ! dwdz = dwdxi(3,inp)
 
-    ! Minus here in fron because UU,UV,... calculated in calcstress hold -tau_ij
-    ! So the exact production is calculated as tau_ij*dui/dxj
-    gen(inp) = -den(inp)*( uu(inp)*dudx+uv(inp)*(dudy+dvdx)+ &
-                           uw(inp)*(dudz+dwdx)+vv(inp)*dvdy+ &
-                           vw(inp)*(dvdz+dwdy)+ww(inp)*dwdz )
+    ! ! Minus here in fron because UU,UV,... calculated in calcstress hold -tau_ij
+    ! ! So the exact production is calculated as tau_ij*dui/dxj
+    ! gen(inp) =  den(inp)*( uu(inp)*dudx+uv(inp)*(dudy+dvdx)+ &
+    !                        uw(inp)*(dudz+dwdx)+vv(inp)*dvdy+ &
+    !                        vw(inp)*(dvdz+dwdy)+ww(inp)*dwdz )
 
     ! magStrainSq=magStrain(inp)*magStrain(inp)
-    ! gen(inp)=abs(vis(inp)-viscos)*magStrainSq
+    gen(inp)=abs(vis(inp)-viscos)*magStrain(inp)**2
 
   enddo
 
@@ -408,13 +404,8 @@ subroutine calcsc_epsilon
 !
 ! Assemble and solve turbulence dissipation rate equation.
 !
-  use types
-  use parameters
-  use geometry
-  use variables
   use sparse_matrix
   use gradients
-  use title_mod
   use linear_solvers
   
   implicit none
@@ -448,7 +439,7 @@ subroutine calcsc_epsilon
   prtr=1.0_dp/sigma_epsilon
 
 ! Calculate gradient: 
-  call grad(fi,dfidxi)
+  call grad(ed,dEddxi)
 
 ! Initialize coef and source arrays
   a = 0.0_dp
@@ -538,7 +529,7 @@ subroutine calcsc_epsilon
     call facefluxsc( ijp, ijn, &
                      xf(i), yf(i), zf(i), arx(i), ary(i), arz(i), &
                      flmass(i), facint(i), gam, &
-                     fi, dFidxi, prtr, cap, can, suadd )
+                     ed, dEddxi, prtr, cap, can, suadd )
 
     ! > Off-diagonal elements:
 
@@ -588,32 +579,14 @@ subroutine calcsc_epsilon
         call facefluxsc( ijp, ijb, &
                          xf(iface), yf(iface), zf(iface), arx(iface), ary(iface), arz(iface), &
                          flmass(iface), &
-                         Fi, dFidxi, prtr, cap, can, suadd)
+                         ed, dEddxi, prtr, cap, can, suadd)
 
         Sp(ijp) = Sp(ijp)-can
 
-        Su(ijp) = Su(ijp)-can*Fi(ijb) + suadd
+        Su(ijp) = Su(ijp)-can*ed(ijb) + suadd
 
       end do
 
-    elseif ( bctype(ib) == 'outlet' ) then
-
-      do i=1,nfaces(ib)
-
-        iface = startFace(ib) + i
-        ijp = owner(iface)
-        ijb = iBndValueStart(ib) + i
-
-        call facefluxsc( ijp, ijb, &
-                         xf(iface), yf(iface), zf(iface), arx(iface), ary(iface), arz(iface), &
-                         flmass(iface), &
-                         FI, dFidxi, prtr, cap, can, suadd )
-
-        Sp(ijp) = Sp(ijp)-can
-
-        Su(ijp) = Su(ijp)-can*Fi(ijb) + suadd
-
-      end do
 
     elseif ( bctype(ib) == 'wall') then
 
@@ -684,12 +657,12 @@ subroutine calcsc_epsilon
 
         ! Underelaxation:
         a(diag(inp)) = a(diag(inp))*urfrs
-        su(inp) = su(inp) + urfms*a(diag(inp))*fi(inp)
+        su(inp) = su(inp) + urfms*a(diag(inp))*ed(inp)
                     
   enddo
 
   ! Solve linear system:
-  call bicgstab(fi,ifi)
+  call bicgstab(ed,ifi)
 
   !
   ! Update symmetry and outlet boundaries
@@ -704,7 +677,7 @@ subroutine calcsc_epsilon
         ijp = owner(iface)
         ijb = iBndValueStart(ib) + i
 
-        fi(ijb)=fi(ijp)
+        ed(ijb)=ed(ijp)
 
       enddo
 
@@ -714,13 +687,13 @@ subroutine calcsc_epsilon
 
 
 ! Report range of scalar values and clip if negative
-  fimin = minval(fi(1:numCells))
-  fimax = maxval(fi(1:numCells))
+  fimin = minval(ed(1:numCells))
+  fimax = maxval(ed(1:numCells))
   
   write(6,'(2x,es11.4,3a,es11.4)') fimin,' <= ',chvar(ifi),' <= ',fimax
 
 ! These field values cannot be negative
-  if(fimin.lt.0.0_dp) fi(1:numCells) = max(fi(1:numCells),small)
+  if(fimin.lt.0.0_dp) ed(1:numCells) = max(ed(1:numCells),small)
 
 end subroutine
 

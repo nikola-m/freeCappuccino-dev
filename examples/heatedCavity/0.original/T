@@ -1,0 +1,21 @@
+internalField
+  uniform
+    273.0
+boundaryField
+wall-top
+  Neumann
+    zeroGradient
+wall-left
+  Dirichlet
+    uniform
+      273.0
+wall-bottom
+  Neumann
+    zeroGradient
+wall-right
+  Dirichlet
+    uniform
+      373.0
+front-back
+  Neumann
+    zeroGradient

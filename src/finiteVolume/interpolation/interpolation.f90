@@ -91,6 +91,9 @@ function face_value(ijp,ijn,xf,yf,zf,lambda,u,dUdxi,scheme) result(vf)
     case ( 'central' )
       vf = face_value_central(ijp, ijn, xf, yf, zf, u, dUdxi)
 
+    case ('harmonic')
+      vf = face_value_harmonic(ijp,ijn, lambda, u) 
+
     case ('linearUpwind')
       vf = face_value_2nd_upwind(ijp, xf, yf, zf, u, dUdxi)
 
@@ -266,6 +269,57 @@ function face_value_central(inp,inn, xf, yf, zf, fi, gradfi) result(vf)
 end function
 
 
+function face_value_harmonic(ijp, ijn, lambda, fi) result(vf)
+!
+!  Purpose: 
+!    Calculates face value using HARMONIC differencing scheme.
+!
+!  Discussion:
+!    This sceheme is proposed in S.Patankar's book and recommended
+!    for diffusion problems when diffusion coefs have greater spatial variation.
+!
+!  Licensing:
+!
+!    This code is distributed under the GNU GPL license. 
+!
+!  Modified:
+!
+!    --
+!  Author:
+!
+!    Nikola Mirkov/Email: nikolamirkov@yahoo.com
+!
+!  Parameters:
+!    ijp               - Input, integer, index of the owner cell (of the face).
+!    ijn               - Input, integer, index of the neighbor cell (of the face).
+!    lambda            - Input, double, face centroid interpolation distance weighted factor.
+!    fi(numTotal)      - Input, double, scalar field values at cell centers.
+!    vf                - Output, double, intepolated value of the field at face centroid.
+!
+  implicit none
+!
+! Result
+!
+  real(dp) :: vf
+!
+! Parameters
+!
+  integer :: ijp, ijn
+  real(dp) :: lambda
+  real(dp), dimension(numTotal) :: fi
+!
+! Local variables
+!
+  real(dp) :: fxn,fxp
+
+  ! Face interpolation factor
+  fxn=lambda 
+  fxp=1.0_dp-lambda
+
+    vf = ( fi(ijp)*fi(ijn) ) / ( fi(ijp)*fxp+fi(ijn)*fxn + 1e-30 ) 
+
+end function
+
 function face_value_2nd_upwind(inp, xf, yf, zf, fi, gradfi) result(vf)
 !
 !  Purpose:
@@ -349,8 +403,8 @@ function face_value_kappa(inp,inn, xf, yf, zf, fi, gradfi) result(vf)
   real(dp) :: theta
 
   ! theta = 0.125_dp ! Fluent theta = 1/8
-  ! theta = 2./3.    ! CUI
-  theta = 0.5_dp     ! Fromm
+  theta = 2./3.    ! CUI
+  ! theta = 0.5_dp   ! Fromm
 
 
   gradfidr_2nd_upwind=gradfi(1,inp)*(xf-xc(inp))+gradfi(2,inp)*(yf-yc(inp))+gradfi(3,inp)*(zf-zc(inp)) 
@@ -520,7 +574,9 @@ function face_value_flux_limiter(ijp, ijn, lambda, u, dUdxi, scheme) result(vf)
   !   psi = 
 
     case default 
-      write(*,*) 'Fatal error: non-existing interpolation scheme!'
+
+      write(*,'(a)') ' '
+      write(*,'(a)') 'Fatal error: non-existing interpolation scheme!'
       stop
 
   end select

@@ -9,101 +9,153 @@ subroutine time_shift
 
   implicit none
 
-  if( bdf .or. cn ) then
-
-    uo = u 
-    vo = v 
-    wo = w 
-
-    teo = te 
-    edo = ed 
-
-    if ( calcT .or. calcEn ) To = T         
-    if ( calcCon ) Cono = Con 
-
-    if (CN) po = p
-
-    ! For consistent mass flux 
-    ! if (piso) then
-    !   flmasso = flmass
-    !   po = p
-    ! endif
-
-    deno = den
-  
-  elseif( bdf2 ) then
-
-    uoo = uo 
-    voo = vo 
-    woo = wo 
-
-    teoo = teo 
-    edoo = edo
-
-    if (calcT .or. calcEn ) Too = To 
-    if ( calcCon ) Conoo = Cono 
-
-    ! For consistent mass flux 
-    ! if (piso) then 
-    !   flmassoo = flmasso
-    !   poo = po
-    ! endif
-
-    uo = u 
-    vo = v 
-    wo = w 
-
-    teo = te 
-    edo = ed 
-
-    if (calcT .or. calcEn ) to = t         
-    if ( calcCon ) Cono = con 
-    
-    ! For consistent mass flux     
-    ! if (piso) then 
-    !   flmasso = flmass
-    !   po = p
-    ! endif
-
-  elseif( bdf3 ) then
-
+  ! Transfer data from level n-2 to level n-3 for BDF3 time-stepping:
+  if( bdf3 ) then
     uooo = uoo 
     vooo = voo 
     wooo = woo 
-
     flmassooo = flmassoo
     pooo = poo
+  endif
 
+  ! Transfer data from level n-1 to level n-2 for BDF3 or BDF2 time-stepping:
+  if( bdf3 .or. bdf2 ) then
     uoo = uo 
     voo = vo 
     woo = wo 
-
     teoo = teo 
     edoo = edo
     if (calcT .or. calcEn ) Too = To 
+    if ( calcEn ) Enoo = Eno   
     if ( calcCon ) Conoo = Cono 
-
     ! For consistent mass flux 
     ! if (piso) then 
     !   flmassoo = flmasso
     !   poo = po
     ! endif
-
-    uo = u 
-    vo = v 
-    wo = w 
-    teo = te 
-    edo = ed 
-    if (calcT .or. calcEn ) To = T          
-    if ( calcCon ) Cono = con 
-
-    ! For consistent mass flux 
-    ! if (piso) then 
-    !   flmasso = flmass
-    !   po = p
-    ! endif
-
   endif
+
+
+  ! In all other cases (Crank-Nicolson, BDF) exclusively, 
+  ! but also in the case of BDF2 and BDF3 as final shift, 
+  ! transfer data from level n to level n-1:
+  uo = u 
+  vo = v 
+  wo = w 
+  teo = te 
+  edo = ed 
+
+  if ( CN ) po = p ! Only for Crank-Nicolson
+  
+  ! For buoyancy when not using Boussines and for pressure-based compressible solver, 
+  ! i.e. if( (lbuoy .and. .not.boussinesq) .or. AllSpeedsSimple ) then
+  deno = den  
+
+  if ( calcT .or. calcEn ) To = T    
+  if ( calcEn ) Eno = En      
+  if ( calcCon ) Cono = Con 
+
+  ! For consistent mass flux 
+  ! if (piso) then
+  !   flmasso = flmass
+  !   po = p
+  ! endif
+
+
+!####
+
+
+  ! if( bdf .or. cn ) then
+
+  !   uo = u 
+  !   vo = v 
+  !   wo = w 
+  !   teo = te 
+  !   edo = ed 
+  !   if ( calcT .or. calcEn ) To = T    
+  !   if ( calcEn ) Eno = En      
+  !   if ( calcCon ) Cono = Con 
+  !   if ( CN ) po = p
+  !   deno = den ! if ( (lbuoy .and. .not.boussinesq) .or. AllSpeedsSimple ) deno = den
+
+  !   ! For consistent mass flux 
+  !   ! if (piso) then
+  !   !   flmasso = flmass
+  !   !   po = p
+  !   ! endif
+
+  
+  ! elseif( bdf2 ) then
+
+  !   uoo = uo 
+  !   voo = vo 
+  !   woo = wo 
+  !   teoo = teo 
+  !   edoo = edo
+  !   if (calcT .or. calcEn ) Too = To 
+  !   if ( calcEn ) Enoo = Eno   
+  !   if ( calcCon ) Conoo = Cono 
+
+  !   ! For consistent mass flux 
+  !   ! if (piso) then 
+  !   !   flmassoo = flmasso
+  !   !   poo = po
+  !   ! endif
+
+  !   uo = u 
+  !   vo = v 
+  !   wo = w 
+  !   teo = te 
+  !   edo = ed 
+  !   if (calcT .or. calcEn ) To = T    
+  !   if ( calcEn ) Eno = En        
+  !   if ( calcCon ) Cono = Con 
+
+  !   ! For consistent mass flux:     
+  !   ! if (piso) then 
+  !   !   flmasso = flmass
+  !   !   po = p
+  !   ! endif
+
+  ! elseif( bdf3 ) then
+
+  !   uooo = uoo 
+  !   vooo = voo 
+  !   wooo = woo 
+
+  !   flmassooo = flmassoo
+  !   pooo = poo
+
+  !   uoo = uo 
+  !   voo = vo 
+  !   woo = wo 
+
+  !   teoo = teo 
+  !   edoo = edo
+  !   if (calcT .or. calcEn ) Too = To 
+  !   if ( calcCon ) Conoo = Cono 
+
+  !   ! For consistent mass flux: 
+  !   ! if (piso) then 
+  !   !   flmassoo = flmasso
+  !   !   poo = po
+  !   ! endif
+
+  !   uo = u 
+  !   vo = v 
+  !   wo = w 
+  !   teo = te 
+  !   edo = ed 
+  !   if (calcT .or. calcEn ) To = T          
+  !   if ( calcCon ) Cono = con 
+
+  !   ! For consistent mass flux 
+  !   ! if (piso) then: 
+  !   !   flmasso = flmass
+  !   !   po = p
+  !   ! endif
+
+  ! endif
 
 
 end subroutine

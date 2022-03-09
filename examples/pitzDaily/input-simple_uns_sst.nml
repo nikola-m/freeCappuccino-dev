@@ -16,7 +16,7 @@
            maxiterU = 10            ! Max no of iterations for linear U-V-W equations
             tolAbsU = 1e-13         ! Absolute tolerance level for residual for linear U-V-W equations
             tolRelU = 0.01          ! Relative tolerance level for residual for linear U-V-W equations
-ScndOrderPressIntrp = F             ! Second order (default), or massflow weighted interpolation of pressure to faces.
+            pscheme = 'weighted'      ! pressure interpolation scheme 
         !
         ! Approximation details for pressure/pressure correction.
         !
@@ -30,15 +30,6 @@ ScndOrderPressIntrp = F             ! Second order (default), or massflow weight
         ! Physical model: Viscous flows - Laminar/Turbulent, Activation and model details.
         !
           TurbModel = 'k_omega_sst'         ! Turbulence model - defined by string code.    
-                urf = 0.5 0.5 0.0 0.0 0.0 0.0 0.0 1.0 ! Under-relaxation factors. (Array of 8 values)
-                gds = 1.0 1.0 1.0 1.0 1.0 1.0 1.0 1.0 ! Deferred correction factor. (Array of 8 values)
-            cScheme = 'muscl' ! Convection scheme - default is second order upwind.
-            dScheme = 'skewness'     ! Difussion scheme, i.e. the method for normal gradient at face skewness/offset.
-             nrelax = 0              ! Relaxation parameter non-orthogonal correction for face gradient.
-            lSolver = 'bicgstab'     ! Linear algebraic solver.
-            maxiter = 20             ! Max number of iterations in linear solver.
-             tolAbs = 1e-15          ! Absolute residual level.
-             tolRel = 0.01           ! Relative drop in residual to exit linear solver.
         !
         ! Definition of physical properties of fluid.
         !      
@@ -68,7 +59,7 @@ ScndOrderPressIntrp = F             ! Second order (default), or massflow weight
         !    
              SIMPLE = T       !# |Pressure-velocity coupling method - SIMPLE, or...
                PISO = F       !# |Pressure-velocity coupling method - PISO.
-    AllSpeedsSIMPLE = F       !# SIMPLE for compressible flows. Activate Energy eqn.
+       compressible = F       !# SIMPLE for compressible flows. Activate Energy eqn.
               ncorr = 1       ! Number of PISO corrections - only relevant for PISO.
               npcor = 1       ! Number of iterations for pressure/pressure correction equation - Number of Nonorthogonal corrections.  
            pRefCell = 1       ! Reference cell for setting pressure level (since we have pure Neumann problem)

@@ -13,6 +13,7 @@ subroutine continuityErrors
   implicit none
 
   integer :: i, ijp, ijn, ib, iface
+  ! real(dp) :: sumLocalContErrPrev
 
   ! Initialize array with zero value.
   res = 0.0_dp
@@ -55,19 +56,27 @@ subroutine continuityErrors
   enddo
 
 
+  ! Used this so far..
   sumLocalContErr = volumeWeightedAverage( abs(res*apu) )
 
-  ! globalContErr   = volumeWeightedAverage( res )
+  ! Variant 2 - experimental, scaling as in Fluent theory guide
+  ! sumLocalContErrPrev = sumLocalContErr
+  ! sumLocalContErr = sum( abs( res ) )
+  ! ! Scale continuity residual as in Fluent theory guide
+  ! if ( (itime-itimes).le.5 .and. sumLocalContErrPrev < sumLocalContErr ) then
+  !   res5Mass = sumLocalContErr
+  ! endif    
+  ! ! Scale residual:
+  ! sumLocalContErr = sumLocalContErr / res5Mass
 
-  ! sumLocalContErr = sum( abs( res ) ) 
-  
+  ! Global mass conservation
   globalContErr = sum( res )
 
   cumulativeContErr = cumulativeContErr + globalContErr
 
   res = 0.0_dp
 
-  ! For report of scaled residuals - scaled residual for continuity is this.
+  ! For report of scaled residuals
   resor(4) = sumLocalContErr
 
   write(6,'(3(a,es10.3))') "  continuity errors : avg local = ", sumLocalContErr, &

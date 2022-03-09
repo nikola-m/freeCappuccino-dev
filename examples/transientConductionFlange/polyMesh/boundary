@@ -1,0 +1,5 @@
+# bcName bcType nFaces startFace
+patch1 wall 2440 15316
+patch2 wall 348 17756
+patch3 wall 96 18104
+patch4 wall 384 18200

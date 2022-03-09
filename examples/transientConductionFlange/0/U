@@ -1,0 +1,20 @@
+internalField
+  uniform
+    0.0 0.0 0.0
+boundaryField
+patch1
+  Dirichlet
+    uniform
+      0.0 0.0 0.0
+patch2
+  Dirichlet
+    uniform
+      0.0 0.0 0.0
+patch3
+  Dirichlet
+    uniform
+      0.0 0.0 0.0
+patch4
+  Dirichlet
+    uniform
+      0.0 0.0 0.0

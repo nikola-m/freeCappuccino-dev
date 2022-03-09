@@ -29,7 +29,7 @@ subroutine vtu_write_XML_header ( output_unit )
   call i4_to_s_left ( numCells, cells_num_string )
 
 
-  write ( output_unit, '(a)' )    '<VTKFile type="UnstructuredGrid" version="0.1" byte_order="BigEndian">'
+  write ( output_unit, '(a)' )    '<VTKFile type="UnstructuredGrid" version="0.1" byte_order="LittleEndian" header_type="UInt64">'
   write ( output_unit, '(2x,a)' ) '<UnstructuredGrid>'
   write ( output_unit, '(4x,5a)' ) &
   '<Piece NumberOfPoints="',trim( node_num_string ),'" NumberOfCells="',trim( cells_num_string ),'">'
@@ -294,7 +294,8 @@ subroutine vtm_write_scalar_field ( scalar_name, scalar_field, timechar )
   open(unit=output_unit,file='VTK/scalar_name_'//trim( timechar )//'.vtm')
 
   write ( output_unit, '(a)' )    '<?xml version="1.0"?>'
-  write ( output_unit, '(2x,a)' ) '<VTKFile type="vtkMultiBlockDataSet" version="1.0" byte_order="LittleEndian">'
+  write ( output_unit, '(2x,a)' ) &
+  '<VTKFile type="vtkMultiBlockDataSet" version="1.0" byte_order="LittleEndian" header_type="UInt64">'
   write ( output_unit, '(4x,a)' ) '<vtkMultiBlockDataSet>'
   write ( output_unit, '(6x,a)' ) '<Block index="0" name="Cells">'
   write ( output_unit, '(8x,a)' ) '<DataSet index="0" name="interior" file="'//trim(timechar)//'/interior.vtu" format="appended">'
@@ -339,7 +340,7 @@ subroutine vtm_write_scalar_field ( scalar_name, scalar_field, timechar )
 
   read(cells_file, *) ch ! A line where numCells is.
 
-  write ( output_unit, '(a)' )    '<VTKFile type="UnstructuredGrid" version="0.1" byte_order="BigEndian">'
+  write ( output_unit, '(a)' ) '<VTKFile type="UnstructuredGrid" version="0.1" byte_order="LittleEndian" header_type="UInt64">'
   write ( output_unit, '(2x,a)' ) '<UnstructuredGrid>'
   write ( output_unit, '(4x,5a)' ) &
   '<Piece NumberOfPoints="',trim( node_num_string ),'" NumberOfCells="',trim( cells_num_string ),'">'
@@ -432,7 +433,8 @@ subroutine vtm_write_scalar_field ( scalar_name, scalar_field, timechar )
   open(unit=output_unit,file='VTK/boundary_'//trim(timechar)//'.vtm')
 
   write ( output_unit, '(a)' )    '<?xml version="1.0"?>'
-  write ( output_unit, '(2x,a)' ) '<VTKFile type="vtkMultiBlockDataSet" version="1.0" byte_order="LittleEndian">'
+  write ( output_unit, '(2x,a)' ) &
+  '<VTKFile type="vtkMultiBlockDataSet" version="1.0" byte_order="LittleEndian" header_type="UInt64">'
   write ( output_unit, '(4x,a)' ) '<vtkMultiBlockDataSet>'
   write ( output_unit, '(6x,a)' ) '<Block index="0" name="Boundaries">'
 
@@ -491,7 +493,7 @@ subroutine vtm_write_scalar_field ( scalar_name, scalar_field, timechar )
     call i4_to_s_left ( nFaces(ib), cells_num_string )
 
 
-    write ( output_unit, '(a)' )    '<VTKFile type="UnstructuredGrid" version="0.1" byte_order="BigEndian">'
+    write ( output_unit, '(a)' ) '<VTKFile type="UnstructuredGrid" version="0.1" byte_order="LittleEndian" header_type="UInt64">'
     write ( output_unit, '(2x,a)' ) '<UnstructuredGrid>'
     write ( output_unit, '(4x,5a)' ) &
     '<Piece NumberOfPoints="',trim( node_num_string ),'" NumberOfCells="',trim( cells_num_string ),'">'
@@ -635,7 +637,7 @@ subroutine vtu_write_scalar_field ( output_unit, scalar_name, scalar_field )
   rewind cells_file
 
 
-  write ( output_unit, '(a)' )    '<VTKFile type="UnstructuredGrid" version="0.1" byte_order="BigEndian">'
+  write ( output_unit, '(a)' ) '<VTKFile type="UnstructuredGrid" version="0.1" byte_order="LittleEndian" header_type="UInt64">'
   write ( output_unit, '(2x,a)' ) '<UnstructuredGrid>'
   write ( output_unit, '(4x,5a)' ) &
   '<Piece NumberOfPoints="',trim( node_num_string ),'" NumberOfCells="',trim( cells_num_string ),'">'
@@ -758,7 +760,7 @@ subroutine vtu_write_vector_field ( output_unit, field_name, u, v, w )
   open( unit = cells_file, file='polyMesh/cells' )
   rewind cells_file
 
-  write ( output_unit, '(a)' )    '<VTKFile type="UnstructuredGrid" version="0.1" byte_order="BigEndian">'
+  write ( output_unit, '(a)' ) '<VTKFile type="UnstructuredGrid" version="0.1" byte_order="LittleEndian" header_type="UInt64">'
   write ( output_unit, '(2x,a)' ) '<UnstructuredGrid>'
   write ( output_unit, '(4x,5a)' ) &
   '<Piece NumberOfPoints="',trim( node_num_string ),'" NumberOfCells="',trim( cells_num_string ),'">'
@@ -878,7 +880,7 @@ subroutine vtu_write_mesh ( output_unit )
   open( unit = cells_file, file='polyMesh/cells' )
   rewind cells_file
 
-  write ( output_unit, '(a)' )    '<VTKFile type="UnstructuredGrid" version="0.1" byte_order="BigEndian">'
+  write ( output_unit, '(a)' ) '<VTKFile type="UnstructuredGrid" version="0.1" byte_order="LittleEndian" header_type="UInt64">'
   write ( output_unit, '(2x,a)' ) '<UnstructuredGrid>'
   write ( output_unit, '(4x,5a)' ) &
   '<Piece NumberOfPoints="',trim( node_num_string ),'" NumberOfCells="',trim( cells_num_string ),'">'

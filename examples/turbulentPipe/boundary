@@ -1,0 +1,4 @@
+# bcName bcType nFaces startFace
+inlet empty 4205 799443
+outlet periodic 4205 803648 799443
+wall wall 7424 807853

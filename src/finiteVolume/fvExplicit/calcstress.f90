@@ -17,26 +17,14 @@ subroutine calcstress
 !***********************************************************************
 !
   integer :: inp
-  real(dp) :: vist                    ! turbulent viscosity
+  real(dp) :: mut                    ! turbulent viscosity
   real(dp) :: dudx, dudy, dudz, &     ! dudxi - the velocity gradient
               dvdx, dvdy, dvdz, &     ! dvdxi - the velocity gradient
               dwdx, dwdy, dwdz        ! dwdxi - the velocity gradient
-  ! real(dp) ::  uuold,vvold, wwold, &  ! Reynolds stress tensor  components 
-  !             uvold, uwold,vwold 
-  ! real(dp) :: facnapm
-
-  ! facnapm = 1.0d0-facnap
 
   do inp=1,numCells
 
-    vist=(vis(inp)-viscos)/densit
-
-    ! uuold=uu(inp)
-    ! vvold=vv(inp)
-    ! wwold=ww(inp)
-    ! uvold=uv(inp)
-    ! uwold=uw(inp)
-    ! vwold=vw(inp)
+    mut=(vis(inp)-viscos) !/densit ! divide with density if tau is define with nu_t instead of mu_t
 
     dudx = dUdxi(1,inp)
     dudy = dUdxi(2,inp)
@@ -50,61 +38,34 @@ subroutine calcstress
     dwdy = dWdxi(2,inp)
     dwdz = dWdxi(3,inp)
 
-    ! if(levm) then
+  
+    ! Reynolds stress tensor components
+    uu(inp) = mut*(dudx+dudx) - twothirds*den(inp)*te(inp)
+    vv(inp) = mut*(dvdy+dvdy) - twothirds*den(inp)*te(inp)
+    ww(inp) = mut*(dwdz+dwdz) - twothirds*den(inp)*te(inp)
 
-      uu(inp)=twothirds*te(inp)-vist*(dudx+dudx)
-      vv(inp)=twothirds*te(inp)-vist*(dvdy+dvdy)
-      ww(inp)=twothirds*te(inp)-vist*(dwdz+dwdz)
+    uv(inp) = mut*(dudy+dvdx)
+    uw(inp) = mut*(dudz+dwdx)
+    vw(inp) = mut*(dvdz+dwdy)
 
-      uv(inp)=-vist*(dudy+dvdx)
-      uw(inp)=-vist*(dudz+dwdx)
-      vw(inp)=-vist*(dvdz+dwdy)
 
-    ! else if(lasm) then
+    ! ! Wallin-Johansson EARSM  - check this again!
+    ! uu(inp) = mut*(dudx+dudx) - 2.*bij(1,inp)*te(inp) - twothirds*den(inp)*te(inp)
+    ! vv(inp) = mut*(dvdy+dvdy) - 2.*bij(4,inp)*te(inp) - twothirds*den(inp)*te(inp)
+    ! ! It seems that b(3,3)=-b(1,1)-b(2,2):
+    ! ww(inp) = mut*(dwdz+dwdz) + 2.*(bij(1,inp)+bij(4,inp))*te(inp) - twothirds*den(inp)*te(inp)
 
-      ! ! Wallin-Johansson EARSM
-      ! uu(inp) = twothirds*te(inp)-vist*(dudx+dudx) + 2.*bij(1,inp)*te(inp)
-      ! vv(inp) = twothirds*te(inp)-vist*(dvdy+dvdy) + 2.*bij(4,inp)*te(inp)
-      ! ! It seems that b(3,3)=-b(1,1)-b(2,2):
-      ! ww(inp) = twothirds*te(inp)-vist*(dwdz+dwdz)  &
-      !         - 2.*(bij(1,inp)+bij(4,inp))*te(inp) 
-
-      ! uv(inp) = -vist*(dudy+dvdx) + 2.*bij(2,inp)*te(inp)
-      ! uw(inp) = -vist*(dudz+dwdx) + 2.*bij(3,inp)*te(inp)
-      ! vw(inp) = -vist*(dvdz+dwdy) + 2.*bij(5,inp)*te(inp)
+    ! uv(inp) = mut*(dudy+dvdx) - 2.*bij(2,inp)*den(inp)*te(inp)
+    ! uw(inp) = mut*(dudz+dwdx) - 2.*bij(3,inp)*den(inp)*te(inp)
+    ! vw(inp) = mut*(dvdz+dwdy) - 2.*bij(5,inp)*den(inp)*te(inp)
  
-! !==========================================================
-! !     Reynolds stresses using the anisotropy tensor:
-! !     ______
-! !     u_iu_j = k(a_ij + 2/3 \delta_ij)
-! !     a_ij = 2* b_ij   
-! !==========================================================
-!       uu(inp)=2*bij(1,inp)*te(inp) + 2*te(inp)/3.
-!       vv(inp)=2*bij(4,inp)*te(inp) + 2*te(inp)/3.
-!       ww(inp)=0.                   + 2*te(inp)/3.
-
-!       uv(inp)=2*bij(2,inp)*te(inp)
-!       uw(inp)=2*bij(3,inp)*te(inp)
-!       vw(inp)=2*bij(5,inp)*te(inp)
-
-    ! end if 
 
     ! Clip negative values
     uu(inp)=max(uu(inp),small)
     vv(inp)=max(vv(inp),small)
     ww(inp)=max(ww(inp),small)
 
-    ! ! Underrelax using facnap factor
-    ! uu(inp)=facnap*uu(inp)+facnapm*uuold
-    ! vv(inp)=facnap*vv(inp)+facnapm*vvold
-    ! ww(inp)=facnap*ww(inp)+facnapm*wwold
+  end do 
 
-    ! uv(inp)=facnap*uv(inp)+facnapm*uvold
-    ! uw(inp)=facnap*uw(inp)+facnapm*uwold
-    ! vw(inp)=facnap*vw(inp)+facnapm*vwold
-
-
-  end do ! cell-loop
-!-------------------------------
 
 end subroutine

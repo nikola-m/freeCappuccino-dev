@@ -21,9 +21,10 @@ subroutine writefiles
   use temperature, only: calct
   use energy, only: calcen
   ! use concentration, only: calccon
-  use turbulence
+  use TurbModelData
   use rheology
   use mhd
+  use velocity, only: calc_wall_shear
 
   implicit none
 !
@@ -54,7 +55,8 @@ subroutine writefiles
   open(unit=output_unit,file='vtk/solution_fields_'//trim( timechar )//'.vtm')
 
   write ( output_unit, '(a)' )    '<?xml version="1.0"?>'
-  write ( output_unit, '(2x,a)' ) '<VTKFile type="vtkMultiBlockDataSet" version="1.0" byte_order="LittleEndian">'
+  write ( output_unit, '(2x,a)' ) &
+  '<VTKFile type="vtkMultiBlockDataSet" version="1.0" byte_order="LittleEndian" header_type="UInt64">'
   write ( output_unit, '(4x,a)' ) '<vtkMultiBlockDataSet>'
   write ( output_unit, '(6x,a)' ) '<Block index="0" name="Cells">'
   write ( output_unit, '(8x,a)' ) '<DataSet index="0" name="interior" file="'//trim(timechar)//'/interior.vtu" format="appended">'
@@ -155,7 +157,8 @@ subroutine writefiles
   open(unit=output_unit,file='vtk/boundary_'//trim(timechar)//'.vtm')
 
   write ( output_unit, '(a)' )    '<?xml version="1.0"?>'
-  write ( output_unit, '(2x,a)' ) '<VTKFile type="vtkMultiBlockDataSet" version="1.0" byte_order="LittleEndian">'
+  write ( output_unit, '(2x,a)' ) &
+  '<VTKFile type="vtkMultiBlockDataSet" version="1.0" byte_order="LittleEndian" header_type="UInt64">'
   write ( output_unit, '(4x,a)' ) '<vtkMultiBlockDataSet>'
   write ( output_unit, '(6x,a)' ) '<Block index="0" name="Boundaries">'
 
@@ -179,6 +182,10 @@ subroutine writefiles
 !
 ! > Open and write a unstructuctured .vtp file for EACH boundary region.
 !  
+
+  ! Before writing calculate wall shear ad yplus for postprocessing
+  call calc_wall_shear
+
   iWall = 1
 
   do ib=1,numBoundaries
@@ -191,7 +198,7 @@ subroutine writefiles
     ! > Header
     !
 
-    ! Serial number of the specific boundary region - with it's own file
+    ! Serial number of the specific boundary region - with its own file
     call i4_to_s_left ( ib, ch2 )
 
     call get_unit( mesh_file )

@@ -81,7 +81,7 @@ program steadyHeatEq
   ! Source term
   su(1:numCells) = 0.0_dp
 
-    su(8232:numCells) = 1.0 !Vol(8232:numCells)
+    ! su(8232:numCells) = 1.0 !Vol(8232:numCells)
   
   ! Add volumetric source term
   !su(1:numCells) = 8*pi**2*sin(2*pi*xc(1:numCells))*sin(2*pi*yc(1:numCells))*Vol(1:numCells)

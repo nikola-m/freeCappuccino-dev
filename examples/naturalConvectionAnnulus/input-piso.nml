@@ -16,7 +16,7 @@
            maxiterU = 5             ! Max no of iterations for linear U-V-W equations
             tolAbsU = 1e-13         ! Absolute tolerance level for residual for linear U-V-W equations
             tolRelU = 1e-6          ! Relative tolerance level for residual for linear U-V-W equations
-        ScndOrderPressIntrp = T     ! Second order (default), or massflow weighted interpolation of pressure to faces.
+            pscheme = 'linear'      ! pressure interpolation scheme 
         !
         ! Approximation details for pressure/pressure correction.
         !
@@ -38,7 +38,7 @@
               lSolverT = 'bicgstab'     ! Linear algebraic solver.
               maxiterT = 20             ! Max number of iterations in linear solver.
               tolAbsT = 1e-15           ! Absolute residual level.
-              tolRelT = 0.01            ! Relative drop in residual to exit linear solver.
+              tolRelT = 1e-5            ! Relative drop in residual to exit linear solver.
               sigt = 0.9                ! sigma_t
         !
         ! Physical model: Energy equation, Activation and model details.
@@ -52,7 +52,7 @@
             lSolverEn = 'bicgstab'        ! Linear algebraic solver.
             maxiterEn = 20                ! Max number of iterations in linear solver.
             tolAbsEn = 1e-15              ! Absolute residual level.
-            tolRelEn = 0.01               ! Relative drop in residual to exit linear solver.
+            tolRelEn = 1e-5               ! Relative drop in residual to exit linear solver.
             sigtEn = 0.9                  ! sigma_en
             solveTotalEnergy = .True.     !@ What we solve here - default is total energy, change it 
             solveInternalEnergy = .False. !@ in input.nml file.
@@ -64,8 +64,8 @@
               lbuoy = T                     !g Buoyancy activated True/False
          Boussinesq = T                     !g Bousinesq approximation for buoyancy
                tref = 300.0                 ! Reference temperature for buoyant flows
-              gravx = -9.81                 !g Three components of gravity vector
-              gravy = 0.0                   !g -
+              gravx = 0.0                   !g Three components of gravity vector
+              gravy = -9.81                 !g -
               gravz = 0.0                   !g -
         !
         ! Definition of physical properties of fluid.

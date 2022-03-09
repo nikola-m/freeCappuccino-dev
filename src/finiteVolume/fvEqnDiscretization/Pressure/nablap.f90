@@ -2,16 +2,16 @@ module nablap
 
 use types
 use gradients
-use interpolation, only: face_value_central
+use interpolation, only: face_value_central, face_value_cds, face_value_harmonic
 
 implicit none
 
-  logical :: ScndOrderPressIntrp  = .True. ! Second order (default), or massflow weighted interpolation of pressure to faces.
+  character(len=10) :: pscheme = 'linear' ! Interpolation scheme for pressure: "linear", "central","harmonic" or "weighted".
 
 private
 
 public :: surfaceIntegratePressure,surfaceIntegratePressureCrankNicolson,surfaceIntegratePressureCorr
-public :: ScndOrderPressIntrp  ! parameter for input.nml
+public :: pscheme ! parameter for input.nml
 
 contains
     
@@ -53,18 +53,31 @@ subroutine surfaceIntegratePressure
       ijp = owner(i)
       ijn = neighbour(i)
 
-      if ( ScndOrderPressIntrp  ) then
+      if ( pscheme == 'linear' ) then
 
         ! Value of the variable at cell-face center
-        pf = face_value_central( ijp, ijn, xf(i), yf(i), zf(i),  p, dPdxi )
+        pf = face_value_cds( ijp, ijn, facint(i), p)
 
-      else
+      elseif ( pscheme == 'central' ) then
+
+        pf = face_value_central( ijp, ijn, xf(i), yf(i), zf(i),  p, dPdxi ) 
+
+      elseif ( pscheme == 'harmonic' ) then
+
+        pf = face_value_harmonic( ijp, ijn, facint(i), p)
+
+      elseif ( pscheme == 'weighted' ) then
 
         ! Pressure on face based on "Standard" interpolation in Fluent.
         ! This is weighted interpolation where weights are mass flows estimated at respective cell center
         pf = ( p(ijp)*Apu(ijp)+p(ijn)*Apu(ijn) ) / ( Apu(ijp) + Apu(ijn) + small )
 
-        
+      else
+
+        write(*,'(a)') ' '
+        write(*,'(a)') 'Fatal error: non-existing interpolation scheme for pressure!'
+        stop
+    
       endif
 
 
@@ -85,7 +98,7 @@ subroutine surfaceIntegratePressure
 
     enddo
 
-    ! Contribution from boundaries
+    ! Contribution from boundaries, p(ijb) is updated in bpres.
 
     do i=1,numBoundaryFaces
       iface = numInnerFaces + i
@@ -139,18 +152,31 @@ subroutine surfaceIntegratePressureCorr
       ijp = owner(i)
       ijn = neighbour(i)
 
-      if ( ScndOrderPressIntrp  ) then
+      if ( pscheme == 'linear' ) then
 
         ! Value of the variable at cell-face center
-        pf = face_value_central( ijp, ijn, xf(i), yf(i), zf(i),  pp, dPdxi )
+        pf = face_value_cds( ijp, ijn, facint(i), pp)
 
-      else
+      elseif ( pscheme == 'central' ) then
+
+        pf = face_value_central( ijp, ijn, xf(i), yf(i), zf(i),  pp, dPdxi ) 
+
+      elseif ( pscheme == 'harmonic' ) then
+
+        pf = face_value_harmonic( ijp, ijn, facint(i), pp)
+
+      elseif ( pscheme == 'weighted' ) then
 
         ! Pressure on face based on "Standard" interpolation in Fluent.
         ! This is weighted interpolation where weights are mass flows estimated at respective cell center
         pf = ( pp(ijp)*Apu(ijp)+pp(ijn)*Apu(ijn) ) / ( Apu(ijp) + Apu(ijn) + small )
 
-        
+      else
+
+        write(*,'(a)') ' '
+        write(*,'(a)') 'Fatal error: non-existing interpolation scheme for pressure!'
+        stop
+    
       endif
 
 
@@ -274,13 +300,15 @@ subroutine surfaceIntegratePressureCrankNicolson
 !***********************************************************************
 !
 
-    ! Pressure gradient
-    do istage=1,nipgrad
-      ! Pressure at boundaries (for correct calculation of press. gradient)
-      call bpres(po,istage)
-      ! Calculate pressure gradient.
-      call grad(po,dPdxi)
-    end do
+    ! Pressure gradient - only if using central scheme
+    if ( pscheme == 'central' ) then
+      do istage=1,nipgrad
+        ! Pressure po at boundaries (for correct calculation of press. gradient)
+        call bpres(po,istage)
+        ! Calculate po pressure gradient.
+        call grad(po,dPdxi)
+      end do
+    endif
 
     ! Calculate terms integrated over surfaces
 
@@ -289,18 +317,31 @@ subroutine surfaceIntegratePressureCrankNicolson
       ijp = owner(i)
       ijn = neighbour(i)
 
-      if ( ScndOrderPressIntrp  ) then
+      if ( pscheme == 'linear' ) then
 
         ! Value of the variable at cell-face center
-        pf = face_value_central( ijp, ijn, xf(i), yf(i), zf(i),  po, dPdxi )
+        pf = face_value_cds( ijp, ijn, facint(i), po)
 
-      else
+      elseif ( pscheme == 'central' ) then
+
+        pf = face_value_central( ijp, ijn, xf(i), yf(i), zf(i),  po, dPdxi ) 
+
+      elseif ( pscheme == 'harmonic' ) then
+
+        pf = face_value_harmonic( ijp, ijn, facint(i), po)
+
+      elseif ( pscheme == 'weighted' ) then
 
         ! Pressure on face based on "Standard" interpolation in Fluent.
         ! This is weighted interpolation where weights are mass flows estimated at respective cell center
         pf = ( po(ijp)*Apu(ijp)+po(ijn)*Apu(ijn) ) / ( Apu(ijp) + Apu(ijn) + small )
 
-        
+      else
+
+        write(*,'(a)') ' '
+        write(*,'(a)') 'Fatal error: non-existing interpolation scheme for pressure!'
+        stop
+    
       endif
 
       ! For Crank-Nicolson - pressure source is split into two contributions from two consecutive timesteps
@@ -345,13 +386,15 @@ subroutine surfaceIntegratePressureCrankNicolson
   ! > Pressure source from present timestep
   !
   
-    ! Pressure gradient
-    do istage=1,nipgrad
-      ! Pressure at boundaries (for correct calculation of press. gradient)
-      call bpres(p,istage)
-      ! Calculate pressure gradient.
-      call grad(p,dPdxi)
-    end do
+    ! Pressure gradient - only if using central scheme
+    if ( pscheme == 'central' ) then
+      do istage=1,nipgrad
+        ! Pressure po at boundaries (for correct calculation of press. gradient)
+        call bpres(p,istage)
+        ! Calculate po pressure gradient.
+        call grad(p,dPdxi)
+      end do
+    endif
 
     ! Calculate terms integrated over surfaces
 
@@ -360,18 +403,31 @@ subroutine surfaceIntegratePressureCrankNicolson
       ijp = owner(i)
       ijn = neighbour(i)
 
-      if ( ScndOrderPressIntrp  ) then
+      if ( pscheme == 'linear' ) then
 
         ! Value of the variable at cell-face center
-        pf = face_value_central( ijp, ijn, xf(i), yf(i), zf(i),  p, dPdxi )
+        pf = face_value_cds( ijp, ijn, facint(i), p)
 
-      else
+      elseif ( pscheme == 'central' ) then
+
+        pf = face_value_central( ijp, ijn, xf(i), yf(i), zf(i),  p, dPdxi ) 
+
+      elseif ( pscheme == 'harmonic' ) then
+
+        pf = face_value_harmonic( ijp, ijn, facint(i), p)
+
+      elseif ( pscheme == 'weighted' ) then
 
         ! Pressure on face based on "Standard" interpolation in Fluent.
         ! This is weighted interpolation where weights are mass flows estimated at respective cell center
         pf = ( p(ijp)*Apu(ijp)+p(ijn)*Apu(ijn) ) / ( Apu(ijp) + Apu(ijn) + small )
 
-        
+      else
+
+        write(*,'(a)') ' '
+        write(*,'(a)') 'Fatal error: non-existing interpolation scheme for pressure!'
+        stop
+    
       endif
 
       ! For Crank-Nicolson - pressure source is split into two contributions from two consecutive timesteps

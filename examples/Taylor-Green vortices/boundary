@@ -1,0 +1,7 @@
+# bcName bcType nFaces startFace
+in empty 3969 750015
+out periodic 3969 753984 750015
+left empty 4032 757953
+right periodic 4032 761985 757953
+top empty 4032 766017
+bottom periodic 4032 770049 766017

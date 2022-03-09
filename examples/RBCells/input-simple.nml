@@ -13,7 +13,7 @@
            lSolverU = 'bicgstab'    ! Linear algebraic solver for momentum eq
            maxiterU = 10            ! Max no of iterations for linear U-V-W equations
             tolRelU = 0.01          ! Relative tolerance level for residual for linear U-V-W equations
-ScndOrderPressIntrp = T             ! Second order (default), or massflow weighted interpolation of pressure to faces.
+            pscheme = 'linear'      ! pressure interpolation scheme 
         !
         ! Approximation details for pressure/pressure correction.
         !

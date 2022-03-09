@@ -1,0 +1,7 @@
+#set logscale y
+set title "Monitors"
+set ylabel 'wall shear'
+set xlabel 'Iteration'
+plot "< cat monitor | grep 'lower' | cut -d' ' -f8" title 'wall bottom' with lines
+pause 5
+reread

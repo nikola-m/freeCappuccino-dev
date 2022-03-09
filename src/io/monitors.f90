@@ -68,21 +68,29 @@ subroutine define_monitors
 
   integer :: i
   integer :: dfile
+  logical :: file_exists
 
-  call get_unit( dfile )
+  ! Check if there is monitors file 
+  inquire(FILE='monitors', EXIST=file_exists)
 
-  open( unit = dfile, file='monitors' )
-  rewind dfile
+  if (file_exists) then
 
-  read(dfile,*) numMonVals
+    call get_unit( dfile )
 
-  allocate( monitored_value(numMonVals), monitored_location(numMonVals) )
+    open( unit = dfile, file='monitors' )
+    rewind dfile
 
-  do i=1,numMonVals
-    read(dfile,*) monitored_value(i), monitored_location(i)
-  enddo
+    read(dfile,*) numMonVals
 
-  close( dfile )
+    allocate( monitored_value(numMonVals), monitored_location(numMonVals) )
+
+    do i=1,numMonVals
+      read(dfile,*) monitored_value(i), monitored_location(i)
+    enddo
+
+    close( dfile )
+
+  endif
 
 end subroutine
 

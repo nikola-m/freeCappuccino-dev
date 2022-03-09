@@ -9,19 +9,19 @@ module parameters
   real(dp), parameter :: twothirds = 2./3._dp
   real(dp), parameter :: onethird = 1./3._dp
   real(dp), parameter :: half = 0.5_dp
-  
+  real(dp), parameter :: slarge = 1e+30 
+
   ! Law of the wall parameters
   real(dp), parameter :: CAPPA = 0.41_dp 
+  real(dp), parameter :: Rair = 287.058  ! J/(kg K)
   real(dp), parameter :: ELOG = 8.432_dp
   real(dp), parameter :: ctrans = 11.63
 
-  real(dp), parameter :: slarge = 1e+30  ! Upper limit for residuals before simulation blowup
 
   character( len=10 ) :: mesh_format   ! Mesh format type
   integer :: pRefCell  ! Pressure reference cell
   integer :: mpoints   ! No. of monitoring points
   real(dp) :: flomas   ! mass flow at inlet
-  real(dp) :: flomom   ! momentum of flow at inlet
   real(dp) :: densit   ! Fluid density
   real(dp) :: viscos   ! Molecular dynamic viscosity
   real(dp) :: tolerance ! Residual toleance for SIMPLE
@@ -32,19 +32,14 @@ module parameters
   logical :: boussinesq ! Is Boussinesq hypothesis evoked yes=1/no=0, read from input file.
   real(dp) :: tref      ! Reference temperature, read from input file
   real(dp) :: beta      ! Thermal expansion coefficient, read from input file
-  real(dp) :: phit      ! Parameter used for GGDH and AFM in calcheatflux subroutine, read from input file?
-  real(dp) :: sksi      ! Parameter used in calcheatflux, read from input file?
-  real(dp) :: eta       ! Parameter used in calcheatflux, read from input file?
-  real(dp) :: prt1      ! Parameter used in calcheatflux, read from input file?
   real(dp) :: gravx,gravy,gravz ! Components of gravity acceleration vector, read from input file
   real(dp) :: facvis            ! Under-relaxation for viscosity
-  integer :: numstep   ! Total number of timesteps
-  integer :: itime     ! Current timestep value
+  integer :: numstep            ! Total number of timesteps
+  integer :: itime,itimes, itimee  ! Current timestep value, first and last timestep value in the current simulation
   integer :: nzapis    ! After how many timesteps we write backup and output files
   integer :: maxit     ! Maximum number of iterations in timestep, also max. number of iterations for SIMPLE iteration
   real(dp) :: timestep ! Timestep size
   real(dp) :: time     ! Total elapsed time
-  real(dp) :: btime    ! Coefficient for Backward Euler time stepping algorithm, if btime = 1. => BDF2 Three time implicit (2nd order), if btime=0. Backward Euler (1st order)
   logical :: CoNumFix         ! Is Courant no. fixed during time-stepping
   real(dp) :: CoNumFixValue   ! Fixed value for Courant number - set in modinp for now - may be read in input
   real(dp) :: CoNum ! Courant number (max value). 
@@ -58,7 +53,7 @@ module parameters
   logical :: lasm,lles,lsgdh,lggdh,lafm ! eddy-viscosity, algebraic stress model or LES, simple gradient or generalized gradient hypothesis, algerbaic flux model
   logical :: bdf,bdf2,bdf3,cn           ! control for the time-stepping algorithm
   logical :: simple,piso                ! control for the velocity-pressure coupling algorithm
-  logical :: AllSpeedsSIMPLE            ! If true together with SIMPLE, then pressure based algorith for all speeds is activated.
+  logical :: compressible               ! If true together with SIMPLE, then pressure based algorithm for all speeds is activated.
   logical :: const_mflux                ! control for constant flow rate 
 
 
@@ -74,20 +69,13 @@ module parameters
   ! real(dp) :: zzero             ! z0 - wall roughness [m] for aerodynamically rough walls
 
   real(dp) :: magUbar, gradPcmf ! Magnitude of the bulk velocity,and pressure grad that will drive the constant mass-flux flow (cmf)
-  real(dp) :: sumLocalContErr, globalContErr, cumulativeContErr   ! Continuity errors
-
-  ! I want to get rid of these - they identify each field with and index,
-  ! like below we have resor(12), so we expect normalized residual of 12 fields.
-  ! Similar situation is in turbulence module, where fields have their indices to distinguish them.
-  integer, parameter :: iu = 1
-  integer, parameter :: iv = 2
-  integer, parameter :: iw = 3    
+  real(dp) :: sumLocalContErr, globalContErr, cumulativeContErr, res5Mass   ! Continuity errors
 
   real(dp), dimension(12) :: resor ! Normalized residuals for monitoring convergence of SIMPLE iterations.
 
   character(len=70) :: title         ! Case title-short description for monitor file.
 
-  character(len=100):: input_file,grid_file,monitor_file,restart_file
+  character(len=100) :: input_file,grid_file,monitor_file,restart_file
 
   
 end module parameters

@@ -14,15 +14,13 @@ module scalar_fluxes
 
   interface facefluxsc
     module procedure facefluxsc
-    module procedure facefluxsc_nonconst_prtr
     module procedure facefluxsc_boundary
     module procedure facefluxsc_periodic
   end interface
 
 
-  private 
-
-  public :: facefluxsc
+  ! private 
+  ! public :: facefluxsc
 
 
 contains
@@ -164,149 +162,6 @@ end subroutine
 
 !***********************************************************************
 !
-subroutine facefluxsc_nonconst_prtr(ijp, ijn, xf, yf, zf, arx, ary, arz, &
-                                    flmass, lambda, gam, FI, dFidxi, &
-                                    prtr_ijp, prtr_ijn, cap, can, suadd, cScheme)
-!
-!***********************************************************************
-!
-! Models such as k-omega SST have turbulent Prandtl-Schmidt numbers (sigmas)
-! not constant but as changing troughout the field. In particular in the SST model,
-! the blending function 'fsst' blends two values of sigmas at each cell center.
-! The two values are blended and their values at owner and neighbour cells is
-! passed into this subroutine to be interpolated to cell face in question.
-!
-!***********************************************************************
-!
-  use types
-  use parameters
-  use variables, only: vis
-  use interpolation
-
-  implicit none
-!
-!***********************************************************************
-! 
-
-  integer, intent(in) :: ijp, ijn
-  real(dp), intent(in) :: xf,yf,zf
-  real(dp), intent(in) :: arx, ary, arz
-  real(dp), intent(in) :: flmass
-  real(dp), intent(in) :: lambda
-  real(dp), intent(in) :: gam 
-  real(dp), dimension(numTotal), intent(in) :: Fi
-  real(dp), dimension(3,numCells), intent(in) :: dFidxi
-  real(dp), intent(in) :: prtr_ijp, prtr_ijn
-  real(dp), intent(inout) :: cap, can, suadd
-  character(len=30), intent(in) :: cScheme
-
-
-! Local variables
-  integer  :: nrelax
-  character(len=12) :: approach
-  real(dp) :: are
-  real(dp) :: xpn,ypn,zpn!, xi,yi,zi,r1,r2,psie,psiw
-  real(dp) :: dpn
-  real(dp) :: Cp,Ce
-  real(dp) :: fii,fm
-  real(dp) :: fdfie,fdfii,fcfie,fcfii,ffic
-  real(dp) :: de, game, viste, prtr
-  real(dp) :: fxp,fxn
-  real(dp) :: dfixi,dfiyi,dfizi
-  real(dp) :: dfixii,dfiyii,dfizii
-!----------------------------------------------------------------------
-
-  ! > Geometry:
-
-  ! Face interpolation factor
-  fxn=lambda 
-  fxp=1.0_dp-lambda
-
-  ! Distance vector between cell centers
-  xpn=xc(ijn)-xc(ijp)
-  ypn=yc(ijn)-yc(ijp)
-  zpn=zc(ijn)-zc(ijp)
-
-  ! Distance from P to neighbor N
-  dpn=sqrt(xpn**2+ypn**2+zpn**2)     
-
-  ! cell face area
-  are=sqrt(arx**2+ary**2+arz**2)
-
-
-  ! Cell face diffussion coefficient
-  viste = (vis(ijp)-viscos)*fxp+(vis(ijn)-viscos)*fxn
-  prtr = prtr_ijp*fxp+prtr_ijn*fxn
-  game = (viste*prtr+viscos)
-
-
-  ! Difusion coefficient for linear system
-  de = game*are/dpn
-
-  ! Convection fluxes - uds
-  fm = flmass
-  ce = min(fm,zero) 
-  cp = max(fm,zero)
-
-  !-------------------------------------------------------
-  ! System matrix coefficients
-  !-------------------------------------------------------
-  cap = -de - max(fm,zero)
-  can = -de + min(fm,zero)
-  !-------------------------------------------------------
-
-
-  !-------------------------------------------------------
-  ! Explicit part of diffusion
-  !-------------------------------------------------------
-
-  nrelax = 0
-  approach  = 'skewness'
-
-  call sngrad(ijp, ijn, xf, yf, zf, arx, ary, arz, lambda, &
-              Fi, dFidxi, nrelax, approach, dfixi, dfiyi, dfizi, dfixii, dfiyii, dfizii)
-
-
-  ! Explicit diffusion
-  fdfie = game*(dfixii*arx + dfiyii*ary + dfizii*arz)  
-
-  ! Implicit diffussion 
-  fdfii = game*are/dpn*(dfixi*xpn+dfiyi*ypn+dfizi*zpn)
-
-
-  !-------------------------------------------------------
-  ! Explicit higher order convection; cScheme is set in input
-  !-------------------------------------------------------
-  if( flmass .ge. zero ) then 
-    ! Flow goes from p to pj - > p is the upwind node
-    fii = face_value(ijp, ijn, xf, yf, zf, fxp, fi, dFidxi, cScheme)
-  else
-    ! Other way, flow goesfrom pj, to p -> pj is the upwind node.
-    fii = face_value(ijn, ijp, xf, yf, zf, fxn, fi, dFidxi, cScheme)
-  endif
-
-  fcfie = fm*fii
-
-  !-------------------------------------------------------
-  ! Explicit first order convection
-  !-------------------------------------------------------
-  fcfii = ce*fi(ijn)+cp*fi(ijp)
-
-  !-------------------------------------------------------
-  ! Deffered correction for convection = gama_blending*(high-low)
-  !-------------------------------------------------------
-  ffic = gam*(fcfie-fcfii)
-
-  !-------------------------------------------------------
-  ! Explicit part of fluxes
-  !-------------------------------------------------------
-  suadd = -ffic+fdfie-fdfii 
-
-end subroutine
-
-
-!***********************************************************************
-!
 subroutine facefluxsc_periodic(ijp, ijn, xf, yf, zf, arx, ary, arz, &
                                flmass, gam, &
                                FI, dFidxi, prtr, cap, can, suadd)
@@ -337,7 +192,7 @@ subroutine facefluxsc_periodic(ijp, ijn, xf, yf, zf, arx, ary, arz, &
 
 ! Local variables
   real(dp) :: are
-  real(dp) :: xpn,ypn,zpn!, xi,yi,zi,r1,r2,psie,psiw
+  real(dp) :: xpn,ypn,zpn
   real(dp) :: dpn
   real(dp) :: Cp,Ce
   real(dp) :: fii,fm
@@ -435,7 +290,9 @@ end subroutine
 
 !***********************************************************************
 !
-subroutine facefluxsc_boundary(ijp, ijn, xf, yf, zf, arx, ary, arz, flmass, FI, dFidxi, prtr, cap, can, suadd)
+subroutine facefluxsc_boundary(ijp, ijn, xf, yf, zf, arx, ary, arz, &
+                               flmass, &
+                               FI, dFidxi, prtr, cap, can, suadd)
 !
 !***********************************************************************
 !
@@ -616,6 +473,146 @@ subroutine facefluxsc_boundary(ijp, ijn, xf, yf, zf, arx, ary, arz, flmass, FI, 
   ! suadd = -ffic+fdfie-fdfii 
   suadd = fdfie-fdfii 
   !-------------------------------------------------------
+
+end subroutine
+
+
+
+
+!***********************************************************************
+!
+subroutine facefluxscalar(ijp, ijn, xf, yf, zf, arx, ary, arz, &
+                          flmass, lambda, gam, cScheme, dScheme, nrelax,  &
+                          FI, dFidxi, diffcoef, cap, can, suadd)
+!
+!***********************************************************************
+!
+! Purpose: In this routine diffusion coefficient is passed as an argument
+!          in the form of an array, as opposed in facefluxsc. 
+!          I will still figure out what is the best way. Nikola 
+!
+!
+!***********************************************************************
+! 
+  use types
+  use parameters
+  use interpolation
+
+  implicit none
+
+
+  integer, intent(in) :: ijp, ijn
+  real(dp), intent(in) :: xf,yf,zf
+  real(dp), intent(in) :: arx, ary, arz
+  real(dp), intent(in) :: flmass
+  real(dp), intent(in) :: lambda
+  real(dp), intent(in) :: gam 
+  character( len=30 ), intent(in) :: cScheme ! Convection scheme.
+  character( len=12 ), intent(in) :: dScheme ! Difussion scheme, i.e. the method for face normal gradient.
+  integer, intent(in) :: nrelax ! Relaxation parameter non-orthogonal correction for face gradient.
+  real(dp), dimension(numTotal), intent(in) :: Fi
+  real(dp), dimension(3,numCells), intent(in) :: dFidxi
+  real(dp), dimension(*), intent(in) :: diffcoef
+  real(dp), intent(inout) :: cap, can, suadd
+
+
+! Local variables
+  real(dp) :: are
+  real(dp) :: xpn,ypn,zpn!, xi,yi,zi,r1,r2,psie,psiw
+  real(dp) :: dpn
+  real(dp) :: Cp,Ce
+  real(dp) :: fii,fm
+  real(dp) :: fdfie,fdfii,fcfie,fcfii,ffic
+  real(dp) :: de, game
+  real(dp) :: fxp,fxn
+  real(dp) :: dfixi,dfiyi,dfizi
+  real(dp) :: dfixii,dfiyii,dfizii
+!----------------------------------------------------------------------
+
+  ! > Geometry:
+
+  ! Face interpolation factor
+  fxn=lambda 
+  fxp=1.0_dp-lambda
+
+  ! Distance vector between cell centers
+  xpn=xc(ijn)-xc(ijp)
+  ypn=yc(ijn)-yc(ijp)
+  zpn=zc(ijn)-zc(ijp)
+
+  ! Distance from P to neighbor N
+  dpn=sqrt(xpn**2+ypn**2+zpn**2)     
+
+  ! cell face area
+  are=sqrt(arx**2+ary**2+arz**2)
+
+
+  ! Cell face diffussion coefficient
+  ! viste = (vis(ijp)-viscos)*fxp+(vis(ijn)-viscos)*fxn
+  ! game = (viste*prtr+viscos)
+  game =  diffcoef(ijp)*fxp+diffcoef(ijn)*fxn
+
+
+  ! Difusion coefficient for linear system
+  ! de = game*are/dpn
+  de = game*(arx*arx+ary*ary+arz*arz)/(xpn*arx+ypn*ary+zpn*arz)
+
+  ! Convection fluxes - uds
+  fm = flmass
+  ce = min(fm,zero) 
+  cp = max(fm,zero)
+
+  !-------------------------------------------------------
+  ! System matrix coefficients
+  !-------------------------------------------------------
+  cap = -de - max(fm,zero)
+  can = -de + min(fm,zero)
+  !-------------------------------------------------------
+
+
+  !-------------------------------------------------------
+  ! Explicit part of diffusion
+  !-------------------------------------------------------
+
+  call sngrad(ijp, ijn, xf, yf, zf, arx, ary, arz, lambda, &
+              Fi, dFidxi, nrelax, dScheme, dfixi, dfiyi, dfizi, &
+              dfixii, dfiyii, dfizii)
+  
+
+  ! Explicit diffusion
+  fdfie = game*(dfixii*arx + dfiyii*ary + dfizii*arz)  
+
+  ! Implicit diffussion 
+  fdfii = game*are/dpn*(dfixi*xpn+dfiyi*ypn+dfizi*zpn)
+
+
+  !-------------------------------------------------------
+  ! Explicit higher order convection, cSheme is set in input
+  !-------------------------------------------------------
+  if( flmass .ge. zero ) then 
+    ! Flow goes from p to pj - > p is the upwind node
+    fii = face_value(ijp, ijn, xf, yf, zf, fxp, fi, dFidxi, cScheme)
+  else
+    ! Other way, flow goes from pj, to p -> pj is the upwind node.
+    fii = face_value(ijn, ijp, xf, yf, zf, fxn, fi, dFidxi, cScheme)
+  endif
+
+  fcfie = fm*fii
+
+  !-------------------------------------------------------
+  ! Explicit first order convection
+  !-------------------------------------------------------
+  fcfii = ce*fi(ijn)+cp*fi(ijp)
+
+  !-------------------------------------------------------
+  ! Deffered correction for convection = gama_blending*(high-low)
+  !-------------------------------------------------------
+  ffic = gam*(fcfie-fcfii)
+
+  !-------------------------------------------------------
+  ! Explicit part of fluxes
+  !-------------------------------------------------------
+  suadd = -ffic+fdfie-fdfii 
 
 end subroutine
 

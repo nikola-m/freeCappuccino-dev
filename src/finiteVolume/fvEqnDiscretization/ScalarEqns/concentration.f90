@@ -3,7 +3,7 @@ module concentration
 ! Implementation of sclar transport equation for concentration.
 !
   use types
-  use scalar_fluxes, only: facefluxsc
+  use scalar_fluxes
 
   implicit none
 
@@ -48,6 +48,7 @@ subroutine calculate_concentration_field
 ! Local variables
 !
   integer ::  i, k, inp, ijp, ijn, ijb, ib, iface, iWall
+  integer :: iPer, l, if, iftwin
   real(dp) :: gam, prtr, apotime
   real(dp) :: cap, can, suadd
   real(dp) :: off_diagonal_terms
@@ -135,10 +136,14 @@ subroutine calculate_concentration_field
   ! Boundary conditions
   !
   iWall = 0
+  iPer = 0
+  l = numInnerFaces
 
   do ib=1,numBoundaries
 
-    if ( bctype(ib) == 'inlet' .or. bctype(ib) == 'outlet' .or. bctype(ib) == 'pressure' ) then
+    if ( bctype(ib) == 'inlet' .or. &
+         bctype(ib) == 'outlet' .or. &
+         bctype(ib) == 'pressure' ) then
 
       do i=1,nfaces(ib)
 
@@ -147,7 +152,8 @@ subroutine calculate_concentration_field
         ijb = iBndValueStart(ib) + i
 
         call facefluxsc( ijp, ijb, &
-                         xf(iface), yf(iface), zf(iface), arx(iface), ary(iface), arz(iface), &
+                         xf(iface), yf(iface), zf(iface), &
+                         arx(iface), ary(iface), arz(iface), &
                          flmass(iface), &
                          Con, dCondxi, prtr, cap, can, suadd)
 
@@ -205,19 +211,58 @@ subroutine calculate_concentration_field
 
       enddo
 
-    elseif ( bctype(ib) == 'symmetry') then
+    elseif ( bctype(ib) == 'periodic') then
 
-      ! Symmetry
+      iPer = iPer + 1 ! count periodic boundary pairs
 
+      ! Faces trough periodic boundaries
       do i=1,nfaces(ib)
 
-        iface = startFace(ib) + i
-        ijp = owner(iface)
-        ijb = iBndValueStart(ib) + i
+        if = startFace(ib) + i
+        ijp = owner(if)
 
-        Con(ijb) = Con(ijp)
+        iftwin = startFaceTwin(iPer) + i ! Where does the face data for twin start, looking at periodic boundary pair with index iPer.
+        ijn = owner(iftwin)              ! Owner cell of the twin periodic face
 
-      enddo
+
+        ! face flux scalar but for periodic boundaries - it will be recognized by arguments
+        call facefluxsc_periodic( ijp, ijn, &
+                                  xf(if), yf(if), zf(if), &
+                                  arx(if), ary(if), arz(if), &
+                                  flmass(if), gam, &
+                                  Con, dCondxi, prtr, cap, can, suadd )
+
+
+        ! > Off-diagonal elements:
+
+        ! l is in interval [numInnerFaces+1, numInnerFaces+numPeriodic]
+        l = l + 1
+
+        ! (icell,jcell) matrix element:
+        k = icell_jcell_csr_index(l)
+        a(k) = can
+
+        ! (jcell,icell) matrix element:
+        k = jcell_icell_csr_index(l)
+        a(k) = cap
+
+        ! > Elements on main diagonal:
+
+        ! ! (icell,icell) main diagonal element
+        k = diag(ijp)
+        a(k) = a(k) - can
+
+        ! ! (jcell,jcell) main diagonal element
+        k = diag(ijn)
+        a(k) = a(k) - cap
+
+        ! > Sources:
+
+        su(ijp) = su(ijp) + suadd
+        su(ijn) = su(ijn) - suadd 
+
+
+      end do 
 
 
     endif
@@ -275,25 +320,9 @@ subroutine calculate_concentration_field
   call csrsolve(lSolverCon, Con, su, resor(9), maxiterCon, tolAbsCon, tolRelCon, 'Conc')
 
   !
-  ! Update symmetry and outlet boundaries
+  ! Update field values at boundaries
   !
-  do ib=1,numBoundaries
-
-    if ( bctype(ib) == 'outlet' .or. bctype(ib) == 'symmetry' ) then
-
-      do i=1,nfaces(ib)
-
-        iface = startFace(ib) + i
-        ijp = owner(iface)
-        ijb = iBndValueStart(ib) + i
-
-        Con(ijb) = Con(ijp)
-
-      enddo
-
-    endif
-
-  enddo
+  call updateBoundary( Con )
 
 ! Report range of scalar values and clip if negative
   fimin = minval( Con(1:numCells))

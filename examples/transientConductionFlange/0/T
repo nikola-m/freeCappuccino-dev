@@ -1,0 +1,18 @@
+internalField
+  uniform
+    273.0
+boundaryField
+patch1
+  Neumann
+    zeroGradient
+patch2
+  Dirichlet
+    uniform
+      273.0
+patch3
+  Neumann
+    zeroGradient
+patch4
+  Dirichlet
+    uniform
+      573.0

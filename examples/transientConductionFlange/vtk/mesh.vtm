@@ -1,0 +1,31 @@
+<VTKFile type="vtkMultiBlockDataSet" version="1.0" byte_order="LittleEndian" header_type="UInt64">
+  <vtkMultiBlockDataSet>
+    <DataSet index="0" name="internalMesh" file="mesh/mesh_0_0.vtu"/>
+    <Block index="1" name="Patches">
+      <DataSet index="0" name="patch1" file="mesh/mesh_1_0.vtp"/>
+      <DataSet index="1" name="patch2" file="mesh/mesh_2_0.vtp"/>
+      <DataSet index="2" name="patch3" file="mesh/mesh_3_0.vtp"/>
+      <DataSet index="3" name="patch4" file="mesh/mesh_4_0.vtp"/>
+    </Block>
+  </vtkMultiBlockDataSet>
+  <FieldData>
+    <DataArray type="Int8" Name="CasePath" NumberOfTuples="75" format="ascii" RangeMin="0" RangeMax="118">
+      47 104 111 109 101 47
+      110 105 107 111 108 97
+      47 79 112 101 110 70
+      79 65 77 47 79 112
+      101 110 70 79 65 77
+      45 118 50 48 48 54
+      47 116 117 116 111 114
+      105 97 108 115 47 98
+      97 115 105 99 47 108
+      97 112 108 97 99 105
+      97 110 70 111 97 109
+      47 102 108 97 110 103
+      101 47 0
+    </DataArray>
+    <DataArray type="Float64" Name="TimeValue" NumberOfTuples="1" format="ascii" RangeMin="0.1" RangeMax="0.1">
+      0.1
+    </DataArray>
+  </FieldData>
+</VTKFile>

@@ -155,19 +155,19 @@ subroutine create_fields
 
 
   ! Temperature
-  if( calcT .or. calcEn ) then
+  if( calcT .or. calcEn .or. compressible) then
 
-    allocate(t(numTotal),stat=ierr) 
+    allocate(T(numTotal),stat=ierr) 
       if(ierr /= 0)write(*,*)"allocation error: t"
 
     allocate(dTdxi(3,numTotal),stat=ierr) 
       if(ierr /= 0)write(*,*)"allocation error: dTdxi"
 
-    allocate(to(numTotal),stat=ierr) 
+    allocate(To(numTotal),stat=ierr) 
       if(ierr /= 0)write(*,*)"allocation error: to"
 
     if( bdf2 ) then
-      allocate(too(numTotal),stat=ierr) 
+      allocate(Too(numTotal),stat=ierr) 
         if(ierr /= 0)write(*,*)"allocation error: too" 
     endif
 
@@ -177,6 +177,32 @@ subroutine create_fields
     endif
 
   endif
+
+
+  ! Energy
+  if( calcEn ) then
+
+    allocate(En(numTotal),stat=ierr) 
+      if(ierr /= 0)write(*,*)"allocation error: t"
+
+    allocate(dEndxi(3,numTotal),stat=ierr) 
+      if(ierr /= 0)write(*,*)"allocation error: dTdxi"
+
+    allocate(Eno(numTotal),stat=ierr) 
+      if(ierr /= 0)write(*,*)"allocation error: to"
+
+    if( bdf2 ) then
+      allocate(Enoo(numTotal),stat=ierr) 
+        if(ierr /= 0)write(*,*)"allocation error: too" 
+    endif
+
+    ! if (ltransient) then
+    !   allocate(En_aver(numTotal),stat=ierr) 
+    !     if(ierr /= 0)write(*,*)"allocation error: t_aver" 
+    ! endif
+
+  endif
+
 
   ! Concentration
   if( calcCon ) then
@@ -230,8 +256,10 @@ subroutine create_fields
   allocate(den(numTotal),stat=ierr) 
     if(ierr /= 0)write(*,*)"allocation error: den" 
 
-  allocate(deno(numTotal),stat=ierr) 
-    if(ierr /= 0)write(*,*)"allocation error: den" 
+  ! if (compressible) then
+    allocate(deno(numTotal),stat=ierr) 
+      if(ierr /= 0)write(*,*)"allocation error: den" 
+  ! endif
     
 
   ! Mass flows trough cell faces

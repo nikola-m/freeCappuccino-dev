@@ -6,7 +6,8 @@ module k_epsilon_rlzb_2lewt
   use parameters
   use geometry
   use variables
-  use turbulence
+  use gradients
+  use TurbModelData, only: TurbModel
   use scalar_fluxes, only: facefluxsc
 
   implicit none
@@ -42,103 +43,62 @@ module k_epsilon_rlzb_2lewt
 contains
 
 
-!***********************************************************************
+subroutine modify_viscosity_k_epsilon_rlzb_2lewt
 !
-subroutine modify_viscosity_k_epsilon_rlzb_2lewt()
+! Purpose: 
+!   Main module routine to solve turbulence model equations and update effective viscosity.
 !
-!***********************************************************************
 !
-! Main module routine to solve turbulence model equations and update 
-! effective viscosity.
-!
-!***********************************************************************
-!
-  use types
-  use parameters
-  use variables
-  use gradients
 
-  implicit none
-!
-!***********************************************************************
-!
-  call calcsc(TE,dTEdxi,ite) ! Assemble and solve turbulence kinetic energy eq.
-  call calcsc(ED,dEDdxi,ied) ! Assemble and solve dissipation rate of tke eq.
-  call modify_mu_eff()
+  call calcsc_tke     ! Assemble and solve turbulence kinetic energy eqn.
+  call calcsc_epsilon ! Assemble and solve dissipation rate of tke eqn.
+  call modify_mu_eff  ! Update viscosity
 
 end subroutine
 
 
+subroutine calcsc_tke
+!
+! Purpose:
+!  Assemble and solve turbulence kinetic energy equation
+!
 
-!***********************************************************************
-!
-subroutine modify_viscosity_inlet_k_epsilon_rlzb_2lewt()
-!
-!***********************************************************************
-!
-! Update effective viscosity at inlet
-!
-!***********************************************************************
-!
-  implicit none
-!
-!***********************************************************************
-!
-  call modify_mu_eff_inlet()
-
-end subroutine
-
-
-
-!***********************************************************************
-!
-subroutine calcsc(Fi,dFidxi,ifi)
-!
-!***********************************************************************
-!
-  use types
-  use parameters
-  use geometry
-  use variables
   use sparse_matrix
-  use gradients
   use linear_solvers
   
   implicit none
-!
-!***********************************************************************
-!
-  integer, intent(in) :: ifi
-  real(dp), dimension(numTotal) :: fi
-  real(dp), dimension(3,numCells) :: dfidxi
 
 !
 ! Local variables
 !
   integer ::  i, k, inp, ijp, ijn, ijb, ib, iface, iwall
-  real(dp) :: gam, prtr, apotime, const, urfrs, urfms, &
+  integer :: iper, l, if, iftwin
+  real(dp) :: prtr, apotime, urfrs, urfms, &
               utp, vtp, wtp, utn, vtn, wtn, &
               genp, genn, &
               uttbuoy, vttbuoy, wttbuoy
   real(dp) :: cap, can, suadd
-  real(dp) :: etarlzb 
   real(dp) :: off_diagonal_terms
   real(dp) :: are,nxf,nyf,nzf,vnp,xtp,ytp,ztp,ut2
   ! real(dp) :: dudx,dudy,dudz,dvdx,dvdy,dvdz,dwdx,dwdy,dwdz
   real(dp) :: magStrainSq
   real(dp) :: viss
   real(dp) :: fimax,fimin
-  real(dp) :: k12,Rey,lambeps,leps,eps2l
-
+  real(dp) :: urf, tolAbs, tolRel
+  integer :: maxiter
+  character( len=12 ) :: lSolver 
 
 ! Variable specific coefficients:
-  gam=gds(ifi)
+  urf = TurbModel%Scalar(1)%urf
+  lSolver = TurbModel%Scalar(1)%lSolver 
+  maxiter = TurbModel%Scalar(1)%maxiter
+  tolAbs = TurbModel%Scalar(1)%tolAbs
+  tolRel = TurbModel%Scalar(1)%tolRel
 
-  if(ifi.eq.ite) prtr=1.0_dp/sigma_k
-  if(ifi.eq.ied) prtr=1.0_dp/sigma_epsilon
+  prtr=1.0_dp/sigma_k
 
 ! Calculate gradient: 
-  call grad(fi,dfidxi)
+  call grad(te,dTedxi)
 
 ! Initialize coef and source arrays
   a = 0.0_dp
@@ -146,12 +106,8 @@ subroutine calcsc(Fi,dFidxi,ifi)
   sp = 0.0_dp
 
   !
-  !=====================================
-  ! VOLUME SOURCE TERMS 
-  !=====================================
-
-  ! TKE volume source terms
-  if(ifi.eq.ite) then
+  ! > VOLUME SOURCE TERMS 
+  !
 
   !=========================================================
   ! STANDARD PRODUCTION
@@ -171,7 +127,7 @@ subroutine calcsc(Fi,dFidxi,ifi)
     ! dwdy = dwdxi(2,inp)
     ! dwdz = dwdxi(3,inp)
 
-    ! ! Minus here in fron because UU,UV,... calculated in calcstress hold -tau_ij
+    ! ! Minus here in front because UU,UV,... calculated in calcstress hold -tau_ij
     ! ! So the exact production is calculated as tau_ij*dui/dxj
     ! gen(inp) = -den(inp)*( uu(inp)*dudx+uv(inp)*(dudy+dvdx)+ &
     !                        uw(inp)*(dudz+dwdx)+vv(inp)*dvdy+ &
@@ -196,129 +152,57 @@ subroutine calcsc(Fi,dFidxi,ifi)
     sp(inp)=sp(inp)-genn*vol(inp)/(te(inp)+small)
 
 
-    !
+  
     !=====================================
     ! VOLUME SOURCE TERMS: buoyancy
     !=====================================
-      if(lbuoy) then
-        
-        ! When bouy activated we need the freshest utt,vtt,wtt - turbulent heat fluxes
-        call calcheatflux 
+    if(lbuoy) then
+      
+      ! When bouy activated we need the freshest utt,vtt,wtt - turbulent heat fluxes
+      call calcheatflux 
 
-        if(boussinesq) then
-           uttbuoy=-gravx*den(inp)*utt(inp)*vol(inp)*beta
-           vttbuoy=-gravy*den(inp)*vtt(inp)*vol(inp)*beta
-           wttbuoy=-gravz*den(inp)*wtt(inp)*vol(inp)*beta
-        else
-           uttbuoy=-gravx*den(inp)*utt(inp)*vol(inp)/(t(inp)+273.15)
-           vttbuoy=-gravy*den(inp)*vtt(inp)*vol(inp)/(t(inp)+273.15)
-           wttbuoy=-gravz*den(inp)*wtt(inp)*vol(inp)/(t(inp)+273.15)
-        end if
-
-        utp=max(uttbuoy,zero)
-        vtp=max(vttbuoy,zero)
-        wtp=max(wttbuoy,zero)
-        utn=min(uttbuoy,zero)
-        vtn=min(vttbuoy,zero)
-        wtn=min(wttbuoy,zero)
-
-        su(inp)=su(inp)+utp+vtp+wtp
-        sp(inp)=sp(inp)-(utn+vtn+wtn)/(te(inp)+small)
-
+      if(boussinesq) then
+         uttbuoy=-gravx*den(inp)*utt(inp)*vol(inp)*beta
+         vttbuoy=-gravy*den(inp)*vtt(inp)*vol(inp)*beta
+         wttbuoy=-gravz*den(inp)*wtt(inp)*vol(inp)*beta
+      else
+         uttbuoy=-gravx*den(inp)*utt(inp)*vol(inp)/(t(inp)+small)
+         vttbuoy=-gravy*den(inp)*vtt(inp)*vol(inp)/(t(inp)+small)
+         wttbuoy=-gravz*den(inp)*wtt(inp)*vol(inp)/(t(inp)+small)
       end if
 
-      !
-      !=====================================
-      ! UNSTEADY TERM
-      !=====================================
-      if( bdf .or. cn ) then
-        apotime = den(inp)*vol(inp)/timestep
-        su(inp) = su(inp) + apotime*teo(inp)
-        sp(inp) = sp(inp) + apotime
-      elseif( bdf2 ) then
-        apotime=den(inp)*vol(inp)/timestep
-        su(inp) = su(inp) + apotime*( 2*teo(inp) - 0.5_dp*teoo(inp) )
-        sp(inp) = sp(inp) + 1.5_dp*apotime
-      endif
+      utp=max(uttbuoy,zero)
+      vtp=max(vttbuoy,zero)
+      wtp=max(wttbuoy,zero)
+      utn=min(uttbuoy,zero)
+      vtn=min(vttbuoy,zero)
+      wtn=min(wttbuoy,zero)
+
+      su(inp)=su(inp)+utp+vtp+wtp
+      sp(inp)=sp(inp)-(utn+vtn+wtn)/(te(inp)+small)
+
+    end if
+
+    !=====================================
+    ! UNSTEADY TERM
+    !=====================================
+    if( bdf .or. cn ) then
+      apotime = den(inp)*vol(inp)/timestep
+      su(inp) = su(inp) + apotime*teo(inp)
+      sp(inp) = sp(inp) + apotime
+    elseif( bdf2 ) then
+      apotime=den(inp)*vol(inp)/timestep
+      su(inp) = su(inp) + apotime*( 2*teo(inp) - 0.5_dp*teoo(inp) )
+      sp(inp) = sp(inp) + 1.5_dp*apotime
+    endif
 
   ! End of TKE volume source terms
   enddo
 
-!****************************************
-  elseif(ifi.eq.ied) then
-!****************************************
 
-  ! Epsilon volume source terms
-
-  !
-  !=====================================
-  ! VOLUME SOURCE TERMS 
-  !=====================================
-  do inp=1,numCells
-
-    genp=max(magStrain(inp),zero)
-    genn=min(magStrain(inp),zero)
-
-    ! Production of dissipation
-    etarlzb = magStrain(inp)*te(inp)/(ed(inp)+small)
-    c1 = max(0.43,etarlzb/(etarlzb+5.))
-    su(inp)=c1*genp*ed(inp)*vol(inp)
-
-    ! Destruction of dissipation
-    sp(inp)=c2*den(inp)*ed(inp)*vol(inp)/( te(inp)+sqrt(viscos/densit*ed(inp)) )
-
-    ! Negative value of production moved to lhs.
-    sp(inp) = sp(inp) - c1*genn*ed(inp)*vol(inp)
-
-    !
-    !=====================================
-    ! VOLUME SOURCE TERMS: Buoyancy
-    !=====================================
-      if(lbuoy) then
-        const=c3*den(inp)*ed(inp)*vol(inp)/(te(inp)+small)
-
-        if(boussinesq) then
-           uttbuoy=-gravx*utt(inp)*const*beta
-           vttbuoy=-gravy*vtt(inp)*const*beta
-           wttbuoy=-gravz*wtt(inp)*const*beta
-        else ! if(boussinesq.eq.0)
-           uttbuoy=-gravx*utt(inp)*const/(t(inp)+273.15)
-           vttbuoy=-gravy*vtt(inp)*const/(t(inp)+273.15)
-           wttbuoy=-gravz*wtt(inp)*const/(t(inp)+273.15)
-        end if
-
-        utp=max(uttbuoy,zero)
-        vtp=max(vttbuoy,zero)
-        wtp=max(wttbuoy,zero)
-        utn=min(uttbuoy,zero)
-        vtn=min(vttbuoy,zero)
-        wtn=min(wttbuoy,zero)
-
-        su(inp)=su(inp)+utp+vtp+wtp
-        sp(inp)=sp(inp)-(utn+vtn+wtn)/(ed(inp)+small)
-      end if
-
-    !
-    !=====================================
-    !.....UNSTEADY TERM
-    !=====================================
-      if( bdf .or. cn ) then
-        apotime = den(inp)*vol(inp)/timestep
-        su(inp) = su(inp) + apotime*edo(inp)
-        sp(inp) = sp(inp) + apotime
-      elseif( bdf2 ) then
-        apotime=den(inp)*vol(inp)/timestep
-        su(inp) = su(inp) + apotime*( 2*edo(inp) - 0.5_dp*edoo(inp) )
-        sp(inp) = sp(inp) + 1.5_dp*apotime
-      endif
-
-  ! End of Epsilon volume source terms
-  enddo
-!--------------------------------------
-  end if
 
 !
-! CALCULATE TERMS INTEGRATED OVER FACES
+! > CALCULATE TERMS INTEGRATED OVER FACES
 !
 
   ! Inner faces:                                             
@@ -327,9 +211,14 @@ subroutine calcsc(Fi,dFidxi,ifi)
     ijn = neighbour(i)
 
     call facefluxsc( ijp, ijn, &
-                     xf(i), yf(i), zf(i), arx(i), ary(i), arz(i), &
-                     flmass(i), facint(i), gam, cScheme, dScheme, nrelax, &
-                     fi, dFidxi, prtr, cap, can, suadd )
+                     xf(i), yf(i), zf(i), &
+                     arx(i), ary(i), arz(i), &
+                     flmass(i), facint(i), &
+                     TurbModel%Scalar(1)%gds, &
+                     TurbModel%Scalar(1)%cScheme, &
+                     TurbModel%Scalar(1)%dScheme, &
+                     TurbModel%Scalar(1)%nrelax, &
+                     TE, dTEdxi, prtr, cap, can, suadd )
 
     ! > Off-diagonal elements:
 
@@ -363,10 +252,14 @@ subroutine calcsc(Fi,dFidxi,ifi)
   !
 
   iWall = 0
+  iPer = 0
+  l = numInnerFaces
 
   do ib=1,numBoundaries
 
-    if ( bctype(ib) == 'inlet' ) then
+    if ( bctype(ib) == 'inlet' .or. &
+         bctype(ib) == 'outlet' .or. &
+         bctype(ib) == 'pressure' ) then
 
       do i=1,nfaces(ib)
 
@@ -377,32 +270,67 @@ subroutine calcsc(Fi,dFidxi,ifi)
         call facefluxsc( ijp, ijb, &
                          xf(iface), yf(iface), zf(iface), arx(iface), ary(iface), arz(iface), &
                          flmass(iface), &
-                         Fi, dFidxi, prtr, cap, can, suadd)
+                         TE, dTEdxi, prtr, cap, can, suadd)
 
         Sp(ijp) = Sp(ijp)-can
 
-        Su(ijp) = Su(ijp)-can*Fi(ijb) + suadd
+        Su(ijp) = Su(ijp)-can*TE(ijb) + suadd
 
       end do
 
-    elseif ( bctype(ib) == 'outlet' ) then
+    elseif (  bctype(ib) == 'periodic' ) then
 
+      iPer = iPer + 1 ! count periodic boundary pairs
+
+      ! Faces trough periodic boundaries
       do i=1,nfaces(ib)
 
-        iface = startFace(ib) + i
-        ijp = owner(iface)
-        ijb = iBndValueStart(ib) + i
+        if = startFace(ib) + i
+        ijp = owner(if)
 
-        call facefluxsc( ijp, ijb, &
-                         xf(iface), yf(iface), zf(iface), arx(iface), ary(iface), arz(iface), &
-                         flmass(iface), &
-                         FI, dFidxi, prtr, cap, can, suadd )
+        iftwin = startFaceTwin(iPer) + i ! Where does the face data for twin start, looking at periodic boundary pair with index iPer.
+        ijn = owner(iftwin)              ! Owner cell of the twin periodic face
 
-        Sp(ijp) = Sp(ijp)-can
 
-        Su(ijp) = Su(ijp)-can*Fi(ijb) + suadd
+        ! face flux scalar but for periodic boundaries - it will be recognized by arguments
+        call facefluxsc(  ijp, ijn, &
+                          xf(if), yf(if), zf(if), &
+                          arx(if), ary(if), arz(if), &
+                          flmass(if), TurbModel%Scalar(1)%gds, &
+                          te, dTedxi, prtr, cap, can, suadd )
 
-      end do
+
+        ! > Off-diagonal elements:
+
+        ! l is in interval [numInnerFaces+1, numInnerFaces+numPeriodic]
+        l = l + 1
+
+        ! (icell,jcell) matrix element:
+        k = icell_jcell_csr_index(l)
+        a(k) = can
+
+        ! (jcell,icell) matrix element:
+        k = jcell_icell_csr_index(l)
+        a(k) = cap
+
+        ! > Elements on main diagonal:
+
+        ! ! (icell,icell) main diagonal element
+        k = diag(ijp)
+        a(k) = a(k) - can
+
+        ! ! (jcell,jcell) main diagonal element
+        k = diag(ijn)
+        a(k) = a(k) - cap
+
+        ! > Sources:
+
+        su(ijp) = su(ijp) + suadd
+        su(ijn) = su(ijn) - suadd 
+
+
+      end do 
+
 
     elseif ( bctype(ib) == 'wall') then
 
@@ -413,68 +341,48 @@ subroutine calcsc(Fi,dFidxi,ifi)
         ijb = iBndValueStart(ib) + i
         iWall = iWall + 1
 
-        if (ifi .eq. ite) then
         !
         ! > Wall boundary conditions for turbulence kinetic energy eq.
         !
 
-          ! viss=viscos
-          ! if(ypl(iWall).gt.ctrans) viss=visw(iWall)
-          viss=max(viscos,visw(iWall))
+        viss=max(viscos,visw(iWall))
 
-          ! Face area 
-          are = sqrt(arx(iface)**2+ary(iface)**2+arz(iface)**2)
+        ! Face area 
+        are = sqrt(arx(iface)**2+ary(iface)**2+arz(iface)**2)
 
-          ! Face normals
-          nxf = arx(iface)/are
-          nyf = ary(iface)/are
-          nzf = arz(iface)/are
+        ! Face normals
+        nxf = arx(iface)/are
+        nyf = ary(iface)/are
+        nzf = arz(iface)/are
 
-          ! Magnitude of a cell center velocity projected on boundary face normal
-          Vnp = U(ijp)*nxf+V(ijp)*nyf+W(ijp)*nzf
+        ! Magnitude of a cell center velocity projected on boundary face normal
+        Vnp = U(ijp)*nxf+V(ijp)*nyf+W(ijp)*nzf
 
-          ! Tangential velocity components 
-          xtp = U(ijp)-Vnp*nxf
-          ytp = V(ijp)-Vnp*nyf
-          ztp = W(ijp)-Vnp*nzf
+        ! Tangential velocity components 
+        xtp = U(ijp)-Vnp*nxf
+        ytp = V(ijp)-Vnp*nyf
+        ztp = W(ijp)-Vnp*nzf
 
-          ! Its magnitude
-          Vtp = sqrt(xtp*xtp+ytp*ytp+ztp*ztp)
+        ! Its magnitude
+        Vtp = sqrt(xtp*xtp+ytp*ytp+ztp*ztp)
 
-          ! Tangent direction - unit vector
-          xtp = xtp/vtp
-          ytp = ytp/vtp
-          ztp = ztp/vtp
+        ! Tangent direction - unit vector
+        xtp = xtp/vtp
+        ytp = ytp/vtp
+        ztp = ztp/vtp
 
-          ! projektovanje razlike brzina na pravac tangencijalne brzine u cell centru ijp
-          Ut2 = abs( (U(ijb)-U(ijp))*xtp + (V(ijb)-V(ijp))*ytp + (W(ijb)-W(ijp))*ztp )
+        ! projektovanje razlike brzina na pravac tangencijalne brzine u cell centru ijp
+        Ut2 = abs( (U(ijb)-U(ijp))*xtp + (V(ijb)-V(ijp))*ytp + (W(ijb)-W(ijp))*ztp )
 
-          Tau(iWall) = viss*Ut2/dnw(iWall)
+        Tau(iWall) = viss*Ut2/dnw(iWall)
 
-          ! Production of TKE in wall adjecent cell
-          ! First substract the standard production from source term
-          su(ijp)=su(ijp)-gen(ijp)*vol(ijp)
-          ! Calculate production for wall adjecent cell
-          gen(ijp)=abs(tau(iWall))*cmu25*sqrt(te(ijp))/(dnw(iWall)*cappa)
-          ! Add this production to source vector
-          su(ijp)=su(ijp)+gen(ijp)*vol(ijp)
-
-        ! else
-        ! !
-        ! ! > Wall boundary conditions for dissipation rate of turbulence kinetic energy eq.
-        ! !
-
-        !   ! Wall boundaries approximated with wall functions
-        !   ! for correct values of dissipation all coefficients have
-        !   ! to be zero, su equal the dissipation, and diagonal element a(diag(ijp)) = 1
-
-        !   a( ioffset(ijp):ioffset(ijp+1)-1 ) = 0.0_dp
-        !   sp(ijp) = 1.0_dp
-
-        !   ed(ijp)=cmu75*te(ijp)**1.5/(cappa*dnw(iWall))
-        !   su(ijp)=ed(ijp)
-
-        endif
+        ! Production of TKE in wall adjecent cell
+        ! First substract the standard production from source term
+        su(ijp)=su(ijp)-gen(ijp)*vol(ijp)
+        ! Calculate production for wall adjecent cell
+        gen(ijp)=abs(tau(iWall))*cmu25*sqrt(te(ijp))/(dnw(iWall)*cappa)
+        ! Add this production to source vector
+        su(ijp)=su(ijp)+gen(ijp)*vol(ijp)
 
       enddo
 
@@ -482,141 +390,242 @@ subroutine calcsc(Fi,dFidxi,ifi)
     
   enddo ! Boundary conditions loop  
 
+  ! Modify coefficients for Crank-Nicolson
+  if (cn) then
 
+    a = 0.5_dp*a ! Doesn't affect the main diagonal because it's still zero.
 
-  if(ifi .eq.ied) then
+    do i = 1,numInnerFaces
+        ijp = owner(i)
+        ijn = neighbour(i)
 
-  ! The two-layer apprach - enhanced wall treatment
-  ! Penalty approach to set epsilon in 'near wall region' based on Rey
-  ! This will overwite what is set for the wall adjecent layer in boundary conditions loop above
-  ! and expand the region where epsilon is set to a specifi value - the whole region where Rey < Rey*
+        k = icell_jcell_csr_index(i)
+        su(ijp) = su(ijp) - a(k)*teo(ijn)
 
-    ! Loop over cells
-    do inp=1,numCells
-
-      ! sqrt(tke)
-      k12 = sqrt(abs(te(inp)))
-
-      !
-      ! Re number based on wall distance
-      !
-      Rey = den(inp)*wallDistance(inp)*k12/viscos
-
-      if (Rey < Reyst) then
-
-        !
-        ! **Now perform Jonger blending (check parameters in the header of the module and change in needed)
-        !
-
-        ! Blending factor
-        lambeps = 0.5_dp*( 1 + tanh( (Rey - Reyst)/Ablend ) )
-
-
-        ! While here we will also produce new value for epsilon based on blending between two values
-        leps = wallDistance(inp)*Clst*( 1.0-exp(-Rey/Aeps) ) ! the Chen-Patel length scale 
-
-        ! Inner layer value for issipation
-        eps2l = k12**3/leps 
-
-        !
-        ! **Now perform Jonger blending for dissipation
-        !  
-        ed(inp) = ( lambeps*ed(inp) + (1.0-lambeps)*eps2l )
-
-        !
-        ! Penalty formulation - not exactly but close
-        !
-        a( ioffset(inp):ioffset(inp+1)-1 ) = 0.0_dp
-        sp(inp) = 1.0_dp
-        su(inp)=ed(inp)
-
-      endif
-
+        k = jcell_icell_csr_index(i)
+        su(ijn) = su(ijn) - a(k)*teo(ijp)
+    enddo
+    do ijp=1,numCells
+        apotime=den(ijp)*vol(ijp)/timestep
+        off_diagonal_terms = sum( a( ioffset(ijp) : ioffset(ijp+1)-1 ) ) - a(diag(ijp))
+        su(ijp) = su(ijp) + (apotime + off_diagonal_terms)*teo(ijp)
+        sp(ijp) = sp(ijp)+apotime
     enddo
 
   endif
 
-
-  ! Modify coefficients for Crank-Nicolson
-  if (cn) then
-
-      a = 0.5_dp*a ! Doesn't affect the main diagonal because it's still zero.
-
-      if(ifi.eq.ite) then
-
-        do i = 1,numInnerFaces
-            ijp = owner(i)
-            ijn = neighbour(i)
-
-            k = icell_jcell_csr_index(i)
-            su(ijp) = su(ijp) - a(k)*teo(ijn)
-
-            k = jcell_icell_csr_index(i)
-            su(ijn) = su(ijn) - a(k)*teo(ijp)
-        enddo
-        do ijp=1,numCells
-            apotime=den(ijp)*vol(ijp)/timestep
-            off_diagonal_terms = sum( a( ioffset(ijp) : ioffset(ijp+1)-1 ) ) - a(diag(ijp))
-            su(ijp) = su(ijp) + (apotime + off_diagonal_terms)*teo(ijp)
-            sp(ijp) = sp(ijp)+apotime
-        enddo
-
-      else ! ifi.eq.ied
-
-        do i = 1,numInnerFaces
-            ijp = owner(i)
-            ijn = neighbour(i)
-
-            k = icell_jcell_csr_index(i)
-            su(ijp) = su(ijp) - a(k)*edo(ijn)
-
-            k = jcell_icell_csr_index(i)
-            su(ijn) = su(ijn) - a(k)*edo(ijp)
-        enddo
-        do ijp=1,numCells
-            apotime=den(ijp)*vol(ijp)/timestep
-            off_diagonal_terms = sum( a( ioffset(ijp) : ioffset(ijp+1)-1 ) ) - a(diag(ijp))
-            su(ijp) = su(ijp) + (apotime + off_diagonal_terms)*edo(ijp)
-            sp(ijp) = sp(ijp)+apotime
-        enddo
-
-      endif
-
-  endif
-
   ! Underrelaxation factors
-  urfrs=1.0_dp/urf(ifi)
-  urfms=1.0_dp-urf(ifi)
+  urfrs=1.0_dp/urf
+  urfms=1.0_dp-urf
 
   ! Main diagonal term assembly:
   do inp = 1,numCells
 
-        ! Main diagonal term assembly:
-        a(diag(inp)) = sp(inp) 
-        do k = ioffset(inp),ioffset(inp+1)-1
-          if (k.eq.diag(inp)) cycle
-          a(diag(inp)) = a(diag(inp)) -  a(k)
-        enddo
+    ! Main diagonal term assembly: a_p = sp-sum( a_nb )
+    a(diag(inp)) = sp(inp) 
+    ! now add to main diagonal the negative sum of off-diagonal elements:
+    do k = ioffset(inp),ioffset(inp+1)-1
+      if (k.eq.diag(inp)) cycle
+      a(diag(inp)) = a(diag(inp)) -  a(k)
+    enddo
 
-        ! Underelaxation:
-        a(diag(inp)) = a(diag(inp))*urfrs
-        su(inp) = su(inp) + urfms*a(diag(inp))*fi(inp)
+    ! Underelaxation:
+    a(diag(inp)) = a(diag(inp))*urfrs
+    su(inp) = su(inp) + urfms*a(diag(inp))*te(inp)
                     
   enddo
 
   ! Solve linear system:
-  if (ifi.eq.ite) then
-    call csrsolve(lSolver, te, su, resor(5), maxiter, tolAbs, tolRel, 'k' )
-  else
-    call csrsolve(lSolver, ed, su, resor(6), maxiter, tolAbs, tolRel, 'epsilon' )
-  endif
+  call csrsolve(lSolver, te, su, resor(5), maxiter, tolAbs, tolRel, 'k' )
+
+
+  ! Update field values at boundaries
+  call updateBoundary( te )
+
+
+! Report range of scalar values and clip if negative
+  fimin = minval( te(1:numCells) )
+  fimax = maxval( te(1:numCells) )
+   
+  write(6,'(2x,es11.4,a,es11.4)') fimin,' <= k <= ',fimax
+
+! These field values cannot be negative
+  if(fimin.lt.0.0_dp) te(1:numCells) = max( te(1:numCells),small )
+
+end subroutine
+
+
+
+subroutine calcsc_epsilon
+!
+! Assemble and solve turbulence dissipation rate equation.
+!
+
+  use sparse_matrix
+  use linear_solvers
+  
+  implicit none
+
+!
+! Local variables
+!
+  integer ::  i, k, inp, ijp, ijn, ijb, ib, iface, iwall
+  integer :: iper, l, if, iftwin
+  real(dp) :: prtr, apotime, const, urfrs, urfms, &
+              utp, vtp, wtp, utn, vtn, wtn, &
+              genp, genn, &
+              uttbuoy, vttbuoy, wttbuoy
+  real(dp) :: cap, can, suadd
+  real(dp) :: etarlzb 
+  real(dp) :: off_diagonal_terms
+  real(dp) :: fimax,fimin
+  real(dp) :: k12,Rey,lambeps,leps,eps2l
+  real(dp) :: urf, tolAbs, tolRel
+  integer :: maxiter
+  character( len=12 ) :: lSolver 
+
+! Variable specific coefficients:
+  urf = TurbModel%Scalar(2)%urf
+  lSolver = TurbModel%Scalar(2)%lSolver 
+  maxiter = TurbModel%Scalar(2)%maxiter
+  tolAbs = TurbModel%Scalar(2)%tolAbs
+  tolRel = TurbModel%Scalar(2)%tolRel
+
+  prtr=1.0_dp/sigma_epsilon
+
+! Calculate gradient: 
+  call grad(ED,dEDdxi)
+
+! Initialize coef and source arrays
+  a = 0.0_dp
+  su = 0.0_dp
+  sp = 0.0_dp
+
+!
+! > VOLUME SOURCE TERMS 
+!
+  do inp=1,numCells
+
+    genp=max(magStrain(inp),zero)
+    genn=min(magStrain(inp),zero)
+
+    ! Production of dissipation
+    etarlzb = magStrain(inp)*te(inp)/(ed(inp)+small)
+    c1 = max(0.43,etarlzb/(etarlzb+5.0))
+    su(inp)=c1*genp*ed(inp)*vol(inp)
+
+    ! Destruction of dissipation
+    sp(inp)=c2*den(inp)*ed(inp)*vol(inp)/( te(inp)+sqrt(viscos/densit*ed(inp))+small )
+
+    ! Negative value of production moved to lhs.
+    sp(inp) = sp(inp) - c1*genn*ed(inp)*vol(inp)
+
+  
+    !=====================================
+    ! VOLUME SOURCE TERMS: Buoyancy
+    !=====================================
+    if(lbuoy) then
+
+      const=c3*den(inp)*ed(inp)*vol(inp)/(te(inp)+small)
+
+      if(boussinesq) then
+         uttbuoy=-gravx*utt(inp)*const*beta
+         vttbuoy=-gravy*vtt(inp)*const*beta
+         wttbuoy=-gravz*wtt(inp)*const*beta
+      else ! if(boussinesq.eq.0)
+         uttbuoy=-gravx*utt(inp)*const/(t(inp)+small)
+         vttbuoy=-gravy*vtt(inp)*const/(t(inp)+small)
+         wttbuoy=-gravz*wtt(inp)*const/(t(inp)+small)
+      end if
+
+      utp=max(uttbuoy,zero)
+      vtp=max(vttbuoy,zero)
+      wtp=max(wttbuoy,zero)
+      utn=min(uttbuoy,zero)
+      vtn=min(vttbuoy,zero)
+      wtn=min(wttbuoy,zero)
+
+      su(inp)=su(inp)+utp+vtp+wtp
+      sp(inp)=sp(inp)-(utn+vtn+wtn)/(ed(inp)+small)
+
+    end if
+
+
+    !=====================================
+    !.....UNSTEADY TERM
+    !=====================================
+    if( bdf .or. cn ) then
+      apotime = den(inp)*vol(inp)/timestep
+      su(inp) = su(inp) + apotime*edo(inp)
+      sp(inp) = sp(inp) + apotime
+    elseif( bdf2 ) then
+      apotime=den(inp)*vol(inp)/timestep
+      su(inp) = su(inp) + apotime*( 2*edo(inp) - 0.5_dp*edoo(inp) )
+      sp(inp) = sp(inp) + 1.5_dp*apotime
+    endif
+
+  ! End of Epsilon volume source terms
+  enddo
+
+!
+! > CALCULATE TERMS INTEGRATED OVER FACES
+!
+
+  ! Inner faces:                                             
+  do i=1,numInnerFaces                                                       
+    ijp = owner(i)
+    ijn = neighbour(i)
+
+    call facefluxsc( ijp, ijn, &
+                     xf(i), yf(i), zf(i), &
+                     arx(i), ary(i), arz(i), &
+                     flmass(i), facint(i), &
+                     TurbModel%Scalar(2)%gds, &
+                     TurbModel%Scalar(2)%cScheme, &
+                     TurbModel%Scalar(2)%dScheme, &
+                     TurbModel%Scalar(2)%nrelax, &
+                     ED, dEDdxi, prtr, cap, can, suadd )
+
+    ! > Off-diagonal elements:
+
+    ! (icell,jcell) matrix element:
+    k = icell_jcell_csr_index(i)
+    a(k) = can
+
+    ! (jcell,icell) matrix element:
+    k = jcell_icell_csr_index(i)
+    a(k) = cap
+
+    ! > Elements on main diagonal:
+
+    ! ! (icell,icell) main diagonal element
+    k = diag(ijp)
+    a(k) = a(k) - can
+
+    ! ! (jcell,jcell) main diagonal element
+    k = diag(ijn)
+    a(k) = a(k) - cap
+
+    ! > Sources:
+
+    su(ijp) = su(ijp) + suadd
+    su(ijn) = su(ijn) - suadd 
+
+  enddo
 
   !
-  ! Update symmetry and outlet boundaries
+  ! Boundary conditions
   !
+
+  iWall = 0
+  iPer = 0
+  l = numInnerFaces
+
   do ib=1,numBoundaries
 
-    if ( bctype(ib) == 'outlet' .or. bctype(ib) == 'symmetry' ) then
+    if ( bctype(ib) == 'inlet' .or. &
+         bctype(ib) == 'outlet' .or. &
+         bctype(ib) == 'pressure' ) then
 
       do i=1,nfaces(ib)
 
@@ -624,50 +633,237 @@ subroutine calcsc(Fi,dFidxi,ifi)
         ijp = owner(iface)
         ijb = iBndValueStart(ib) + i
 
-        fi(ijb)=fi(ijp)
+        call facefluxsc( ijp, ijb, &
+                         xf(iface), yf(iface), zf(iface), &
+                         arx(iface), ary(iface), arz(iface), &
+                         flmass(iface), &
+                         ED, dEDdxi, prtr, cap, can, suadd)
 
-      enddo
+        Sp(ijp) = Sp(ijp)-can
+
+        Su(ijp) = Su(ijp)-can*ED(ijb) + suadd
+
+      end do
+
+
+    elseif (  bctype(ib) == 'periodic' ) then
+
+      iPer = iPer + 1 ! count periodic boundary pairs
+
+      ! Faces trough periodic boundaries
+      do i=1,nfaces(ib)
+
+        if = startFace(ib) + i
+        ijp = owner(if)
+
+        iftwin = startFaceTwin(iPer) + i ! Where does the face data for twin start, looking at periodic boundary pair with index iPer.
+        ijn = owner(iftwin)              ! Owner cell of the twin periodic face
+
+
+        ! face flux scalar but for periodic boundaries - it will be recognized by arguments
+        call facefluxsc(  ijp, ijn, &
+                          xf(if), yf(if), zf(if), &
+                          arx(if), ary(if), arz(if), &
+                          flmass(if), TurbModel%Scalar(2)%gds, &
+                          Ed, dEddxi, prtr, cap, can, suadd )
+
+
+        ! > Off-diagonal elements:
+
+        ! l is in interval [numInnerFaces+1, numInnerFaces+numPeriodic]
+        l = l + 1
+
+        ! (icell,jcell) matrix element:
+        k = icell_jcell_csr_index(l)
+        a(k) = can
+
+        ! (jcell,icell) matrix element:
+        k = jcell_icell_csr_index(l)
+        a(k) = cap
+
+        ! > Elements on main diagonal:
+
+        ! ! (icell,icell) main diagonal element
+        k = diag(ijp)
+        a(k) = a(k) - can
+
+        ! ! (jcell,jcell) main diagonal element
+        k = diag(ijn)
+        a(k) = a(k) - cap
+
+        ! > Sources:
+
+        su(ijp) = su(ijp) + suadd
+        su(ijn) = su(ijn) - suadd 
+
+
+      end do 
+
+
+    elseif ( bctype(ib) == 'wall') then
+
+      ! do i=1,nfaces(ib)
+
+      !   iface = startFace(ib) + i
+      !   ijp = owner(iface)
+      !   ijb = iBndValueStart(ib) + i
+      !   iWall = iWall + 1
+
+      !   !
+      !   ! > Wall boundary conditions for dissipation rate of turbulence kinetic energy eq.
+      !   !
+
+      !   ! Wall boundaries approximated with wall functions
+      !   ! for correct values of dissipation all coefficients have
+      !   ! to be zero, su equal the dissipation, and diagonal element a(diag(ijp)) = 1
+
+      !   a( ioffset(ijp):ioffset(ijp+1)-1 ) = 0.0_dp
+      !   sp(ijp) = 1.0_dp
+
+      !   ed(ijp)=cmu75*te(ijp)**1.5/(cappa*dnw(iWall))
+      !   su(ijp)=ed(ijp)
+
+      ! enddo
+
+    endif
+    
+  enddo ! Boundary conditions loop  
+
+
+  !*****************************************************************
+
+  ! The two-layer apprach - enhanced wall treatment
+  ! Penalty approach to set epsilon in 'near wall region' based on Rey
+  ! This will overwite what is set for the wall adjecent layer in boundary conditions loop above
+  ! and expand the region where epsilon is set to a specifi value - the whole region where Rey < Rey*
+
+  ! Loop over cells
+  do inp=1,numCells
+
+    ! sqrt(tke)
+    k12 = sqrt(abs(te(inp)))
+
+    !
+    ! Re number based on wall distance
+    !
+    Rey = den(inp)*wallDistance(inp)*k12/viscos
+
+    if (Rey < Reyst) then
+
+      !
+      ! **Now perform Jonger blending (check parameters in the header of the module and change in needed)
+      !
+
+      ! Blending factor
+      lambeps = 0.5_dp*( 1 + tanh( (Rey - Reyst)/Ablend ) )
+
+
+      ! While we are here, we will also produce new value for epsilon based on blending between two values
+      leps = wallDistance(inp)*Clst*( 1.0-exp(-Rey/Aeps) ) ! the Chen-Patel length scale 
+
+      ! Inner layer value for issipation
+      eps2l = k12**3/leps 
+
+      !
+      ! **Now perform Jonger blending for dissipation
+      !  
+      ed(inp) = ( lambeps*ed(inp) + (1.0-lambeps)*eps2l )
+
+      !
+      ! Penalty formulation - not exactly but close
+      !
+      a( ioffset(inp):ioffset(inp+1)-1 ) = 0.0_dp
+      sp(inp) = 1.0_dp
+      su(inp) = ed(inp)
 
     endif
 
   enddo
 
+  !*****************************************************************
 
-! Report range of scalar values and clip if negative
-  fimin = minval(fi(1:numCells))
-  fimax = maxval(fi(1:numCells))
-  
-  if (ifi.eq.ite) then 
-    write(6,'(2x,es11.4,a,es11.4)') fimin,' <= k <= ',fimax
-  else
-    write(6,'(2x,es11.4,a,es11.4)') fimin,' <= epsilon <= ',fimax
+  ! Modify coefficients for Crank-Nicolson
+  if (cn) then
+
+    a = 0.5_dp*a ! Doesn't affect the main diagonal because it's still zero.
+
+    do i = 1,numInnerFaces
+        ijp = owner(i)
+        ijn = neighbour(i)
+
+        k = icell_jcell_csr_index(i)
+        su(ijp) = su(ijp) - a(k)*edo(ijn)
+
+        k = jcell_icell_csr_index(i)
+        su(ijn) = su(ijn) - a(k)*edo(ijp)
+    enddo
+    do ijp=1,numCells
+        apotime=den(ijp)*vol(ijp)/timestep
+        off_diagonal_terms = sum( a( ioffset(ijp) : ioffset(ijp+1)-1 ) ) - a(diag(ijp))
+        su(ijp) = su(ijp) + (apotime + off_diagonal_terms)*edo(ijp)
+        sp(ijp) = sp(ijp)+apotime
+    enddo
+
   endif
 
+  ! Underrelaxation factors
+  urfrs=1.0_dp/urf
+  urfms=1.0_dp-urf
+
+  ! Main diagonal term assembly:
+  do inp = 1,numCells
+
+    ! Main diagonal term assembly:
+    a(diag(inp)) = sp(inp) 
+    do k = ioffset(inp),ioffset(inp+1)-1
+      if (k.eq.diag(inp)) cycle
+      a(diag(inp)) = a(diag(inp)) -  a(k)
+    enddo
+
+    ! Underelaxation:
+    a(diag(inp)) = a(diag(inp))*urfrs
+    su(inp) = su(inp) + urfms*a(diag(inp))*ed(inp)
+                    
+  enddo
+
+  ! Solve linear system:
+  call csrsolve(lSolver, ed, su, resor(6), maxiter, tolAbs, tolRel, 'epsilon' )
+
+
+
+  ! Update field values at boundaries
+  call updateBoundary( ed )
+
+
+! Report range of scalar values and clip if negative
+  fimin = minval( ed(1:numCells) )
+  fimax = maxval( ed(1:numCells) )
+  
+  write(6,'(2x,es11.4,a,es11.4)') fimin,' <= epsilon <= ',fimax
+
+
 ! These field values cannot be negative
-  if(fimin.lt.0.0_dp) fi(1:numCells) = max(fi(1:numCells),small)
+  if(fimin.lt.0.0_dp) ed(1:numCells) = max(ed(1:numCells),small)
 
-end subroutine calcsc
+end subroutine
 
 
-!***********************************************************************
-!
-subroutine modify_mu_eff()
+
+subroutine modify_mu_eff
 !
 ! Update turbulent and effective viscosity.
 !
-!***********************************************************************
-!
+
   use types
   use parameters
   use geometry
   use variables
+
   implicit none
-!
-!***********************************************************************
-!
+
   integer :: i,ib,inp
   integer :: iface, ijp,ijb,iWall,ivisc
-  real(dp) :: visold
+  real(dp) :: urf,visold
   real(dp) :: nxf,nyf,nzf,are
   real(dp) :: Vnp,Vtp,xtp,ytp,ztp
   real(dp) :: viscw
@@ -676,9 +872,11 @@ subroutine modify_mu_eff()
   real(dp) :: wrlzb,ffi,ass,ust,cmur,stild
   real(dp) :: k12,Rey,lmu,mut2l,mut,lambeps
   real(dp) :: Uplblend,Utau
-  
-  ivisc = 0
 
+  urf = TurbModel%urfVis
+
+  ivisc = 0
+  
   !
   ! Loop trough cells 
   !
@@ -769,7 +967,7 @@ subroutine modify_mu_eff()
     vis(inp)=viscos + ( lambeps*mut + (1.0-lambeps)*mut2l )
 
     ! Underelaxation
-    vis(inp)=urf(ivis)*vis(inp)+(1.0_dp-urf(ivis))*visold
+    vis(inp)=urf*vis(inp)+(1.0_dp-urf)*visold
 
   enddo
 
@@ -778,49 +976,17 @@ subroutine modify_mu_eff()
   !
   ! Boundary faces 
   !
+  
+  ! Update value at every bounary face type except "wall', which is treated below.
+  call updateBoundary( vis )
 
+  ! Now 'wall' type.
   iWall = 0
 
   do ib=1,numBoundaries
 
-    if ( bctype(ib) == 'inlet' ) then
 
-      do i=1,nfaces(ib)
-
-        iface = startFace(ib) + i
-        ijp = owner(iface)
-        ijb = iBndValueStart(ib) + i
-
-        Vis(ijb) = Vis(ijp)
-
-      end do
-
-    elseif ( bctype(ib) == 'outlet' ) then
-
-      do i=1,nfaces(ib)
-
-        iface = startFace(ib) + i
-        ijp = owner(iface)
-        ijb = iBndValueStart(ib) + i
-
-        Vis(ijb) = Vis(ijp)
-
-      enddo
-
-    elseif ( bctype(ib) == 'symmetry') then
-
-      ! Symmetry
-      do i=1,nfaces(ib)
-
-        iface = startFace(ib) + i
-        ijp = owner(iface)
-        ijb = iBndValueStart(ib) + i
-
-        Vis(ijb) = Vis(ijp)
-
-      end do
-
-    elseif ( bctype(ib) == 'wall') then
+    if ( bctype(ib) == 'wall') then
 
       do i=1,nfaces(ib)
 
@@ -934,16 +1100,14 @@ subroutine modify_mu_eff()
 
     endif 
 
+
   enddo
 
 
-end subroutine modify_mu_eff
+end subroutine
 
 
-
-!***********************************************************************
-!
-subroutine modify_mu_eff_inlet()
+subroutine modify_viscosity_inlet_k_epsilon_rlzb_2lewt
 !
 ! Update effective viscosity for standard k-epsilon:
 ! \mu_{eff}=\mu+\mu_t; \mu_t = C_\mu * \frac{k^2}{\epsilon} 
@@ -951,17 +1115,14 @@ subroutine modify_mu_eff_inlet()
 ! NOTE: Although this is realizable k-eps we will use simple standard
 ! k-epsilon mu_t expression at inlet. 
 !
-!***********************************************************************
-!
+
   use types
   use parameters
   use geometry, only: numBoundaries,nfaces,iBndValueStart
   use variables
 
   implicit none
-!
-!***********************************************************************
-!
+
   integer :: i,ib,ijb
 
   !
@@ -983,7 +1144,7 @@ subroutine modify_mu_eff_inlet()
 
   enddo    
 
-end subroutine modify_mu_eff_inlet
+end subroutine
 
 
 end module k_epsilon_rlzb_2lewt

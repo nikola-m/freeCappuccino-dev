@@ -325,8 +325,8 @@ subroutine pipe_disturbances(x,y,z,ux,uy,uz)
   real(dp), intent(in) :: x,y,z
   real(dp), intent(inout) :: ux,uy,uz
 
-  real(dp), parameter :: pipeRadius = 0.0105
-  real(dp), parameter :: pipeLength = 0.105
+  real(dp), parameter :: pipeRadius = 0.5
+  real(dp), parameter :: pipeLength = 5.0
   real(dp) :: zr,yr,rr,th,xo,uxx
   real(dp) :: amp_x,freq_x,freq_t,amp_tht,amp_clip,blt,phase_x,arg_tht,amp_sin,rand,big
 
@@ -362,10 +362,7 @@ subroutine pipe_disturbances(x,y,z,ux,uy,uz)
   big  = 1.e3*x + 1.e2*y + 1.e1*z
   rand = sin(big)
 
-  ! CALL init_random_seed()
-  ! CALL RANDOM_NUMBER(rand)
-
-  ux   = ux * (uxx + .01*rand) ! to scake it to the proper level of u
+  ux   = ux * (uxx + .01*rand)
   uy   = .10*rand*rand*rand
   uz   = .05*rand*rand
 
@@ -386,11 +383,11 @@ subroutine channel_disturbances(x,y,z,ux,uy,uz)
   real(dp), intent(inout) :: ux,uy,uz
 
   real(dp), parameter :: channelHalfWidth = 1.0
-  real(dp), parameter :: channelLength = 6.28
+  real(dp), parameter :: channelLength = 4.0 ! 6.28 
   real(dp) :: yr,rr,th,xo,uxx
   real(dp) :: amp_x,freq_x,freq_t,amp_tht,amp_clip,blt,phase_x,arg_tht,amp_sin,rand,big
 
-  yr = y/channelHalfWidth
+  yr = y !yr = (y-1.)/channelHalfWidth ! <- yr = y if [-1,1]; yr = y-1.0 if [0,2] in vertical direction
   rr = yr*yr
   if (rr.gt.0) rr=sqrt(rr)
   th = atan2(y,z)
@@ -415,17 +412,43 @@ subroutine channel_disturbances(x,y,z,ux,uy,uz)
   if (amp_sin.gt. amp_clip) amp_sin =  amp_clip
   if (amp_sin.lt.-amp_clip) amp_sin = -amp_clip
 
-  if (rr.gt.(1-blt)) uxx = uxx !+ amp_sin
+  if (rr.gt.(1-blt)) uxx = uxx + amp_sin !<<<<
 
   ! Quick P-independent randomizer
   big  = 1.e3*x + 1.e2*y + 1.e1*z
   rand = sin(big)
 
-  ux   = ux * (uxx + 0.01*rand) ! to scake it to the proper level of u
+  ux   = ux * (uxx + 0.01*rand) ! to scale it to the proper level of u
   uy   = 0.10*rand*rand*rand
-  uz   = 0.05*rand*rand
+  uz   = 0.10*rand*rand*rand !0.05*rand*rand
 
 end subroutine
+
+
+
+subroutine initialize_tgv(x,y,z,ux,uy,uz,p)
+!
+! Initialize field values for Taylor-Green vortex case
+!
+  use parameters, only: pi
+
+  implicit none
+
+  real(dp), intent(in) :: x,y,z
+  real(dp), intent(inout) :: ux,uy,uz,p
+
+  real(dp), parameter :: rho = 1.0_dp
+  real(dp), parameter :: Vo = 1.0_dp
+  real(dp), parameter :: po = 0.0_dp
+
+  ux = Vo*sin(x)*cos(y)*cos(z)
+  uy =-Vo*cos(x)*sin(y)*cos(z)
+  uz = 0.0_dp
+
+  p = po + rho*Vo**2/16.0 * ( cos(2*x)+cos(2*y) ) * ( cos(2*z) + 2.0_dp )
+
+end subroutine
+
 
 
 end module

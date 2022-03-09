@@ -16,7 +16,7 @@
            maxiterU = 5             ! Max no of iterations for linear U-V-W equations
             tolAbsU = 1e-13         ! Absolute tolerance level for residual for linear U-V-W equations
             tolRelU = 1e-6          ! Relative tolerance level for residual for linear U-V-W equations
-ScndOrderPressIntrp = F             ! Second order (default), or massflow weighted interpolation of pressure to faces.
+            pscheme = 'weighted'    ! pressure interpolation scheme 
         !
         ! Approximation details for pressure/pressure correction.
         !

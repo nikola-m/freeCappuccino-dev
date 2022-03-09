@@ -11,14 +11,14 @@ subroutine read_input_file
   use gradients, only: lstsq, lstsq_qr, lstsq_dm, gauss, limiter
   use velocity, only: calcU, urfU, gdsU, cSchemeU, dSchemeU, nrelaxU, lSolverU, maxiterU, tolAbsU, tolRelU
   use pressure, only: calcP, urfP, lSolverP, maxiterP, tolAbsP, tolRelP
-  use nablap, only: ScndOrderPressIntrp
+  use nablap, only: pscheme
   use temperature
   use energy
   use concentration
   use mhd
-  use turbulence
+  use TurbModelData, only: TurbModel,set_turb_scalar_solution_flags
   use rheology, only: npow, Consst, shearmin, Tau_0, megp,  &
-                      muplastic, muzero, muinfty, lamtime, &    
+                      muplastic, muzero, muinfty, lamtime, acy,&    
                       calcVis, urfVis, non_newtonian_model
   use monitors
 
@@ -48,7 +48,7 @@ subroutine read_input_file
         maxiterU, &           ! Max no of iterations for linear U-V-W equations
         tolAbsU, &            ! Absolute tolerance level for residual for linear U-V-W equations
         tolRelU, &            ! Relative tolerance level for residual for linear U-V-W equations
-        ScndOrderPressIntrp,& ! Second order (default), or massflow weighted interpolation of pressure to faces.
+        pscheme,&             ! pressure interpolation scheme 
         !
         ! Approximation details for pressure/pressure correction.
         !
@@ -62,15 +62,6 @@ subroutine read_input_file
         ! Physical model: Viscous flows - Laminar/Turbulent, Activation and model details.
         !
         TurbModel, &          ! Turbulence model. Now a number, maybe char string in the future.    
-        urf, &                ! Under-relaxation factors.
-        gds, &                ! Deferred correction factor.
-        cScheme, &            ! Convection scheme - default is second order upwind.
-        dScheme, &            ! Difussion scheme, i.e. the method for normal gradient at face skewness/offset.
-        nrelax, &             ! Relaxation parameter non-orthogonal correction for face gradient.
-        lSolver, &            ! Linear algebraic solver.
-        maxiter, &            ! Max number of iterations in linear solver.
-        tolAbs, &             ! Absolute residual level.
-        tolRel, &             ! Relative drop in residual to exit linear solver.
         !
         ! Physical model: Rheology - Non-Newtonian fluids - model and solution details
         ! 
@@ -85,7 +76,8 @@ subroutine read_input_file
         muzero, &             ! Zero shear rate viscosity
         muinfty, &            ! Infinity shear rate viscosity
         lamtime, &            ! Natural time - time parameter
-        urfVis, &              ! Under-relaxation parameter
+        acy, &                ! Exponent a in Carreau-Yasuda model
+        urfVis, &             ! Under-relaxation parameter
         !
         ! Physical model: Heat transfer, Temperature as energy equation, Activation and model details.
         !
@@ -188,7 +180,7 @@ subroutine read_input_file
         !             
         SIMPLE, &             !# |Pressure-velocity coupling method - SIMPLE, or...
         PISO, &               !# |Pressure-velocity coupling method - PISO.
-        AllSpeedsSIMPLE, &    !# SIMPLE for compressible flows. Activate Energy eqn.
+        compressible, &       !# SIMPLE for compressible flows. Activate Energy eqn.
         ncorr, &              ! Number of PISO corrections - only relevant for PISO.
         npcor, &              ! Number of iterations for pressure/pressure correction equation, i.e. Number of Nonorthogonal corrections.
         pRefCell, &           ! Reference cell for setting pressure level (since we have pure Neumann problem)
@@ -227,14 +219,14 @@ subroutine read_input_file
 
   ! Turbulent flow computation condition:
   lturb =  .False.
-  if( TurbModel /= 'none') then
+  if( TurbModel%name /= 'none') then
     lturb = .True. 
     call  set_turb_scalar_solution_flags
   endif
 
 
-  ! ! > Open files for data at monitoring points // this funtionality is now based on function from 'monitors' module.
-  ! call define_monitors
+  ! > Open files for data at monitoring points // this functionality is now based on function from 'monitors' module.
+  call define_monitors
 
 
 end subroutine

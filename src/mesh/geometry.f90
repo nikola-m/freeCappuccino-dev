@@ -784,7 +784,7 @@ subroutine read_mesh_openfoam
   real(dp) :: are,areasum
   real(dp) :: xpn,ypn,zpn
   real(dp) :: xjp,yjp,zjp
-  real(dp) :: dpn,djn
+  real(dp) :: dpn,djn,djp
   real(dp) :: nxf,nyf,nzf
 
   ! Array for temporary storage of doubles
@@ -1338,49 +1338,78 @@ subroutine read_mesh_openfoam
   ! > Interpolation factor > inner faces
   !
 
-  do iface=1,numInnerFaces
+  if ( interpolation_coeff_variant == 1 ) then
 
-    inp = owner(iface)
-    inn = neighbour(iface)
+    do iface=1,numInnerFaces
 
-    node = 0
+      inp = owner(iface)
+      inn = neighbour(iface)
 
-    ! Read line in 'faces' file
-    call read_line_faces_file_polyMesh(faces_file,nnodes,node,nomax)
+      node = 0
 
-    xpn = xc(inn)-xc(inp)
-    ypn = yc(inn)-yc(inp)
-    zpn = zc(inn)-zc(inp)
+      ! Read line in 'faces' file
+      call read_line_faces_file_polyMesh(faces_file,nnodes,node,nomax)
 
-    dpn = sqrt( xpn**2 + ypn**2 + zpn**2 ) 
+      xpn = xc(inn)-xc(inp)
+      ypn = yc(inn)-yc(inp)
+      zpn = zc(inn)-zc(inp)
+
+      dpn = sqrt( xpn**2 + ypn**2 + zpn**2 ) 
+
+      !
+      ! > > Intersection point j' of line connecting centers with cell face, we are taking only three points assuming that other are co-planar
+      !
+      call find_intersection_point(&
+                                   ! plane defined by three face vertices:
+                                   x(node(1)),y(node(1)),z(node(1)),&
+                                   x(node(2)),y(node(2)),z(node(2)), &
+                                   x(node(3)),y(node(3)),z(node(3)), &
+                                   ! line defined by cell center and neighbour center:
+                                   xc(inp),yc(inp),zc(inp), &
+                                   xc(inn),yc(inn),zc(inn), &
+                                   ! intersection point (output):
+                                   xjp,yjp,zjp &
+                                  )
+      xpn = xjp - xc(inp)
+      ypn = yjp - yc(inp)
+      zpn = zjp - zc(inp)
+
+      djn = sqrt( xpn**2 + ypn**2 + zpn**2 )
+
+      ! Interpolation factor |P Pj'|/|P Pj| where P is cell center, Pj neighbour cell center and j' intersection point.
+      facint(iface) = djn / dpn 
+      
+    enddo
+
+  else ! ( interpolation_coeff_variant == 2 )
 
     !
-    ! > > Intersection point j' of line connecting centers with cell face, we are taking only three points assuming that other are co-planar
+    ! > Interpolation factor > inner faces - Variant 2.
     !
-    call find_intersection_point(&
-                                 ! plane defined by three face vertices:
-                                 x(node(1)),y(node(1)),z(node(1)),&
-                                 x(node(2)),y(node(2)),z(node(2)), &
-                                 x(node(3)),y(node(3)),z(node(3)), &
-                                 ! line defined by cell center and neighbour center:
-                                 xc(inp),yc(inp),zc(inp), &
-                                 xc(inn),yc(inn),zc(inn), &
-                                 ! intersection point (output):
-                                 xjp,yjp,zjp &
-                                )
-    xpn = xjp - xc(inp)
-    ypn = yjp - yc(inp)
-    zpn = zjp - zc(inp)
+    do iface=1,numInnerFaces
 
-    djn = sqrt( xpn**2 + ypn**2 + zpn**2 )
+      inp = owner(iface)
+      inn = neighbour(iface)
 
-    ! Interpolation factor |P Pj'|/|P Pj| where P is cell center, Pj neighbour cell center and j' intersection point.
-    facint(iface) = djn / dpn 
-    
-  enddo
+      xpn = xf(iface) - xc(inp)
+      ypn = yf(iface) - yc(inp)
+      zpn = zf(iface) - zc(inp)
+
+      djp = sqrt( xpn**2 + ypn**2 + zpn**2 )
+
+      xpn = xf(iface) - xc(inn)
+      ypn = yf(iface) - yc(inn)
+      zpn = zf(iface) - zc(inn)
+
+      djn = sqrt( xpn**2 + ypn**2 + zpn**2 )
+
+      ! Interpolation factor |PjF|/|PF + PjF|  where P is cell center, Pj neighbour cell center and F is face centroid.
+      facint(iface) =  djp / ( djp + djn ) 
+      
+    enddo
 
 
-
+  endif
 
   ! Loop over wall boundaries to calculate normal distance from cell center of the first cell layer - dnw, and
   ! loop over symmetry boundaries to calculate normal distance from cell center of the first cell layer - dns.
@@ -1637,12 +1666,12 @@ subroutine face_mapping
   implicit none
 
 
-  integer :: i,ib,ijn,iface
+  integer :: i,ib,ijp,ijn,iface
   integer :: iPer, itemp, indx
   real(dp) :: dist,mindist
   real(dp), parameter :: tol = 1e-10
-  integer, dimension(:), allocatable :: tmp
-
+  integer, dimension(:), allocatable :: tmp,itmp
+  real(dp), dimension(:), allocatable :: vtmp
 
   iPer = 0
 
@@ -1651,7 +1680,7 @@ subroutine face_mapping
     if (  bctype(ib) == 'periodic' ) then
 
 
-      allocate( tmp( nfaces(ib) ) )
+      allocate( tmp( nfaces(ib) ), itmp( nfaces(ib) ), vtmp( nfaces(ib) ) )
 
       iPer = iPer + 1 ! found one pair of periodic boundaries, increase counter by one
 
@@ -1659,25 +1688,28 @@ subroutine face_mapping
       do i=1,nfaces(ib)
 
         iface = startFace(ib) + i
+        ijp = owner(iface)
 
-          mindist = 1e+30
-          indx = 0
+        mindist = 1e+30
+        indx = 0
 
-          do itemp=1,nfaces(ib)   
+        do itemp=1,nfaces(ib)   
 
-            ijn = owner( startFaceTwin(iPer) + itemp )
+          ijn = owner( startFaceTwin(iPer) + itemp )
 
-            dist = abs(yf(iface)-yc(ijn)) + abs(zf(iface)-zc(ijn))
+          ! Maybe in the future in the 'boundary' file, on 'periodic' bctype line,
+          ! give vector, eg. '4.0d0, 0.0D0, 0.0D0' which translates that boundary
+          ! to it's periodic twin, and that's how we can map faces...
+          ! For now we use the concept of minimizing distance between periodic faces to find twins.
+          dist = abs(xf(iface)-xc(ijn)) + abs(yf(iface)-yc(ijn)) + abs(zf(iface)-zc(ijn))
 
-            if ( dist < mindist ) then
-             mindist = dist
-             indx  = ijn
-            endif
+          if ( dist < mindist ) then
+            mindist = dist
+            tmp(i)  = ijn
+            itmp(i) = itemp 
+          endif
 
-          enddo
-
-          ! owner( startFaceTwin(iPer) + i ) = indx
-          tmp(i) = indx
+        enddo
 
       enddo
 
@@ -1685,7 +1717,51 @@ subroutine face_mapping
         owner( startFaceTwin(iPer) + i ) = tmp(i)
       enddo
 
-      deallocate(tmp)
+      ! Permute face center coordinates
+      do i=1,nfaces(ib)
+        vtmp(i) = xf( startFaceTwin(iPer) + itmp(i) )
+      enddo
+      do i=1,nfaces(ib)
+        xf( startFaceTwin(iPer) + i ) = vtmp(i)
+      enddo
+
+      do i=1,nfaces(ib)
+        vtmp(i) = yf( startFaceTwin(iPer) + itmp(i) )
+      enddo
+      do i=1,nfaces(ib)
+        yf( startFaceTwin(iPer) + i ) = vtmp(i)
+      enddo
+
+      do i=1,nfaces(ib)
+        vtmp(i) = zf( startFaceTwin(iPer) + itmp(i) )
+      enddo 
+      do i=1,nfaces(ib)
+        zf( startFaceTwin(iPer) + i ) = vtmp(i)
+      enddo
+
+      ! Permute face normal vector components
+      do i=1,nfaces(ib)
+        vtmp(i) = arx( startFaceTwin(iPer) + itmp(i) )
+      enddo
+      do i=1,nfaces(ib)
+        arx( startFaceTwin(iPer) + i ) = vtmp(i)
+      enddo
+
+      do i=1,nfaces(ib)
+        vtmp(i) = ary( startFaceTwin(iPer) + itmp(i) )
+      enddo   
+      do i=1,nfaces(ib)
+        ary( startFaceTwin(iPer) + i ) = vtmp(i)
+      enddo
+
+      do i=1,nfaces(ib)
+        vtmp(i) = arz( startFaceTwin(iPer) + itmp(i) )
+      enddo
+      do i=1,nfaces(ib)
+        arz( startFaceTwin(iPer) + i ) = vtmp(i)
+      enddo
+
+      deallocate(tmp,itmp,vtmp)
 
     endif
 

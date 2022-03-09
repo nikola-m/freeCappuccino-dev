@@ -258,8 +258,7 @@ subroutine create_lsq_grad_matrix
 !
 !  Discussion:
 !    Prepare System Matrix For Least-Squares Gradient Calculation.
-!    It is done by setting this --v value to one.
-!           call grad_lsq(U,dUdxi,1)
+!    It is done only once at the beggiing of the calculation.
 !
 !***********************************************************************
 !
@@ -1000,19 +999,19 @@ subroutine grad_lsq_qr_matrix
   integer, parameter :: n=3, m=6  ! m is the number of neighbours, e.g. for structured 3D mesh it's 6
 
   ! Locals
-  integer ::  i,l,k,ijp,ijn,inp,iface
+  integer ::  i,l,ijp,ijn,inp,iface
 
   integer, dimension(numCells) :: neighbour_index  
 
   real(dp), dimension(m,n) :: Dtmp
   real(dp), dimension(n,m) :: Dtmpt
 
+  ! REAL(dp), DIMENSION(m,n) :: R
+  ! REAL(dp), DIMENSION(m,m) :: Q
+  ! REAL(dp), DIMENSION(n,n) :: R1
+  ! REAL(dp), DIMENSION(n,m) :: Q1t
 
-  !REAL(dp), DIMENSION(m,n) :: R
-  !REAL(dp), DIMENSION(m,m) :: Q
-  !REAL(dp), DIMENSION(n,n) :: R1
-  !REAL(dp), DIMENSION(n,m) :: Q1t
-
+  integer :: k
   INTEGER :: INFO
   REAL(dp), DIMENSION(n) :: TAU
   INTEGER, DIMENSION(n) :: WORK
@@ -1071,20 +1070,22 @@ subroutine grad_lsq_qr_matrix
   Dtmpt = D(:,:,inp)
   Dtmp = transpose(Dtmpt)
 
-  !1 ...Decompose A=QR using Householder
-  !      call householder_qr(Dtmp, m, n, Q, R)
-  !2 ...Decompose A=QR using Gram-Schmidt
-  !      call mgs_qr(Dtmp, m, n, Q, R)
+  !1) ...Decompose A=QR using Householder
+  ! call householder_qr(Dtmp, m, n, Q, R)
+  !2) ...Decompose A=QR using Gram-Schmidt >>
+  ! call mgs_qr(Dtmp, m, n, Q, R)
 
-  !      Q = transpose(Q)
-  !      Q1t = Q(1:n,1:m)     ! NOTE: A=Q1R1 is so-called 'thin QR factorization' - see Golub & Van Loan
-                              ! Here Q1 is actually Q1^T a transpose of Q1(thin Q - Q with m-n column stripped off)
-  !      R1 = R(1:n,1:n)      ! our Q1 is thin transpose of original Q.
-  !      R1 = inv(R1)         ! inv is a function in matrix_module, now works only for 3x3 matrices.
-  !      Q1t  = matmul(R1,Q1t) ! this is actually R^(-1)*Q^T - a matrix of size n x m.
-  !      D(:,:,INP) = Q1t     ! Store it for later.
+  ! Q = transpose(Q)
+  ! Q1t = Q(1:n,1:m)      ! NOTE: A=Q1R1 is so-called 'thin QR factorization' - see Golub & Van Loan
+  !                       ! Here Q1 is actually Q1^T a transpose of Q1(thin Q - Q with m-n column stripped off)
+  ! R1 = R(1:n,1:n)       ! our Q1 is thin transpose of original Q.
+  ! R1 = inv(R1)          ! inv is a function in matrix_module, now works only for 3x3 matrices.
+  ! Q1t  = matmul(R1,Q1t) ! this is actually R^(-1)*Q^T - a matrix of size n x m.
+  ! D(:,:,INP) = Q1t      ! Store it for later.
 
-  !3....LAPACK routine DGEQRF
+  !<<
+
+  !3....LAPACK routine DGEQRF >>>
   CALL DGEQRF( l, N, Dtmp, M, TAU, WORK, N, INFO )
 
   ! Upper triangular matrix R
@@ -1110,6 +1111,7 @@ subroutine grad_lsq_qr_matrix
     D(2,k,inp) = q(k,2)/r(2,2) - (r(2,3)*q(k,3))/(r(2,2)*r(3,3))
     D(3,k,inp) = q(k,3)/r(3,3)
   enddo
+  !<<<
 
   enddo
 

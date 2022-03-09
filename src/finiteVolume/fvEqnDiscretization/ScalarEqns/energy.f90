@@ -9,21 +9,35 @@ module energy
   !
   ! Discrtetization and solution parameters - modified trough input.nml file
   !
-  logical  :: calcEn = .False.                         ! To activate the solution of this field in the main function. 
-  real(dp) :: urfEn  = 0.9_dp                            ! Under-relaxation factors.
-  real(dp) :: gdsEn = 1.0_dp                             ! Deferred correction factor.
-  character ( len=30 ) :: cSchemeEn = 'boundedLinearUpwind'  ! Convection scheme - default is second order upwind.
-  character ( len=12 ) :: dSchemeEn = 'skewness'  ! Difussion scheme, i.e. the method for normal gradient at face skewness/offset.
-  integer :: nrelaxEn = 0                         ! Type of non-orthogonal correction for face gradient minimal/orthogonal/over-relaxed. 1/0/-1
-  character ( len=12 ) :: lSolverEn = 'bicgstab'  ! Linear algebraic solver.
-  integer  :: maxiterEn = 10                      ! Max number of iterations in linear solver.
-  real(dp) :: tolAbsEn = 1e-13                    ! Absolute residual level.
-  real(dp) :: tolRelEn = 0.025                    ! Relative drop in residual to exit linear solver.
-  real(dp) :: sigtEn = 0.9_dp                     ! sigma_t
-  logical :: solveTotalEnergy = .True.            !@ What we solve here - default is total energy, change it 
-  logical :: solveInternalEnergy = .False.        !@ in input.nml file.
-  logical :: solveEnthalpy = .False.              !@
-  logical :: addViscDiss = .False.                ! Add viscous dissipation term? T/F
+  logical  :: calcEn = .False.                      ! To activate the solution of this field in the main function. 
+  real(dp) :: urfEn  = 0.9_dp                       ! Under-relaxation factors.
+  real(dp) :: gdsEn = 1.0_dp                        ! Deferred correction factor.
+  character ( len=30 ) :: cSchemeEn = 'linearUpwind'! Convection scheme - default is second order upwind.
+  character ( len=12 ) :: dSchemeEn = 'skewness'    ! Difussion scheme, i.e. the method for normal gradient at face skewness/offset.
+  integer :: nrelaxEn = 0                           ! Type of non-orthogonal correction for face gradient minimal/orthogonal/over-relaxed. 1/0/-1
+  character ( len=12 ) :: lSolverEn = 'bicgstab'    ! Linear algebraic solver.
+  integer  :: maxiterEn = 10                        ! Max number of iterations in linear solver.
+  real(dp) :: tolAbsEn = 1e-13                      ! Absolute residual level.
+  real(dp) :: tolRelEn = 0.025                      ! Relative drop in residual to exit linear solver.
+  real(dp) :: sigtEn = 0.9_dp                       ! sigma_t
+  logical :: solveTotalEnergy = .True.              !@ What we solve here - default is total energy, change it 
+  logical :: solveInternalEnergy = .False.          !@ in input.nml file.
+  logical :: solveEnthalpy = .False.                !@
+  logical :: addViscDiss = .False.                  ! Add viscous dissipation term? T/F
+
+  real(dp), parameter :: c_p = 1006.0               ! Heat capacity at constant pressure [J/kgK]
+
+
+  ! type, extends(fieldEqn) :: energyEqn
+  !   real(dp) :: sigtEn = 0.9_dp                       ! sigma_t
+  !   logical :: solveTotalEnergy = .True.              !@ What we solve here - default is total energy, change it 
+  !   logical :: solveInternalEnergy = .False.          !@ in input.nml file.
+  !   logical :: solveEnthalpy = .False.                !@
+  !   logical :: addViscDiss = .False.                  ! Add viscous dissipation term? T/F
+  ! end type energyEqn
+
+  ! type(energyEqn) :: Energy
+
 
   private 
 
@@ -57,6 +71,7 @@ subroutine calc_energy
 ! Local variables
 !
   integer ::  i, k, ib, inp, ijp, ijn, ijb, iface, iwall
+  integer :: iPer, l, if, iftwin
   real(dp) :: gam, prtr, apotime
   real(dp) :: cap, can, suadd
   real(dp) :: off_diagonal_terms
@@ -79,7 +94,12 @@ subroutine calc_energy
   prtr = 1.0_dp/sigtEn
 
 ! Calculate gradient: 
-  call grad(T,dTdxi)
+  call grad(En,dEndxi)
+
+  ! Velocity gradients update (is it necessary here?) 
+  call grad(U,dUdxi)
+  call grad(V,dVdxi)
+  call grad(W,dWdxi)
 
 ! Initialize coef and source arrays
   a = 0.0_dp
@@ -129,41 +149,37 @@ subroutine calc_energy
 
   endif
 
-  !
-  ! > Viscous heating term (compressible flows)
-  !
-  if (addViscDiss) then
-
-    ! Velocity gradients update (is it necessary here?) 
-    call grad(U,dUdxi)
-    call grad(V,dVdxi)
-    call grad(W,dWdxi)
-
-    dudx = dUdxi(1,inp)
-    dudy = dUdxi(2,inp)
-    dudz = dUdxi(3,inp)
-    
-    dvdx = dVdxi(1,inp)
-    dvdy = dVdxi(2,inp)
-    dvdz = dVdxi(3,inp)
-
-    dwdx = dWdxi(1,inp)
-    dwdy = dWdxi(2,inp)
-    dwdz = dWdxi(3,inp)
-
-    Psi = (dudx+dvdy+dwdz)**2
-
-    Phi = 2*(dudx**2+dvdy**2+dwdz**2)+ (dudy+dvdx)**2+(dudz+dwdx)**2+(dwdy+dvdz)**2
-    
-    viscDiss = vis(inp)*(Phi-2./3.*Psi)*Vol(inp)
-
-  endif
-
 
 !
 ! > Volume source terms - loop over cells
 !
   do inp=1,numCells
+
+
+    !
+    ! > Viscous heating term (compressible flows)
+    !
+    if (addViscDiss) then
+
+      dudx = dUdxi(1,inp)
+      dudy = dUdxi(2,inp)
+      dudz = dUdxi(3,inp)
+      
+      dvdx = dVdxi(1,inp)
+      dvdy = dVdxi(2,inp)
+      dvdz = dVdxi(3,inp)
+
+      dwdx = dWdxi(1,inp)
+      dwdy = dWdxi(2,inp)
+      dwdz = dWdxi(3,inp)
+
+      Psi = (dudx+dvdy+dwdz)**2
+
+      Phi = 2*(dudx**2+dvdy**2+dwdz**2)+ (dudy+dvdx)**2+(dudz+dwdx)**2+(dwdy+dvdz)**2
+      
+      viscDiss = vis(inp)*(Phi-2./3.*Psi)*Vol(inp)
+
+    endif
 
 
     if (ltransient) then
@@ -206,12 +222,12 @@ subroutine calc_energy
 
       if( bdf .or. cn ) then
         apotime = den(inp)*vol(inp)/timestep
-        su(inp) = su(inp) + apotime*To(inp)
+        su(inp) = su(inp) + apotime*Eno(inp)
         sp(inp) = sp(inp) + apotime
 
       elseif( bdf2 ) then
         apotime=den(inp)*vol(inp)/timestep
-        su(inp) = su(inp) + apotime*( 2*to(inp) - 0.5_dp*too(inp) )
+        su(inp) = su(inp) + apotime*( 2*Eno(inp) - 0.5_dp*Enoo(inp) )
         sp(inp) = sp(inp) + 1.5_dp*apotime
 
       endif
@@ -234,7 +250,7 @@ subroutine calc_energy
     call facefluxsc( ijp, ijn, &
                      xf(i), yf(i), zf(i), arx(i), ary(i), arz(i), &
                      flmass(i), facint(i), gam, &
-                     T, dTdxi, prtr, cap, can, suadd )
+                     En, dEndxi, prtr, cap, can, suadd )
 
     ! > Off-diagonal elements:
 
@@ -271,6 +287,8 @@ subroutine calc_energy
 !
 
   iWall = 0
+  iPer = 0
+  l = numInnerFaces
 
   do ib=1,numBoundaries
 
@@ -287,11 +305,11 @@ subroutine calc_energy
         call facefluxsc_boundary( ijp, ijb, &
                          xf(iface), yf(iface), zf(iface), arx(iface), ary(iface), arz(iface), &
                          flmass(iface), &
-                         T, dTdxi, prtr, cap, can, suadd)
+                         En, dEndxi, prtr, cap, can, suadd)
 
         Sp(ijp) = Sp(ijp)-can
 
-        Su(ijp) = Su(ijp)-can*T(ijb) + suadd
+        Su(ijp) = Su(ijp)-can*En(ijb) + suadd
 
       end do
 
@@ -312,7 +330,7 @@ subroutine calc_energy
         !# are = sqrt(arx(iface)**2+ary(iface)**2+arz(iface)**2)
         !# coef = dcoef*are/dnw(iWall)
         sp(ijp) = sp(ijp) + coef
-        su(ijp) = su(ijp) + coef*T(ijb)
+        su(ijp) = su(ijp) + coef*En(ijb)
 
       enddo
 
@@ -326,7 +344,7 @@ subroutine calc_energy
         ijp = owner(iface)
         ijb = iBndValueStart(ib) + i
 
-        T(ijb)=T(ijp)
+        En(ijb)=En(ijp)
 
       enddo
 
@@ -357,12 +375,63 @@ subroutine calc_energy
         nzf = arz(iface)/are
 
         ! Gradient in face-normal direction        
-        dTn = dTdxi(1,ijb)*nxf+dTdxi(2,ijb)*nyf+dTdxi(3,ijb)*nzf
+        dTn = dEndxi(1,ijb)*nxf+dEndxi(2,ijb)*nyf+dEndxi(3,ijb)*nzf
 
         ! Explicit source
         su(ijp) = su(ijp) + coef*dTn
 
       enddo
+
+    elseif (  bctype(ib) == 'periodic' ) then
+
+      iPer = iPer + 1 ! count periodic boundary pairs
+
+      ! Faces trough periodic boundaries
+      do i=1,nfaces(ib)
+
+        if = startFace(ib) + i
+        ijp = owner(if)
+
+        iftwin = startFaceTwin(iPer) + i ! Where does the face data for twin start, looking at periodic boundary pair with index iPer.
+        ijn = owner(iftwin)              ! Owner cell of the twin periodic face
+
+
+        ! face flux scalar but for periodic boundaries - it will be recognized by arguments
+        call facefluxsc_periodic( ijp, ijn, xf(if), yf(if), zf(if), arx(if), ary(if), arz(if), &
+                                  flmass(if), gam, &
+                                  En, dEndxi, prtr, cap, can, suadd )
+
+
+        ! > Off-diagonal elements:
+
+        ! l is in interval [numInnerFaces+1, numInnerFaces+numPeriodic]
+        l = l + 1
+
+        ! (icell,jcell) matrix element:
+        k = icell_jcell_csr_index(l)
+        a(k) = can
+
+        ! (jcell,icell) matrix element:
+        k = jcell_icell_csr_index(l)
+        a(k) = cap
+
+        ! > Elements on main diagonal:
+
+        ! ! (icell,icell) main diagonal element
+        k = diag(ijp)
+        a(k) = a(k) - can
+
+        ! ! (jcell,jcell) main diagonal element
+        k = diag(ijn)
+        a(k) = a(k) - cap
+
+        ! > Sources:
+
+        su(ijp) = su(ijp) + suadd
+        su(ijn) = su(ijn) - suadd 
+
+
+      end do 
 
 
     endif
@@ -383,16 +452,16 @@ subroutine calc_energy
           ijn = neighbour(i)
 
           k = icell_jcell_csr_index(i)
-          su(ijp) = su(ijp) - a(k)*To(ijn)
+          su(ijp) = su(ijp) - a(k)*Eno(ijn)
 
           k = jcell_icell_csr_index(i)
-          su(ijn) = su(ijn) - a(k)*To(ijp)
+          su(ijn) = su(ijn) - a(k)*Eno(ijp)
       enddo
       
       do ijp=1,numCells
           apotime=den(ijp)*vol(ijp)/timestep
           off_diagonal_terms = sum( a( ioffset(ijp) : ioffset(ijp+1)-1 ) ) - a(diag(ijp))
-          su(ijp) = su(ijp) + (apotime + off_diagonal_terms)*To(ijp)
+          su(ijp) = su(ijp) + (apotime + off_diagonal_terms)*Eno(ijp)
           sp(ijp) = sp(ijp)+apotime
       enddo
 
@@ -413,42 +482,50 @@ subroutine calc_energy
 
     ! Underelaxation:
     a(diag(inp)) = a(diag(inp))*urfr
-    su(inp) = su(inp) + urfm*a(diag(inp))*T(inp)
+    su(inp) = su(inp) + urfm*a(diag(inp))*En(inp)
 
   enddo
 
   ! Solve linear system:
-  call csrsolve(lSolverEn, T, su, resor(7), maxiterEn, tolAbsEn, tolRelEn, 'Energy')
+  call csrsolve(lSolverEn, En, su, resor(7), maxiterEn, tolAbsEn, tolRelEn, 'Energy')
 
-  !
-  ! Update symmetry and outlet boundaries
-  !
-  do ib=1,numBoundaries
 
-    if ( bctype(ib) == 'outlet' .or. bctype(ib) == 'symmetry' ) then
+  ! Update field values at boundaries
+  call updateBoundary(En)
 
-      do i=1,nfaces(ib)
+  ! do ib=1,numBoundaries
 
-        iface = startFace(ib) + i
-        ijp = owner(iface)
-        ijb = iBndValueStart(ib) + i
+  !   if ( bctype(ib) == 'outlet' .or. bctype(ib) == 'symmetry' ) then
 
-        T(ijb) = T(ijp)
+  !     do i=1,nfaces(ib)
 
-      enddo
+  !       iface = startFace(ib) + i
+  !       ijp = owner(iface)
+  !       ijb = iBndValueStart(ib) + i
 
-    endif
+  !       En(ijb) = En(ijp)
 
-  enddo
+  !     enddo
+
+  !   endif
+
+  ! enddo
 
 ! Report range of scalar values and clip if negative
-  fimin = minval(T(1:numCells))
-  fimax = maxval(T(1:numCells))
+  fimin = minval(En(1:numCells))
+  fimax = maxval(En(1:numCells))
   
   write(6,'(2x,es11.4,a,es11.4)') fimin,' <= Energy <= ',fimax
 
-! These field values cannot be negative
-  if(fimin.lt.0.0_dp) T(1:numCells) = max( T(1:numCells), small )  
+  ! These field values cannot be negative
+  if(fimin.lt.0.0_dp) En(1:numCells) = max( En(1:numCells), small )  
+
+
+  !
+  ! > Recalculate temperature from energy variable (total energy, ethalpy or internal energy)
+  !
+  call correct_temperature
+
 
 end subroutine
 
@@ -582,6 +659,140 @@ subroutine facefluxsc(ijp, ijn, xf, yf, zf, arx, ary, arz, &
   suadd = -ffic+fdfie-fdfii 
 
 end subroutine
+
+
+
+
+
+!***********************************************************************
+!
+subroutine facefluxsc_periodic(ijp, ijn, &
+                               xf, yf, zf, arx, ary, arz, &
+                               flmass, gam, &
+                               FI, dFidxi, prtr, cap, can, suadd)
+!
+!***********************************************************************
+!
+  use types
+  use parameters
+  use variables, only: vis
+  use interpolation
+
+  implicit none
+!
+!***********************************************************************
+! 
+
+  integer, intent(in) :: ijp, ijn
+  real(dp), intent(in) :: xf,yf,zf
+  real(dp), intent(in) :: arx, ary, arz
+  real(dp), intent(in) :: flmass
+  real(dp), intent(in) :: gam 
+  ! character( len=30 ), intent(in) :: cScheme ! Convection scheme.
+  real(dp), dimension(numTotal), intent(in) :: Fi
+  real(dp), dimension(3,numCells), intent(in) :: dFidxi
+  real(dp), intent(in) :: prtr
+  real(dp), intent(inout) :: cap, can, suadd
+
+
+! Local variables
+  real(dp) :: are
+  real(dp) :: xpn,ypn,zpn
+  real(dp) :: dpn
+  real(dp) :: Cp,Ce
+  real(dp) :: fii,fm
+  real(dp) :: fdfie,fdfii,fcfie,fcfii,ffic
+  real(dp) :: de, game, viste
+  real(dp) :: fxp,fxn
+  real(dp) :: dfixi,dfiyi,dfizi
+!----------------------------------------------------------------------
+
+  ! > Geometry:
+
+  ! Face interpolation factor
+  fxn = 0.5_dp ! Assumption for periodic boundaries
+  fxp = fxn
+
+  ! Distance vector between cell centers
+  xpn = 2*( xf-xc(ijp) )
+  ypn = 2*( yf-yc(ijp) )
+  zpn = 2*( zf-zc(ijp) )
+
+  ! Distance from P to neighbor N
+  dpn=sqrt(xpn**2+ypn**2+zpn**2)     
+
+  ! cell face area
+  are=sqrt(arx**2+ary**2+arz**2)
+
+
+  ! Cell face diffussion coefficient
+  viste = (vis(ijp)-viscos)*fxp+(vis(ijn)-viscos)*fxn
+  game = viscos*prtr+viste/sigtEn
+
+
+  ! Difusion coefficient for linear system
+  ! de = game*are/dpn
+  de = game*(arx*arx+ary*ary+arz*arz)/(xpn*arx+ypn*ary+zpn*arz)
+
+  ! Convection fluxes - uds
+  fm = flmass
+  ce = min(fm,zero) 
+  cp = max(fm,zero)
+
+  !-------------------------------------------------------
+  ! System matrix coefficients
+  !-------------------------------------------------------
+  cap = -de - max(fm,zero)
+  can = -de + min(fm,zero)
+  !-------------------------------------------------------
+
+
+  !-------------------------------------------------------
+  ! Explicit part of diffusion
+  !-------------------------------------------------------
+
+  dfixi = dFidxi(1,ijp)*fxp+dFidxi(1,ijn)*fxn
+  dfiyi = dFidxi(2,ijp)*fxp+dFidxi(2,ijn)*fxn
+  dfizi = dFidxi(3,ijp)*fxp+dFidxi(3,ijn)*fxn
+
+  ! Explicit diffusion
+  fdfie = game*(dfixi*arx + dfiyi*ary + dfizi*arz)  
+
+  ! Implicit diffussion 
+  fdfii = game*are/dpn*(dfixi*xpn+dfiyi*ypn+dfizi*zpn)
+
+
+  !-------------------------------------------------------
+  ! Explicit higher order convection, cSheme is set in input
+  !-------------------------------------------------------
+  if( flmass .ge. zero ) then 
+    ! Flow goes from p to pj - > p is the upwind node
+    fii = face_value_cds(ijp, ijn, fxp, fi)
+  else
+    ! Other way, flow goes from pj, to p -> pj is the upwind node.
+    fii = face_value_cds(ijn, ijp, fxn, fi)
+  endif
+
+  fcfie = fm*fii
+
+  !-------------------------------------------------------
+  ! Explicit first order convection
+  !-------------------------------------------------------
+  fcfii = ce*fi(ijn)+cp*fi(ijp)
+
+  !-------------------------------------------------------
+  ! Deffered correction for convection = gama_blending*(high-low)
+  !-------------------------------------------------------
+  ffic = gam*(fcfie-fcfii)
+
+  !-------------------------------------------------------
+  ! Explicit part of fluxes
+  !-------------------------------------------------------
+  suadd = -ffic+fdfie-fdfii 
+
+end subroutine
+
+
 
 
 !***********************************************************************
@@ -723,6 +934,33 @@ subroutine facefluxsc_boundary(ijp, ijn, xf, yf, zf, arx, ary, arz, fm, FI, dFid
 
   ! Explicit part of fluxes
   suadd = fdfie-fdfii 
+
+end subroutine
+
+
+subroutine correct_temperature
+!
+! Purpose:
+!  Recalculate temperature from energy variable (total energy, ethalpy or internal energy).
+!
+! Author:
+!  Nikola Mirkov
+!
+  ! use variables, only: u,v,w,p,T,En,den
+
+  implicit none
+
+  if ( solveEnthalpy ) then
+
+  else if ( solveInternalEnergy ) then
+
+  elseif ( solveTotalEnergy .or. solveInternalEnergy ) then
+
+  else
+    write(*,*) "Error: choose one energy variable!"
+    stop
+  endif
+
 
 end subroutine
 

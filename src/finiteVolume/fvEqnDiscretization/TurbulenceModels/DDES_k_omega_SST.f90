@@ -22,7 +22,8 @@ module DDES_k_omega_SST
   use parameters
   use geometry
   use variables
-  use turbulence
+  use gradients
+  use TurbModelData, only: TurbModel
   use scalar_fluxes, only: facefluxsc
 
   implicit none
@@ -78,10 +79,6 @@ subroutine modify_viscosity_DDES_k_omega_sst
 ! Main module routine to solve turbulence model equations and update effective viscosity.
 !
 !***********************************************************************
-  use types
-  use parameters
-  use variables
-  use gradients
 
   implicit none
 
@@ -139,8 +136,8 @@ subroutine modify_viscosity_DDES_k_omega_sst
   endif
 
 
-  call calcsc(TE,dTEdxi,ite) ! Assemble and solve turbulence kinetic energy eq.
-  call calcsc(ED,dEDdxi,ied) ! Assemble and solve specific dissipation rate (omega [1/s]) of tke eq.
+  call calcsc(TE,dTEdxi,1) ! Assemble and solve turbulence kinetic energy eq.
+  call calcsc(ED,dEDdxi,2) ! Assemble and solve specific dissipation rate (omega [1/s]) of tke eq.
 
   call modify_mu_eff()
 
@@ -157,12 +154,8 @@ subroutine calcsc(Fi,dFidxi,ifi)
 !  Discretization of scalar equation
 !
 !***********************************************************************
-  use types
-  use parameters
-  use geometry
-  use variables
+
   use sparse_matrix
-  use gradients
   use linear_solvers
   
   implicit none
@@ -175,7 +168,8 @@ subroutine calcsc(Fi,dFidxi,ifi)
 ! Local variables
 !
   integer ::  i, k, inp, ijp, ijn, ijb, ib, iface, iwall
-  real(dp) :: gam, prtr, prtr_ijp, prtr_ijn, apotime, const, urfrs, urfms
+  integer ::  iper, l, if, iftwin
+  real(dp) :: prtr, prtr_ijp, prtr_ijn, apotime, const, urfrs, urfms
   real(dp) :: utp, vtp, wtp, utn, vtn, wtn
   real(dp) :: genp, genn
   real(dp) :: uttbuoy, vttbuoy, wttbuoy
@@ -192,10 +186,17 @@ subroutine calcsc(Fi,dFidxi,ifi)
   real(dp) :: wlog,wvis
   real(dp) :: cdes,lenles,lenrans,rd,fd,lDDES
   ! real(dp) :: W_S,Ri,F4
- 
+  real(dp) :: gam, urf, tolAbs, tolRel
+  integer :: maxiter
+  character( len=12 ) :: lSolver 
 
 ! Variable specific coefficients:
-  gam=gds(ifi)
+  gam = TurbModel%Scalar(ifi)%gds
+  urf = TurbModel%Scalar(ifi)%urf
+  lSolver = TurbModel%Scalar(ifi)%lSolver 
+  maxiter = TurbModel%Scalar(ifi)%maxiter
+  tolAbs = TurbModel%Scalar(ifi)%tolAbs
+  tolRel = TurbModel%Scalar(ifi)%tolRel
 
 
 ! Calculate gradient: 
@@ -211,7 +212,7 @@ subroutine calcsc(Fi,dFidxi,ifi)
 !
 
   ! TKE volume source terms
-  if(ifi.eq.ite) then
+  if(ifi.eq.1) then
 
 
   !=========================================================
@@ -302,54 +303,54 @@ subroutine calcsc(Fi,dFidxi,ifi)
     !=====================================
     ! VOLUME SOURCE TERMS: buoyancy
     !=====================================
-      if(lbuoy) then
-        
-        ! When bouy activated we need the freshest utt,vtt,wtt - turbulent heat fluxes
-        call calcheatflux 
+    if(lbuoy) then
+      
+      ! When bouy activated we need the freshest utt,vtt,wtt - turbulent heat fluxes
+      call calcheatflux 
 
-        if(boussinesq) then
-           uttbuoy=-gravx*den(inp)*utt(inp)*vol(inp)*beta
-           vttbuoy=-gravy*den(inp)*vtt(inp)*vol(inp)*beta
-           wttbuoy=-gravz*den(inp)*wtt(inp)*vol(inp)*beta
-        else
-           uttbuoy=-gravx*den(inp)*utt(inp)*vol(inp)/(t(inp)+273.15_dp)
-           vttbuoy=-gravy*den(inp)*vtt(inp)*vol(inp)/(t(inp)+273.15_dp)
-           wttbuoy=-gravz*den(inp)*wtt(inp)*vol(inp)/(t(inp)+273.15_dp)
-        end if
-
-        utp=max(uttbuoy,zero)
-        vtp=max(vttbuoy,zero)
-        wtp=max(wttbuoy,zero)
-        utn=min(uttbuoy,zero)
-        vtn=min(vttbuoy,zero)
-        wtn=min(wttbuoy,zero)
-
-        su(inp)=su(inp)+utp+vtp+wtp
-        sp(inp)=sp(inp)-(utn+vtn+wtn)/(te(inp)+small)
-
+      if(boussinesq) then
+         uttbuoy=-gravx*den(inp)*utt(inp)*vol(inp)*beta
+         vttbuoy=-gravy*den(inp)*vtt(inp)*vol(inp)*beta
+         wttbuoy=-gravz*den(inp)*wtt(inp)*vol(inp)*beta
+      else
+         uttbuoy=-gravx*den(inp)*utt(inp)*vol(inp)/(t(inp)+273.15_dp)
+         vttbuoy=-gravy*den(inp)*vtt(inp)*vol(inp)/(t(inp)+273.15_dp)
+         wttbuoy=-gravz*den(inp)*wtt(inp)*vol(inp)/(t(inp)+273.15_dp)
       end if
 
-      !
-      !=====================================
-      ! UNSTEADY TERM
-      !=====================================
-      if (ltransient) then
-        if( bdf .or. cn ) then
-          apotime = den(inp)*vol(inp)/timestep
-          su(inp) = su(inp) + apotime*teo(inp)
-          sp(inp) = sp(inp) + apotime
-        elseif( bdf2 ) then
-          apotime=den(inp)*vol(inp)/timestep
-          su(inp) = su(inp) + apotime*( 2*teo(inp) - 0.5_dp*teoo(inp) )
-          sp(inp) = sp(inp) + 1.5_dp*apotime
-        endif
+      utp=max(uttbuoy,zero)
+      vtp=max(vttbuoy,zero)
+      wtp=max(wttbuoy,zero)
+      utn=min(uttbuoy,zero)
+      vtn=min(vttbuoy,zero)
+      wtn=min(wttbuoy,zero)
+
+      su(inp)=su(inp)+utp+vtp+wtp
+      sp(inp)=sp(inp)-(utn+vtn+wtn)/(te(inp)+small)
+
+    end if
+
+    !
+    !=====================================
+    ! UNSTEADY TERM
+    !=====================================
+    if (ltransient) then
+      if( bdf .or. cn ) then
+        apotime = den(inp)*vol(inp)/timestep
+        su(inp) = su(inp) + apotime*teo(inp)
+        sp(inp) = sp(inp) + apotime
+      elseif( bdf2 ) then
+        apotime=den(inp)*vol(inp)/timestep
+        su(inp) = su(inp) + apotime*( 2*teo(inp) - 0.5_dp*teoo(inp) )
+        sp(inp) = sp(inp) + 1.5_dp*apotime
       endif
+    endif
 
   ! End of TKE volume source terms
   enddo
 
 !****************************************
-  elseif(ifi.eq.ied) then
+  elseif(ifi.eq.2) then
 !****************************************
 
   ! Omega volume source terms
@@ -448,44 +449,44 @@ subroutine calcsc(Fi,dFidxi,ifi)
     !=====================================
     ! VOLUME SOURCE TERMS: Buoyancy
     !=====================================
-      if(lbuoy) then
-        const=c3*den(inp)*ed(inp)*vol(inp)/(te(inp)+small)
+    if(lbuoy) then
+      const=c3*den(inp)*ed(inp)*vol(inp)/(te(inp)+small)
 
-        if(boussinesq) then
-           uttbuoy=-gravx*utt(inp)*const*beta
-           vttbuoy=-gravy*vtt(inp)*const*beta
-           wttbuoy=-gravz*wtt(inp)*const*beta
-        else
-           uttbuoy=-gravx*utt(inp)*const/(t(inp)+273.15)
-           vttbuoy=-gravy*vtt(inp)*const/(t(inp)+273.15)
-           wttbuoy=-gravz*wtt(inp)*const/(t(inp)+273.15)
-        end if
-
-        utp=max(uttbuoy,zero)
-        vtp=max(vttbuoy,zero)
-        wtp=max(wttbuoy,zero)
-        utn=min(uttbuoy,zero)
-        vtn=min(vttbuoy,zero)
-        wtn=min(wttbuoy,zero)
-
-        su(inp)=su(inp)+utp+vtp+wtp
-        sp(inp)=sp(inp)-(utn+vtn+wtn)/(ed(inp)+small)
+      if(boussinesq) then
+         uttbuoy=-gravx*utt(inp)*const*beta
+         vttbuoy=-gravy*vtt(inp)*const*beta
+         wttbuoy=-gravz*wtt(inp)*const*beta
+      else
+         uttbuoy=-gravx*utt(inp)*const/(t(inp)+273.15)
+         vttbuoy=-gravy*vtt(inp)*const/(t(inp)+273.15)
+         wttbuoy=-gravz*wtt(inp)*const/(t(inp)+273.15)
       end if
 
-      !=====================================
-      ! UNSTEADY TERM
-      !=====================================
-      if (ltransient) then
-        if( bdf .or. cn ) then
-          apotime = den(inp)*vol(inp)/timestep
-          su(inp) = su(inp) + apotime*edo(inp)
-          sp(inp) = sp(inp) + apotime
-        elseif( bdf2 ) then
-          apotime=den(inp)*vol(inp)/timestep
-          su(inp) = su(inp) + apotime*( 2*edo(inp) - 0.5_dp*edoo(inp) )
-          sp(inp) = sp(inp) + 1.5_dp*apotime
-        endif
+      utp=max(uttbuoy,zero)
+      vtp=max(vttbuoy,zero)
+      wtp=max(wttbuoy,zero)
+      utn=min(uttbuoy,zero)
+      vtn=min(vttbuoy,zero)
+      wtn=min(wttbuoy,zero)
+
+      su(inp)=su(inp)+utp+vtp+wtp
+      sp(inp)=sp(inp)-(utn+vtn+wtn)/(ed(inp)+small)
+    end if
+
+    !=====================================
+    ! UNSTEADY TERM
+    !=====================================
+    if (ltransient) then
+      if( bdf .or. cn ) then
+        apotime = den(inp)*vol(inp)/timestep
+        su(inp) = su(inp) + apotime*edo(inp)
+        sp(inp) = sp(inp) + apotime
+      elseif( bdf2 ) then
+        apotime=den(inp)*vol(inp)/timestep
+        su(inp) = su(inp) + apotime*( 2*edo(inp) - 0.5_dp*edoo(inp) )
+        sp(inp) = sp(inp) + 1.5_dp*apotime
       endif
+    endif
 
   ! End of Epsilon volume source terms
   enddo
@@ -502,7 +503,7 @@ subroutine calcsc(Fi,dFidxi,ifi)
     ijn = neighbour(i)
 
     ! In SST model the Effective diffusivity is a field variable:
-    if(ifi.eq.ite) then
+    if(ifi.eq.1) then
       prtr_ijp = fsst(ijp)*SIGMK1  + (1.0_dp-fsst(ijp))*SIGMK2
       prtr_ijn = fsst(ijn)*SIGMK1  + (1.0_dp-fsst(ijn))*SIGMK2
     else
@@ -510,11 +511,18 @@ subroutine calcsc(Fi,dFidxi,ifi)
       prtr_ijn = fsst(ijn)*SIGMOM1 + (1.0_dp-fsst(ijn))*SIGMOM2
     endif
 
+    prtr = prtr_ijp*(1.0_dp-facint(i))+prtr_ijn*facint(i)
+
     call facefluxsc(  ijp, ijn, &
-                      xf(i), yf(i), zf(i), arx(i), ary(i), arz(i), &
-                      flmass(i), facint(i), gam, cScheme, dScheme, nrelax, &
-                      fi, dFidxi, prtr_ijp, cap, can, suadd )                      
-                      ! fi, dFidxi, prtr_ijp, prtr_ijn, cap, can, suadd )
+                      xf(i), yf(i), zf(i), &
+                      arx(i), ary(i), arz(i), &
+                      flmass(i), facint(i), &
+                      TurbModel%Scalar(ifi)%gds, &
+                      TurbModel%Scalar(ifi)%cScheme, &
+                      TurbModel%Scalar(ifi)%dScheme, &
+                      TurbModel%Scalar(ifi)%nrelax, &
+                      fi, dFidxi, prtr, cap, can, suadd )                      
+
 
     ! > Off-diagonal elements:
 
@@ -548,10 +556,14 @@ subroutine calcsc(Fi,dFidxi,ifi)
   !
 
   iWall = 0
+  iPer = 0
+  l = numInnerFaces
 
   do ib=1,numBoundaries
 
-    if ( bctype(ib) == 'inlet' ) then
+    if ( bctype(ib) == 'inlet' .or. &
+         bctype(ib) == 'outlet' .or. &
+         bctype(ib) == 'pressure' ) then
 
       do i=1,nfaces(ib)
 
@@ -560,16 +572,17 @@ subroutine calcsc(Fi,dFidxi,ifi)
         ijb = iBndValueStart(ib) + i
 
         ! In SST model the Effective diffusivity is a field variable:
-        if(ifi.eq.ite) then
+        if(ifi.eq.1) then
           prtr=fsst(ijp)*SIGMK1  + (1.0_dp-fsst(ijp))*SIGMK2
         else
           prtr=fsst(ijp)*SIGMOM1 + (1.0_dp-fsst(ijp))*SIGMOM2
         endif
 
         call facefluxsc( ijp, ijb, &
-                         xf(iface), yf(iface), zf(iface), arx(iface), ary(iface), arz(iface), &
+                         xf(iface), yf(iface), zf(iface), &
+                         arx(iface), ary(iface), arz(iface), &
                          flmass(iface), &
-                         Fi, dFidxi, prtr, cap, can, suadd )
+                         fi, dFidxi, prtr, cap, can, suadd )
 
         Sp(ijp) = Sp(ijp)-can
 
@@ -578,31 +591,74 @@ subroutine calcsc(Fi,dFidxi,ifi)
       end do
 
 
-    elseif ( bctype(ib) == 'outlet' ) then
+    elseif (  bctype(ib) == 'periodic' ) then
 
+      iPer = iPer + 1 ! count periodic boundary pairs
+
+      ! Faces trough periodic boundaries
       do i=1,nfaces(ib)
 
-        iface = startFace(ib) + i
-        ijp = owner(iface)
-        ijb = iBndValueStart(ib) + i
+        if = startFace(ib) + i
+        ijp = owner(if)
+
+        iftwin = startFaceTwin(iPer) + i ! Where does the face data for twin start, looking at periodic boundary pair with index iPer.
+        ijn = owner(iftwin)              ! Owner cell of the twin periodic face
+
+
 
         ! In SST model the Effective diffusivity is a field variable:
-        if(ifi.eq.ite) then
-          prtr=fsst(ijp)*SIGMK1  + (1.0_dp-fsst(ijp))*SIGMK2
+        if(ifi.eq.1) then
+          prtr_ijp = fsst(ijp)*SIGMK1  + (1.0_dp-fsst(ijp))*SIGMK2
+          prtr_ijn = fsst(ijn)*SIGMK1  + (1.0_dp-fsst(ijn))*SIGMK2
         else
-          prtr=fsst(ijp)*SIGMOM1 + (1.0_dp-fsst(ijp))*SIGMOM2
+          prtr_ijp = fsst(ijp)*SIGMOM1 + (1.0_dp-fsst(ijp))*SIGMOM2
+          prtr_ijn = fsst(ijn)*SIGMOM1 + (1.0_dp-fsst(ijn))*SIGMOM2
         endif
 
-        call facefluxsc( ijp, ijb, &
-                         xf(iface), yf(iface), zf(iface), arx(iface), ary(iface), arz(iface), &
-                         flmass(iface), &
-                         FI, dFidxi, prtr, cap, can, suadd )
+        prtr = 0.5* (prtr_ijp+prtr_ijn )
 
-        Sp(ijp) = Sp(ijp)-can
 
-        Su(ijp) = Su(ijp) - can*fi(ijb) + suadd
 
-      end do
+        ! face flux scalar but for periodic boundaries - it will be recognized by arguments
+        call facefluxsc(  ijp, ijn, &
+                          xf(if), yf(if), zf(if), &
+                          arx(if), ary(if), arz(if), &
+                          flmass(if), TurbModel%Scalar(ifi)%gds, &
+                          fi, dFidxi, prtr, cap, can, suadd )
+
+
+        ! > Off-diagonal elements:
+
+        ! l is in interval [numInnerFaces+1, numInnerFaces+numPeriodic]
+        l = l + 1
+
+        ! (icell,jcell) matrix element:
+        k = icell_jcell_csr_index(l)
+        a(k) = can
+
+        ! (jcell,icell) matrix element:
+        k = jcell_icell_csr_index(l)
+        a(k) = cap
+
+        ! > Elements on main diagonal:
+
+        ! ! (icell,icell) main diagonal element
+        k = diag(ijp)
+        a(k) = a(k) - can
+
+        ! ! (jcell,jcell) main diagonal element
+        k = diag(ijn)
+        a(k) = a(k) - cap
+
+        ! > Sources:
+
+        su(ijp) = su(ijp) + suadd
+        su(ijn) = su(ijn) - suadd 
+
+
+      end do 
+
+
 
     elseif ( bctype(ib) == 'wall') then
 
@@ -613,7 +669,7 @@ subroutine calcsc(Fi,dFidxi,ifi)
         ijb = iBndValueStart(ib) + i
         iWall = iWall + 1
 
-        if (ifi .eq. ite) then
+        if (ifi .eq. 1) then
 
         !
         ! > Wall boundary conditions for turbulence kinetic energy eq.
@@ -686,104 +742,87 @@ subroutine calcsc(Fi,dFidxi,ifi)
   ! Modify coefficients for Crank-Nicolson
   if (cn) then
 
-      a = 0.5_dp*a ! Doesn't affect the main diagonal because it's still zero.
+    a = 0.5_dp*a ! Doesn't affect the main diagonal because it's still zero.
 
-      if(ifi.eq.ite) then
+    if(ifi.eq.1) then
 
-        do i = 1,numInnerFaces
-            ijp = owner(i)
-            ijn = neighbour(i)
+      do i = 1,numInnerFaces
+          ijp = owner(i)
+          ijn = neighbour(i)
 
-            k = icell_jcell_csr_index(i)
-            su(ijp) = su(ijp) - a(k)*teo(ijn)
+          k = icell_jcell_csr_index(i)
+          su(ijp) = su(ijp) - a(k)*teo(ijn)
 
-            k = jcell_icell_csr_index(i)
-            su(ijn) = su(ijn) - a(k)*teo(ijp)
-        enddo
-        do ijp=1,numCells
-            apotime=den(ijp)*vol(ijp)/timestep
-            off_diagonal_terms = sum( a( ioffset(ijp) : ioffset(ijp+1)-1 ) ) - a(diag(ijp))
-            su(ijp) = su(ijp) + (apotime + off_diagonal_terms)*teo(ijp)
-            sp(ijp) = sp(ijp)+apotime
-        enddo
+          k = jcell_icell_csr_index(i)
+          su(ijn) = su(ijn) - a(k)*teo(ijp)
+      enddo
+      do ijp=1,numCells
+          apotime=den(ijp)*vol(ijp)/timestep
+          off_diagonal_terms = sum( a( ioffset(ijp) : ioffset(ijp+1)-1 ) ) - a(diag(ijp))
+          su(ijp) = su(ijp) + (apotime + off_diagonal_terms)*teo(ijp)
+          sp(ijp) = sp(ijp)+apotime
+      enddo
 
-      else ! ifi.eq.ied
+    else ! ifi.eq.ied
 
-        do i = 1,numInnerFaces
-            ijp = owner(i)
-            ijn = neighbour(i)
+      do i = 1,numInnerFaces
+          ijp = owner(i)
+          ijn = neighbour(i)
 
-            k = icell_jcell_csr_index(i)
-            su(ijp) = su(ijp) - a(k)*edo(ijn)
+          k = icell_jcell_csr_index(i)
+          su(ijp) = su(ijp) - a(k)*edo(ijn)
 
-            k = jcell_icell_csr_index(i)
-            su(ijn) = su(ijn) - a(k)*edo(ijp)
-        enddo
-        do ijp=1,numCells
-            apotime=den(ijp)*vol(ijp)/timestep
-            off_diagonal_terms = sum( a( ioffset(ijp) : ioffset(ijp+1)-1 ) ) - a(diag(ijp))
-            su(ijp) = su(ijp) + (apotime + off_diagonal_terms)*edo(ijp)
-            sp(ijp) = sp(ijp)+apotime
-        enddo
+          k = jcell_icell_csr_index(i)
+          su(ijn) = su(ijn) - a(k)*edo(ijp)
+      enddo
+      do ijp=1,numCells
+          apotime=den(ijp)*vol(ijp)/timestep
+          off_diagonal_terms = sum( a( ioffset(ijp) : ioffset(ijp+1)-1 ) ) - a(diag(ijp))
+          su(ijp) = su(ijp) + (apotime + off_diagonal_terms)*edo(ijp)
+          sp(ijp) = sp(ijp)+apotime
+      enddo
 
-      endif
+    endif
 
   endif
 
   ! Underrelaxation factors
-  urfrs=1.0_dp/urf(ifi)
-  urfms=1.0_dp-urf(ifi)
+  urfrs=1.0_dp/urf
+  urfms=1.0_dp-urf
 
   ! Main diagonal term assembly:
   do inp = 1,numCells
 
-        ! Main diagonal term assembly:
-        a(diag(inp)) = sp(inp) 
-        do k = ioffset(inp),ioffset(inp+1)-1
-          if (k.eq.diag(inp)) cycle
-          a(diag(inp)) = a(diag(inp)) -  a(k)
-        enddo
+    ! Main diagonal term assembly:
+    a(diag(inp)) = sp(inp) 
+    do k = ioffset(inp),ioffset(inp+1)-1
+      if (k.eq.diag(inp)) cycle
+      a(diag(inp)) = a(diag(inp)) -  a(k)
+    enddo
 
-        ! Underelaxation:
-        a(diag(inp)) = a(diag(inp))*urfrs
-        su(inp) = su(inp) + urfms*a(diag(inp))*fi(inp)
+    ! Underelaxation:
+    a(diag(inp)) = a(diag(inp))*urfrs
+    su(inp) = su(inp) + urfms*a(diag(inp))*fi(inp)
                     
   enddo
 
   ! Solve linear system:
-  if (ifi.eq.ite) then
+  if (ifi.eq.1) then
     call csrsolve(lSolver, te, su, resor(5), maxiter, tolAbs, tolRel, 'k' )
   else
     call csrsolve(lSolver, ed, su, resor(6), maxiter, tolAbs, tolRel, 'Omega' )
   endif
 
 
-  !
-  ! Update symmetry and outlet boundaries
-  !
-  do ib=1,numBoundaries
+  ! Update field values at boundaries
+  call updateBoundary( fi )
 
-    if ( bctype(ib) == 'outlet' .or. bctype(ib) == 'symmetry' ) then
-
-      do i=1,nfaces(ib)
-
-        iface = startFace(ib) + i
-        ijp = owner(iface)
-        ijb = iBndValueStart(ib) + i
-
-        fi(ijb)=fi(ijp)
-
-      enddo
-
-    endif
-
-  enddo
 
 ! Report range of scalar values and clip if negative
   fimin = minval(fi)
   fimax = maxval(fi)
 
-  if (ifi.eq.ite) then 
+  if (ifi.eq.1) then 
     write(6,'(2x,es11.4,a,es11.4)') fimin,' <= k <= ',fimax
   else
     write(6,'(2x,es11.4,a,es11.4)') fimin,' <= Omega <= ',fimax
@@ -804,15 +843,12 @@ subroutine modify_mu_eff()
 ! Update turbulent and effective viscosity.
 !
 !***********************************************************************
-  use types
-  use parameters
-  use geometry
-  use variables
+
   implicit none
 
   integer :: i,inp
   integer :: ib,iface,ijp,ijb,iwall
-  real(dp) :: visold
+  real(dp) :: urf,visold
   real(dp) :: nxf,nyf,nzf,are
   real(dp) :: Vnp,Vtp,xtp,ytp,ztp
   real(dp) :: Utau,viscw
@@ -820,6 +856,7 @@ subroutine modify_mu_eff()
   real(dp) :: Utauvis,Utaulog,Upl
   ! real(dp) :: fimax,fimin
 
+  urf = TurbModel%urfVis
 
   ! Loop trough cells 
   do inp=1,numCells
@@ -842,7 +879,7 @@ subroutine modify_mu_eff()
     vis(inp)=viscos+den(inp)*a1*te(inp)/(max(a1*ed(inp), magStrain(inp)*f2_sst))
 
     ! Underelaxation
-    vis(inp)=urf(ivis)*vis(inp)+(1.0_dp-urf(ivis))*visold
+    vis(inp)=urf*vis(inp)+(1.0_dp-urf)*visold
 
   enddo
 
@@ -851,48 +888,15 @@ subroutine modify_mu_eff()
   ! Boundary faces 
   !
 
+  ! Update value at every bounary face type except "wall', which is treated below.
+  call updateBoundary( vis )
+
+  ! Now 'wall' type.
   iWall = 0
 
   do ib=1,numBoundaries
 
-    if ( bctype(ib) == 'inlet' ) then
-
-      do i=1,nfaces(ib)
-
-        iface = startFace(ib) + i
-        ijp = owner(iface)
-        ijb = iBndValueStart(ib) + i
-
-        Vis(ijb) = Vis(ijp)
-
-      end do
-
-    elseif ( bctype(ib) == 'outlet' ) then
-
-      do i=1,nfaces(ib)
-
-        iface = startFace(ib) + i
-        ijp = owner(iface)
-        ijb = iBndValueStart(ib) + i
-
-        Vis(ijb) = Vis(ijp)
-
-      enddo
-
-    elseif ( bctype(ib) == 'symmetry') then
-
-      ! Symmetry
-      do i=1,nfaces(ib)
-
-        iface = startFace(ib) + i
-        ijp = owner(iface)
-        ijb = iBndValueStart(ib) + i
-
-        Vis(ijb) = Vis(ijp)
-
-      end do
-
-    elseif ( bctype(ib) == 'wall') then
+    if ( bctype(ib) == 'wall') then
 
       do i=1,nfaces(ib)
 

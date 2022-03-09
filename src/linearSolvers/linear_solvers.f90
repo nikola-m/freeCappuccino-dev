@@ -27,6 +27,7 @@ module linear_solvers
   use parameters
   use geometry, only: numCells,numTotal
   use sparse_matrix, only: nnz, ioffset, ja, a, diag
+  use LIS_linear_solvers, only: lis_spsolve
 
   implicit none
 
@@ -57,6 +58,7 @@ subroutine csrsolve(solver, fi, rhs, res0, itr_max, tol_abs, tol_rel, chvar)
   character( len=* ), intent(in) :: chvar             ! Character string containing name of the solved field, printed on stdout
 
 
+
   if( solver .eq. 'gauss-seidel') then
 
     call GaussSeidel( numCells, nnz, ioffset, ja, a, diag, fi(1:numCells), rhs, res0, itr_max, tol_abs, tol_rel, chvar, ltest )
@@ -80,7 +82,16 @@ subroutine csrsolve(solver, fi, rhs, res0, itr_max, tol_abs, tol_rel, chvar)
     ! Play with this number if you want, the greater like m=20, better the convergence, but much more memory is required.
 
     call pmgmres_ilu( numCells, nnz, ioffset, ja, a, diag, fi(1:numCells), rhs, res0, itr_max, 4, tol_abs, tol_rel, chvar, ltest )
-    
+
+  else
+
+    !
+    ! If nothing above is chosen, we devert to solvers from LIS library
+    !
+
+      call lis_spsolve( solver, fi(1:numCells), rhs, chvar )
+
+
   endif
 
 
@@ -124,11 +135,13 @@ subroutine GaussSeidel( n, nnz, ioffset, ja, a, diag, fi, rhs, resor, itr_max, t
 !
   integer :: i, k, l, itr_used
   real(dp) :: res0, rsm, resl, factor
-  real(dp), dimension(n) :: res                         ! Residual vector
+  real(dp), dimension(:), allocatable :: res                         ! Residual vector
 
 !
 ! Start iterations
 !
+
+  allocate( res(n))
 
   itr_used = 0
   factor = 0.0
@@ -190,6 +203,8 @@ subroutine GaussSeidel( n, nnz, ioffset, ja, a, diag, fi, rhs, resor, itr_max, t
   write(*,'(3a,1PE10.3,a,1PE10.3,a,I0)') '  Gauss-Seidel:  Solving for ',trim( chvar ), &
   ', Initial residual = ',resor,', Final residual = ',resl/factor,', No Iterations ',itr_used 
 
+  deallocate( res )
+
 end subroutine
 
 
@@ -228,14 +243,16 @@ subroutine dpcg( n, nnz, ioffset, ja, a, diag, fi, rhs, resor, itr_max, tol_abs,
 ! Local variables
 !
   integer :: i, k, l, itr_used
-  real(dp), dimension(n) :: pk,zk
   real(dp) :: res0, rsm, resl, factor
   real(dp) :: s0, sk, alf, bet, pkapk
-  real(dp), dimension(n) :: res                         ! Residual vector
+  real(dp), dimension(:), allocatable :: res,pk,zk
 
 !
 ! Initalize working arrays
 !
+
+  allocate( res(n), pk(n), zk(n) )
+
   factor = 0.0_dp
   pk = 0.0_dp
   zk = 0.0_dp
@@ -345,6 +362,8 @@ subroutine dpcg( n, nnz, ioffset, ja, a, diag, fi, rhs, resor, itr_max, tol_abs,
   write(*,'(3a,1PE10.3,a,1PE10.3,a,I0)') '  PCG(Jacobi):  Solving for ',trim(chvar),', Initial residual = ',resor, &
   ', Final residual = ',resl/factor,', No Iterations ',itr_used
 
+  deallocate( res, pk, zk )
+
 end subroutine
 
 
@@ -386,17 +405,21 @@ subroutine iccg( n, nnz, ioffset, ja, a, diag, fi, rhs, resor, itr_max, tol_abs,
   integer :: i, k, l, itr_used
   real(dp) :: res0, rsm, resl, factor
   real(dp) :: s0, sk, alf, bet, pkapk
-  real(dp), dimension(n) :: pk,zk,d
-  real(dp), dimension(n) :: res                         ! Residual vector
+  real(dp), dimension(:), allocatable :: pk,zk,d
+  real(dp), dimension(:), allocatable :: res                         ! Residual vector
 
 !
 ! Initalize working arrays
 !
+
+  allocate( res(n), pk(n), zk(n), d(n) )
+
   factor = 0.0_dp
   pk = 0.0_dp
   zk = 0.0_dp
   d = 0.0_dp
   res = 0.0_dp
+
 !
 ! Calculate initial residual vector and the norm
 !
@@ -528,6 +551,8 @@ subroutine iccg( n, nnz, ioffset, ja, a, diag, fi, rhs, resor, itr_max, tol_abs,
   write(*,'(3a,1PE10.3,a,1PE10.3,a,I0)') '  PCG(IC0):  Solving for ',trim( chvar ), &
   ', Initial residual = ',resor,', Final residual = ',resl/factor,', No Iterations ',itr_used
 
+  deallocate( res, pk, zk, d )
+
 end subroutine
 
 
@@ -567,8 +592,11 @@ subroutine bicgstab( n, nnz, ioffset, ja, a, diag, fi, rhs, resor, itr_max, tol_
   integer :: i, k, l, itr_used
   real(dp) :: res0, rsm, resl, factor
   real(dp) :: alf, beto, gam, bet, om, ukreso
-  real(dp), dimension(n) :: reso,pk,uk,zk,vk,d
-  real(dp), dimension(n) :: res                         ! Residual vector
+  real(dp), dimension(:), allocatable :: reso,pk,uk,zk,vk,d
+  real(dp), dimension(:), allocatable :: res                 ! Residual vector
+
+
+  allocate( res(n), reso(n), pk(n), uk(n), zk(n), vk(n), d(n) )
 
 !
 ! Calculate initial residual vector and the norm
@@ -766,6 +794,8 @@ subroutine bicgstab( n, nnz, ioffset, ja, a, diag, fi, rhs, resor, itr_max, tol_
 ! Write linear solver report:
   write(*,'(3a,1PE10.3,a,1PE10.3,a,I0)') '  BiCGStab(ILU(0)):  Solving for ',trim(chvar), &
   ', Initial residual = ',resor,', Final residual = ',resl/factor,', No Iterations ',itr_used
+
+  deallocate( res, reso, pk, uk, zk, vk, d )
 
 end subroutine
 

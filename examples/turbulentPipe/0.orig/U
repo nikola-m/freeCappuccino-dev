@@ -1,0 +1,15 @@
+internalField
+  uniform
+    1.0 0.0 0.0
+boundaryField
+inlet
+  Dirichlet
+    uniform
+      1.0 0.0 0.0
+outlet
+  Neumann
+    zeroGradient
+wall
+  Dirichlet
+    uniform
+      0.0 0.0 0.0
