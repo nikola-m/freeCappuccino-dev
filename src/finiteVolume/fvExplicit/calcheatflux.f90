@@ -35,7 +35,7 @@ subroutine calcheatflux
   real(dp) :: volr, vist
   real(dp) :: tedi                                
 
-  real(dp) :: phit = 0.2        ! Parameter used for GGDH and AFM in calcheatflux subroutine, read from input file?
+  real(dp) :: phit = 0.2        ! For GGDH, maybe 0.3??
   real(dp) :: sksi = 0.6        ! Parameter used in calcheatflux, read from input file?
   real(dp) :: eta = 0.6         ! Parameter used in calcheatflux, read from input file?
   real(dp) :: prt1 = 1./0.86    ! Parameter used in calcheatflux, read from input file?
@@ -50,7 +50,7 @@ subroutine calcheatflux
   ! Temperature gradient
   call grad(T,dTdxi)
 
-  ! Velocity gradients of tentative velocity fields 
+  ! Velocity gradients
   call grad(U,dUdxi)
   call grad(V,dVdxi)
   call grad(W,dWdxi)
@@ -59,7 +59,7 @@ subroutine calcheatflux
 
     volr = 1.0_dp/vol(inp)
     vist = (vis(inp)-viscos)/densit
-    tedi = te(inp)/(ed(inp)+small)
+
 
     uttold = utt(inp)
     vttold = vtt(inp)
@@ -83,6 +83,8 @@ subroutine calcheatflux
     !
     else if(lggdh) then
 
+      tedi = te(inp)/(ed(inp)+small)
+
       ut1=uu(inp)*dtdx
       ut2=uv(inp)*dtdy
       ut3=uw(inp)*dtdz
@@ -103,6 +105,8 @@ subroutine calcheatflux
     ! > Algebraic Flux Model:
     !
     else if(lafm) then
+
+      tedi = te(inp)/(ed(inp)+small)
 
       dudx=dUdxi(1,inp)
       dudy=dUdxi(2,inp)

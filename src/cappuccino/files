@@ -36,7 +36,7 @@ modify_viscosity_turbulence.f90
 modify_viscosity_inlet.f90
 mhd.f90
 asm_stress_terms.f90
-asm_heatflux_terms.f90
+heatflux_source.f90
 faceflux_mass.f90
 calcheatflux.f90
 continuityErrors.f90

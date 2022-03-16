@@ -99,10 +99,10 @@ subroutine calculate_temperature
 
   enddo
 
-  if(lturb.and.lbuoy) then
-    ! When buoy activated we need the freshest utt,vtt,wtt - turbulent heat fluxes
+  if( lturb ) then
+    ! We need the freshest utt,vtt,wtt - turbulent heat fluxes
     call calcheatflux 
-    call Additional_algebraic_heatflux_terms
+    call heatflux_source
   end if
 
 !

@@ -32,6 +32,7 @@ subroutine readfiles
     read(restart_unit) te
     read(restart_unit) ed
     read(restart_unit) t
+    ! read(restart_unit) con
     read(restart_unit) vis
     read(restart_unit) visw    
     ! read(restart_unit) uu
@@ -45,11 +46,9 @@ subroutine readfiles
     read(restart_unit) wo
     read(restart_unit) teo
     read(restart_unit) edo
-    ! read(restart_unit) to
+    read(restart_unit) to
     ! read(restart_unit) varto
-    ! read(restart_unit) con
     ! read(restart_unit) cono
-    ! read(restart_unit) alph
     ! read(restart_unit) vart
     ! read(restart_unit) edd
     ! read(restart_unit) ret

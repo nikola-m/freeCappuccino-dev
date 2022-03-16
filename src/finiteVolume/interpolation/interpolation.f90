@@ -100,6 +100,9 @@ function face_value(ijp,ijn,xf,yf,zf,lambda,u,dUdxi,scheme) result(vf)
     case('kappa')
       vf = face_value_kappa(ijp, ijn, xf, yf, zf, u, dUdxi)
 
+    ! case('cubic')
+    !   vf = face_value_cubic(ijp, ijn, lambda, u, dUdxi)
+
     case default 
       ! Defaults to flux limiter schemes to speed-up the search.
       vf = face_value_flux_limiter(ijp, ijn, lambda, u, dUdxi, scheme )
@@ -416,8 +419,73 @@ function face_value_kappa(inp,inn, xf, yf, zf, fi, gradfi) result(vf)
   vf_central = 0.5_dp*( fi(inp) + fi(inn) + gradfidr_central)
 
   vf = theta*vf_central + (1.0_dp-theta)*vf_2nd_upwind
+
   
 end function
+
+
+
+! function face_value_cubic(inp,inn, lambda, fi, gradfi) result(vf)
+! !
+! !  Purpose:
+! !    Calculates face value using values of variables and their gradients
+! !    at centers of adjecent cells.
+! !
+! !  Discussion:
+! !    Cubic scheme from an online reference (see below)
+! !
+! !  Reference:
+! !    https://www.cfd-online.com/Forums/openfoam-programming-development/184766-factors-cubic-inerpolation-scheme-openfoam.html
+! !
+! !  Parameters:
+! !    inp               - Input, integer, index of the owner cell (of the face).
+! !    inn               - Input, integer, index of the neighbor cell (of the face).
+! !    lambda            - Input, double, face interpolation factor.
+! !    fi(numTotal)      - Input, double, scalar field values at cell centers.
+! !    gradfi(3,numTotal)- Input, double, gradient vector of the scalar field at cell centers.
+! !    vf                - Output, double, intepolated value of the field at face centroid.
+! !
+
+!   implicit none
+
+!   ! Result
+!   real(dp) :: vf
+
+!   ! Input
+!   integer :: inp, inn
+!   real(dp) :: lambda
+!   real(dp), dimension(numTotal) :: fi
+!   real(dp), dimension(3,numCells) :: gradfi
+
+! ! Local variables
+!   real(dp) :: fxn,fxp,xpn,ypn,zpn,dpn,gradP,gradN
+
+!   ! Face interpolation factor
+!   fxn=lambda 
+!   fxp=1.0_dp-lambda
+
+!   ! Distance vector between cell centers
+!   xpn=xc(inn)-xc(inp)
+!   ypn=yc(inn)-yc(inp)
+!   zpn=zc(inn)-zc(inp)
+
+!   ! Distance from P to neighbor N
+!   dpn=sqrt(xpn**2+ypn**2+zpn**2)  
+
+!   ! Normal on the line connecting cell centers
+!   xpn = xpn/dpn
+!   ypn = ypn/dpn
+!   zpn = zpn/dpn
+
+!   ! Projektuj gradijente u P i u N na pravac dpn da bi dobio skalarne vrednosti i onda to ubaci u jedn.
+!   gradP = gradfi(1,inp)*xpn+gradfi(2,inp)*ypn+gradfi(3,inp)*zpn
+!   gradN = gradfi(1,inn)*xpn+gradfi(2,inn)*ypn+gradfi(3,inn)*zpn
+
+!   ! Cubic interpolation formula
+!   vf = fxp*fi(inp) + fxn*fi(inn) + fxp*fxn*(1.-2*fxp)*(fi(inn)-fi(inp)) + fxp**2*fxn*gradP - fxp*fxn*(1+fxp)*gradN
+
+  
+! end function
 
 
 function face_value_flux_limiter(ijp, ijn, lambda, u, dUdxi, scheme) result(vf)

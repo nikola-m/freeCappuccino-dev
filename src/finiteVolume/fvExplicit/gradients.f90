@@ -10,7 +10,7 @@ use sparse_matrix, only: ioffset,ja,diag
 implicit none
 
 logical :: lstsq, lstsq_qr, lstsq_dm, gauss        ! Gradient discretization approach
-character(len=20) :: limiter                       ! Gradient limiter. Options: none, Barth-Jespersen, Venkatakrishnan, mVenkatakrishnan
+character(len=20) :: limiter                       ! Gradient limiter. Options: none, Barth-Jespersen, Venkatakrishnan, multidimensional
 
 real(dp),dimension(:,:), allocatable ::  Dmat      !  d(6,nxyz) - when using bn, or dm version of the subroutine
 real(dp),dimension(:,:,:), allocatable ::  D       !  when using qr version of the subroutine size(3,6,nxyz)!
@@ -152,12 +152,16 @@ implicit none
 
     call slope_limiter_Venkatakrishnan(phi, dPhidxi)
 
-  elseif(adjustl(limiter) == 'MDL') then
+  elseif( limiter == 'R3') then
+
+    call slope_limiter_r345(phi, dPhidxi)
+
+  elseif(adjustl(limiter) == 'multidimensional') then
 
     call slope_limiter_multidimensional(phi, dPhidxi)
 
   else
-    ! no-limit
+    ! 'no-limit' or 'none'
   endif
 
 end subroutine
@@ -264,7 +268,7 @@ implicit none
 
     call slope_limiter_Venkatakrishnan(phi, dPhidxi)
 
-  elseif(adjustl(option_limiter) == 'MDL') then
+  elseif(adjustl(option_limiter) == 'multidimensional') then
 
     call slope_limiter_multidimensional(phi, dPhidxi)
 
@@ -435,6 +439,90 @@ subroutine slope_limiter_Venkatakrishnan(phi, dPhidxi)
      endif
 
      slopelimit = min( slopelimit , (r**2+2.0*r)/(r**2+r+2.0) )
+
+    enddo
+
+    dPhidxi(:,inp) = slopelimit*dPhidxi(:,inp)
+
+  enddo
+
+end subroutine
+
+
+!***********************************************************************
+!
+subroutine slope_limiter_r345(phi, dPhidxi)
+!
+!***********************************************************************
+!
+!     Calculates slope limiter and applies to scalar gradient:
+!     R3-R5 slope limiters:
+!
+!     Based on paper: AIAA2022-1374 by Hiroaki Nishikawa
+!
+!***********************************************************************
+!
+
+  implicit none
+
+  ! Input
+  real(dp),dimension(numTotal) :: phi
+  real(dp),dimension(3,numTotal) :: dPhidxi
+
+
+  ! Locals
+  integer :: inp,ijp,ijn,k
+  real(dp) :: phi_p
+  real(dp) :: slopelimit
+  real(dp) :: delta_face
+  real(dp) :: phi_max,phi_min,r
+  real(dp) :: fimax,fimin,deltamax,deltamin
+
+
+  fimin = minval(phi(1:numCells))
+  fimax = maxval(phi(1:numCells))
+
+  do inp = 1, numCells
+
+    ! Values at cell center:
+    phi_p = phi(inp)
+
+    ! max and min values over current cell and neighbors
+    phi_max = phi(ja( ioffset(inp) ))
+    phi_min = phi(ja( ioffset(inp) ))
+
+    do k=ioffset(inp)+1, ioffset(inp+1)-1
+      phi_max = max( phi_max, phi(ja(k)) )
+      phi_min = min( phi_max, phi(ja(k)) )      
+    enddo
+
+
+    deltamax = fimax - phi(inp)
+    deltamin = fimin - phi(inp)
+
+    slopelimit = 1.0_dp
+
+    do k=ioffset(inp), ioffset(inp+1)-1
+
+      if (k == diag(inp)) cycle
+   
+      ijp = inp
+      ijn = ja(k)
+
+      delta_face=dPhidxi(1,ijp)*(xc(ijn)-xc(ijp))+dPhidxi(2,ijp)*(yc(ijn)-yc(ijp))+dPhidxi(3,ijp)*(zc(ijn)-zc(ijp)) 
+
+
+     if( abs(delta_face) < 1.e-6 )then
+       r = 1.0_dp
+     else if( delta_face > 0.0 )then
+       r = deltamax/delta_face
+     else
+       r = deltamin/delta_face
+     endif
+
+     slopelimit = min( slopelimit , (r**3+4*r)/(r**3+r**2+r+4.0) ) ! R3
+        ! slopelimit = min( slopelimit , (r**4+2*r**3-4*r**2+8*r)/(r**4+r**3+2*r**2-4*r+8.0) ) ! R4
+          ! slopelimit = min( slopelimit , (r**5+8*r**3-16*r**2+16*r)/(r**5+r**4+8*r**2-16*r+16) ) ! R5    
 
     enddo
 

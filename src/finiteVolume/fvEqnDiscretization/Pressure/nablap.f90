@@ -6,7 +6,7 @@ use interpolation, only: face_value_central, face_value_cds, face_value_harmonic
 
 implicit none
 
-  character(len=10) :: pscheme = 'linear' ! Interpolation scheme for pressure: "linear", "central","harmonic" or "weighted".
+  character(len=10) :: pscheme = 'linear' ! Interpolation scheme for pressure: "linear", "central" or "weighted".
 
 private
 
@@ -62,9 +62,6 @@ subroutine surfaceIntegratePressure
 
         pf = face_value_central( ijp, ijn, xf(i), yf(i), zf(i),  p, dPdxi ) 
 
-      elseif ( pscheme == 'harmonic' ) then
-
-        pf = face_value_harmonic( ijp, ijn, facint(i), p)
 
       elseif ( pscheme == 'weighted' ) then
 
@@ -161,9 +158,6 @@ subroutine surfaceIntegratePressureCorr
 
         pf = face_value_central( ijp, ijn, xf(i), yf(i), zf(i),  pp, dPdxi ) 
 
-      elseif ( pscheme == 'harmonic' ) then
-
-        pf = face_value_harmonic( ijp, ijn, facint(i), pp)
 
       elseif ( pscheme == 'weighted' ) then
 
@@ -326,10 +320,6 @@ subroutine surfaceIntegratePressureCrankNicolson
 
         pf = face_value_central( ijp, ijn, xf(i), yf(i), zf(i),  po, dPdxi ) 
 
-      elseif ( pscheme == 'harmonic' ) then
-
-        pf = face_value_harmonic( ijp, ijn, facint(i), po)
-
       elseif ( pscheme == 'weighted' ) then
 
         ! Pressure on face based on "Standard" interpolation in Fluent.
@@ -411,10 +401,6 @@ subroutine surfaceIntegratePressureCrankNicolson
       elseif ( pscheme == 'central' ) then
 
         pf = face_value_central( ijp, ijn, xf(i), yf(i), zf(i),  p, dPdxi ) 
-
-      elseif ( pscheme == 'harmonic' ) then
-
-        pf = face_value_harmonic( ijp, ijn, facint(i), p)
 
       elseif ( pscheme == 'weighted' ) then
 

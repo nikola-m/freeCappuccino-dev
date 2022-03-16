@@ -41,7 +41,7 @@ end type
 type TurbulenceModel
   character (len=20) :: name = ' ' ! Turbulence model name - unique identifier.
   type(TurbScalar), dimension(2) :: Scalar ! Data for solution of discretized PDE for specific scalar
-  real(dp) :: urfVis = 0.8_dp ! Under-relaxation facotr for eddy-viscosity (if the model is eddy-viscosity model)
+  real(dp) :: urfVis = 1.0_dp ! Under-relaxation facotr for eddy-viscosity (if the model is eddy-viscosity model)
 end type
 
 

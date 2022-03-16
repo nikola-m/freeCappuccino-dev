@@ -1058,8 +1058,7 @@ subroutine CrossModel
 
   ! Now return to array based storage of variables
   vis(1:numCells) = urfVis * &
-                    muzero / (1.0_dp + ( lamtime * shear%mag(1:numCells) ) ** (1.0_dp-npow) ) &
-                    ! muinfty + ( muzero - muinfty ) / (1.0_dp + ( lamtime * shear%mag(1:numCells) ) ** npow ) &
+                    muinfty + ( muzero - muinfty ) / (1.0_dp + ( lamtime * shear%mag(1:numCells) ) ** npow ) &
                    + (1.0_dp-urfVis)*vis(1:numCells)
 
   !

@@ -309,7 +309,7 @@ subroutine calcp_piso
       ! a( diag(pRefCell) ) = 1.0_dp
       ! ! Set rhs value for pRefCell to be reference pressure
       ! su(pRefCell) = p(pRefCell)
-
+      
       !
       ! Solve pressure equation system
       !

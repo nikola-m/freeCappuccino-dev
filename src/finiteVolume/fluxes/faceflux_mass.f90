@@ -134,10 +134,6 @@ subroutine facefluxmass(ijp, ijn, xf, yf, zf, arx, ary, arz, lambda, cap, can, f
   ! vi = face_value_central( ijp,ijn, xf, yf, zf, v, dVdxi )
   ! wi = face_value_central( ijp,ijn, xf, yf, zf, w, dWdxi )
 
-  ! Try this - like in Fluent Theory Guide
-  ! ui = ( u(ijp)/Apu(ijp)+u(ijn)/Apu(ijn) ) / ( 1./Apu(ijp) + 1./Apu(ijn) )
-  ! vi = ( v(ijp)/Apv(ijp)+v(ijn)/Apv(ijn) ) / ( 1./Apv(ijp) + 1./Apv(ijn) )
-  ! wi = ( w(ijp)/Apw(ijp)+w(ijn)/Apw(ijn) ) / ( 1./Apw(ijp) + 1./Apw(ijn) )
 
   !+Interpolate pressure gradients to cell face center
   dpxi = ( dPdxi(1,ijn)*fxp + dPdxi(1,ijp)*fxn ) * xpn
@@ -264,10 +260,11 @@ subroutine facefluxmass2(ijp, ijn, arx, ary, arz, lambda, cap, can, fluxmass)
   ! vi = face_value_central( ijp,ijn, xf, yf, zf, v, dVdxi )
   ! wi = face_value_central( ijp,ijn, xf, yf, zf, w, dWdxi )
 
-  ! Try this - like in Fluent Theory Guide
-  ui = ( u(ijp)/Apu(ijp)+u(ijn)/Apu(ijn) ) / ( 1./Apu(ijp) + 1./Apu(ijn) )
-  vi = ( v(ijp)/Apv(ijp)+v(ijn)/Apv(ijn) ) / ( 1./Apv(ijp) + 1./Apv(ijn) )
-  wi = ( w(ijp)/Apw(ijp)+w(ijn)/Apw(ijn) ) / ( 1./Apw(ijp) + 1./Apw(ijn) )
+  ! Try this - like in Fluent Theory Guide - mass flow weighted interpolation
+  Kj = ( Apu(ijp) + Apu(ijn) + small )
+  ui = ( u(ijp)*Apu(ijn)+u(ijn)*Apu(ijp) ) / Kj
+  vi = ( v(ijp)*Apv(ijn)+v(ijn)*Apv(ijp) ) / Kj
+  wi = ( w(ijp)*Apw(ijn)+w(ijn)*Apw(ijp) ) / Kj
 
   dpxi = ( dPdxi(1,ijn)*fxp + dPdxi(1,ijp)*fxn ) * xpn
   dpyi = ( dPdxi(2,ijn)*fxp + dPdxi(2,ijp)*fxn ) * ypn

@@ -33,8 +33,8 @@ module velocity
   real(dp) :: tolRelU = 0.025                    ! Relative drop in residual to exit linear solver.
 
   ! !...or =>
-  ! type( FieldEquation ) :: Momentum
-  ! ! Now access data as: Momentum%urf, Monentum%cScheme, Momentum%maxiter,...etc.
+  ! type( FieldEquation ) :: Vel
+  ! ! Now access data as: Vel%urf, Vel%cScheme, Vel%maxiter,...etc.
   
   private 
 

@@ -1,0 +1,68 @@
+&input_parameters
+              title = '2D Taylor-Couette' ! Descriptive name of the case which will be written in monitor file.                                      
+        mesh_format = 'nativeMesh'  ! Mesh format 'nativeMesh' for native polyMesh format or 'foamMesh' for OpenFOAM polyMesh.
+              lread = F           ! Read restart file - continue simulation from saved state?  True/False.
+              ltest = F           ! Verbosity for linear solver convergence (for troubleshooting) True/False. 
+        !
+        ! Approximation details for velocity field.
+        !
+              calcU = T             ! Activate Velocity field caculation? True/False.
+               urfU = 0.5, 0.5, 0.5 ! Under-relaxation factor for momentum eq
+               gdsU = 1.0           ! gamma-deferred correction parameter for velocity
+           cSchemeU = 'central'         ! Convection scheme for momentun eq
+           dSchemeU = 'uncorrected'    ! Difussion scheme for momentum eq
+            nrelaxU = 0             ! Integer parameter for difussion scheme - advanced
+           lSolverU = 'bicgstab'    ! Linear algebraic solver for momentum eq
+           maxiterU = 10            ! Max no of iterations for linear U-V-W equations
+            tolRelU = 0.01          ! Relative tolerance level for residual for linear U-V-W equations
+           pscheme = 'central'       ! interpolation of pressure to faces.
+        !
+        ! Approximation details for pressure/pressure correction.
+        !
+              calcP = T             ! Activate Pressure field caculation? True/False.
+               urfP = 0.2           ! Under-relaxation factor for pressure
+           lSolverP = 'iccg'        ! Linear algebraic solver for pressure/pressure correction
+           maxiterP = 200            ! Max no of iterations for pressure/pressure correction
+            tolAbsP = 1e-13         ! Absolute tolerance level for residual for pressure/pressure correction
+            tolRelP = 0.01          ! Relative tolerance level for residual for pressure/pressure correction     
+        !
+        ! Definition of physical properties of fluid.
+        !
+             densit = 1.0                   ! Fluid density [kg/m3]
+             viscos = 1e-5                 ! Molecular dynamic viscosity [Pa.s]       
+        !
+        ! Unsteady simulation
+        !    
+         ltransient = F           !% |Unsteady simulation True/False and chose ONE algorithm  below
+                bdf = F           !% |Backward-Euler; First-Order Implicit, or...
+               bdf2 = f           !% |Second-Order Backward Euler; Second-Order Implicit, or...
+               bdf3 = f           !% |Third-order backard, or...
+                 CN = F           !% |Crank-Nicolson.
+        !
+        ! Numerical approximation: Gradient approximation and limiting
+        !
+              lstsq = F           !@ |Gradient approximation, chose ONE: Unweighted Least-Square gradient approximation, or...
+           lstsq_qr = F           !@ |Least square gradients based on thin QR decomposition, or...
+           lstsq_dm = F           !@ |Distance-square weighted version of Least-Square Gradient, or...
+              gauss = T           !@ |Cell based Gauss gradient with simple linear interpolation.
+             nigrad = 1           !@ | Number of iterations for Gauss gradient (default 1)
+            limiter = 'no-limit'     ! Gradient limiter - default for all gradients
+        !
+        ! Solution method: pressure-velocity coupling
+        !    
+             SIMPLE = T       !# |Pressure-velocity coupling method - SIMPLE, or...
+               PISO = F       !# |Pressure-velocity coupling method - PISO.
+              ncorr = 1       ! Number of PISO corrections - only relevant for PISO.
+              npcor = 1       ! Number of iterations for pressure/pressure correction equation - Number of Nonorthogonal corrections.  
+           pRefCell = 1       ! Reference cell for setting pressure level (since we have pure Neumann problem)
+          tolerance = 1e-6    ! Desired level of convergence for SIMPLE iterations.
+        !
+        ! Simulation run details
+        !
+            numstep = 3000     ! Total number of timesteps.                   
+           timestep = 1.0      ! Timestep size  - also known as dt.
+             nzapis = 500      ! Program writes output files every NZAPIS timesteps.
+              maxit = 1        ! Number of iterations in SIMPLE/PISO sequential equation solution loop. 
+           CoNumFix = f        !Co  |Adaptive timestep size based on target Courant number, True/False.
+      CoNumFixValue = 1.0      !Co  |If CoNumFix=True then set target maximum Courant number here.
+/

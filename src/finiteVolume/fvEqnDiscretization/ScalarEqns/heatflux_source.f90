@@ -1,6 +1,6 @@
 !***********************************************************************
 !
-subroutine Additional_algebraic_heatflux_terms
+subroutine heatflux_source
 !
 !***********************************************************************
 !  Calculates the additional agebraic heatflux terms for temperature eq.

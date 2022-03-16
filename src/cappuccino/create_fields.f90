@@ -226,7 +226,7 @@ subroutine create_fields
 
   ! Turbulent heat fluxes
 
-  if( lturb .and. lbuoy ) then
+  if( lturb .and. (calcEn.or.calct) ) then
 
     allocate(utt(numCells),stat=ierr) 
       if(ierr /= 0)write(*,*)"allocation error: utt" 
@@ -256,10 +256,10 @@ subroutine create_fields
   allocate(den(numTotal),stat=ierr) 
     if(ierr /= 0)write(*,*)"allocation error: den" 
 
-  ! if (compressible) then
+  if (compressible) then
     allocate(deno(numTotal),stat=ierr) 
       if(ierr /= 0)write(*,*)"allocation error: den" 
-  ! endif
+  endif
     
 
   ! Mass flows trough cell faces

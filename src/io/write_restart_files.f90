@@ -36,6 +36,7 @@ subroutine write_restart_files
     write(restart_unit) te
     write(restart_unit) ed
     write(restart_unit) t
+    ! write(restart_unit) con
     write(restart_unit) vis
     write(restart_unit) visw    
     ! write(restart_unit) uu
@@ -49,9 +50,8 @@ subroutine write_restart_files
     write(restart_unit) wo
     write(restart_unit) teo
     write(restart_unit) edo
-    ! write(restart_unit) to
+    write(restart_unit) to
     ! write(restart_unit) varto
-    ! write(restart_unit) con
     ! write(restart_unit) cono
     ! write(restart_unit) alph
     ! write(restart_unit) vart

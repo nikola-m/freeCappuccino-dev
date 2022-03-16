@@ -1,0 +1,5 @@
+# bcName bcType nFaces startFace
+wallInner wall 156 18252
+front empty 9204 18408
+back empty 9204 27612
+wallOuter wall 156 36816
