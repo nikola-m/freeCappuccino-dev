@@ -198,7 +198,15 @@ subroutine read_input_file
         ! Constant-mass flux: Activation and prescription of target bulk velocity.
         !
         const_mflux, &        !mdot | Do we have constant mass flow in the domain True/False.
-        magUbar               !mdot | Target bulk velocity for constant mass flow situation.
+        magUbar, &            !mdot | Target bulk velocity for constant mass flow situation.
+        !
+        ! Reference values for reporting forces, fluxes, and coefficients.
+        !
+        rhoref, &  ! Reference density
+        Uref, &    ! Reference velocity
+        Aref, &    ! Reference area 
+        pref, &    ! Reference pressure 
+        lref       ! Reference length
 
 
 !

@@ -8,8 +8,11 @@ module compressible
   use sparse_matrix
   use variables
   use gradients
-  use LIS_linear_solver_library
-
+  use linear_solvers
+  use fieldManipulation
+  use faceflux_mass
+  use nablap
+  use velocity, only: updateVelocityAtBoundary
   implicit none
 
 public :: pressure_velocity_density_coupling
@@ -126,9 +129,6 @@ subroutine pressure_velocity_density_coupling
     ! write(options,'(a)') "-i gmres -restart [20] -p ilut -maxiter "//adjustl(maxno)//"-tol "//adjustl(tol)
     ! call solve_csr( numCells, nnz, ioffset, ja, a, su, pp )
 
-
-       
-    ! SECOND STEP *** CORRECTOR STAGE
    
     do istage=1,nipgrad
 

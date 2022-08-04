@@ -84,15 +84,13 @@ Discretized equations are written in CSR (Compressed Sparse Row) format, which a
 
 Requirements
 -----------------
-The code is written in modern fortran, so you will need fortran compiler (e.g. gfortran). Code uses _LAPACK_ in one routine, the default is to require _LAPACK_ but there is an option to build the code without it. Code may be built to use external library for solution of sparse linear systems [LIS](http://www.ssisc.org/lis/) or be used without it, just using built in linear solvers.
+The code is written in modern fortran, so you will need fortran compiler (e.g. gfortran). Code uses _LAPACK_ in one routine, the default is to require _LAPACK_ but there is an option to build the code without it. Code may be built to use external library for solution of sparse linear systems [LIS](http://www.ssisc.org/lis/) or be used without it, just using built in linear solvers. See below the instruction on how to configure LIS.
 
 Getting started
 -----------------
 Clone the git repository or download the zip archive of the most recent source, compile and build the code, and checkout the examples such as the lid-driven cavity, von Karman vortices behind a cylinder, Pitz-Daily backward facing step, MHD flow in a channel, and many more to come.
 
-To compile the code just run
-`make`
-from the root directory. The binary file _cappuccino_ will be created in _/bin_ directory. Don't forget to make _bin_ directory first.
+To compile the code just run _make_ from the root directory of freeCappuccino. The binary file _cappuccino_ will be created in _/bin_ directory. Don't forget to make _bin_ directory first. So the sequence is:
 ```
 mkdir bin
 make
@@ -107,7 +105,15 @@ To create some utility programs, go to specific folder and run 'make' there. For
 cd utilities/su2ToCappuccino/
 make
 ```
-The binary for 'su2ToCappuccino' will be created in '/bin' folder.
+The binary for 'su2ToCappuccino' will be created in 'freeCappuccino-dev/bin' folder.
+
+If you want to use LIS library to access external linear algera solvers and preconditioners such as Smoothed Agglomeration Algebraic Multigrid, you need to download and install [LIS](http://www.ssisc.org/lis/) before building freeCappuccino. The process is described in LIS user's manual. To configure it the following switches are recommended, after which you proceed with building and installing the library:
+```
+./configure --enable-omp --enable-f90 --enable-saamg
+make
+make check
+make install
+```
 
 Workflow
 -----------------
@@ -136,7 +142,9 @@ cappuccino input.nml monitor <case_name>.rst
 7. __Monitor the progress of the run__ by inspecting monitor file (we provide some scripts in examples to plot residuals) and when simulation is done, __view the results__ located in _vtk_ folder in Paraview.
 
 
-__The alternative workflow__ would start from a given mesh in OpenFOAM polyMesh format. Then you can convert the mesh to native freeCappuccino format using _foamToCappuccino_ tool, or using OpenFOAM polyMesh format directly, just making some modifications. Most of these modifications can be done with provided toolset from the _utilities_ directory. All this will be covered in video tutorials that are being prepared.
+__The alternative workflow__ would start from a given mesh in OpenFOAM polyMesh format. Then you can convert the mesh to native freeCappuccino format using _foamToCappuccino_ tool, or using OpenFOAM polyMesh format directly, just making some modifications. Most of these modifications can be done with provided toolset from the _utilities_ directory. 
+
+An example of converting OpenFOAM mesh and preparing the simulation case can be seen in [![this video](https://img.youtube.com/vi/sYMfoQ61BcY/default.jpg)](https://www.youtube.com/watch?v=sYMfoQ61BcY)
 
 License
 ------------------

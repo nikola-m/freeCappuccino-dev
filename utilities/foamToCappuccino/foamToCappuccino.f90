@@ -393,9 +393,9 @@ program foamToCappuccino
     node = 0
 
     ! Read line in 'faces' file
-    call read_line_faces_file_polyMesh(faces_file_of,nnodes,node,4)
+    call read_line_faces_file_polyMesh(faces_file_of,nnodes,node,8)
 
-    write(faces_file, '( 5(i0,1x) )') nnodes, (node(k), k=1,nnodes)
+    write(faces_file, '( 8(i0,1x) )') nnodes, (node(k), k=1,nnodes)
 
   end do
 

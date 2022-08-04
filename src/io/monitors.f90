@@ -15,6 +15,20 @@ module monitors
 !    every iteration and/or timestep.
 !    Logged values are written in a dedicated file and can be plot e.g. using gnuplot during simulation run.
 !
+!
+!  The following is the recap od the use of reference values (source: ANSYS Fluent User's guide):
+!
+!   * Force coefficients use the reference area, density, and velocity. In addition, the pressure force calculation 
+!     uses the reference pressure.
+!   * Moment coefficients use the reference length, area, density and velocity. In addition, the pressure force calculation 
+!     uses the reference pressure.
+!   * Reynolds number uses the reference length, density, and viscosity.
+!   * Pressure and total pressure coefficients use the reference pressure, density, and velocity.
+!   * Entropy uses the reference density, pressure, and temperature.
+!   * Skin friction coefficient uses the reference density and velocity.
+!   * Heat transfer coefficient uses the reference temperature.
+!   * Turbomachinery efficiency calculations use the ratio of specific heats.
+!
 !  Licensing:
 !
 !    This code is distributed under the GNU GPL license. 
@@ -29,6 +43,10 @@ module monitors
   integer :: numMonVals = 0
   character( len = 30 ), dimension(:), allocatable :: monitored_value
   character( len = 30 ), dimension(:), allocatable :: monitored_location
+
+  ! Directions to project lift and drag force
+  ! real(dp), dimension(3) :: liftDir = (/ 0, 1, 0 /) 
+  ! real(dp), dimension(3) :: dragDir = (/ 1, 0, 0 /)
 
   private
 

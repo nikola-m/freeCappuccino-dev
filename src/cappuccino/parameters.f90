@@ -33,7 +33,6 @@ module parameters
   real(dp) :: tref      ! Reference temperature, read from input file
   real(dp) :: beta      ! Thermal expansion coefficient, read from input file
   real(dp) :: gravx,gravy,gravz ! Components of gravity acceleration vector, read from input file
-  real(dp) :: facvis            ! Under-relaxation for viscosity
   integer :: numstep            ! Total number of timesteps
   integer :: itime,itimes, itimee  ! Current timestep value, first and last timestep value in the current simulation
   integer :: nzapis    ! After how many timesteps we write backup and output files
@@ -77,5 +76,11 @@ module parameters
 
   character(len=100) :: input_file,grid_file,monitor_file,restart_file
 
+  ! Referent values - initialized here, should be initialized through a configuration file
+  real(dp) :: Rhoref = 1.0_dp  ! Reference density
+  real(dp) :: Uref = 1.0_dp    ! Reference velocity
+  real(dp) :: Aref = 1.0_dp    ! Reference area 
+  real(dp) :: Pref = 0.0_dp    ! Reference pressure 
+  real(dp) :: Lref = 1.0_dp    ! Reference length
   
 end module parameters

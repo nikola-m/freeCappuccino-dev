@@ -22,7 +22,7 @@ module velocity
   ! Discrretization and solution parameters - modified trough input.nml file
   !
   logical  :: calcU = .True.                         ! To activate the solution of this field in the main function. 
-  real(dp) :: urfU(3) = (/ 0.5, 0.5, 0.5 /)          ! Under-relaxation factors.
+  real(dp) :: urfU(3) = (/ 0.7, 0.7, 0.7 /)          ! Under-relaxation factors.
   real(dp) :: gdsU = 1.0                             ! Deferred correction factor.
   character ( len=30 ) :: cSchemeU = 'linearUpwind'  ! Convection scheme - default is second order upwind.
   character ( len=12 ) :: dSchemeU = 'skewness'      ! Difussion scheme, i.e. the method for normal gradient at face skewness/offset.
@@ -1435,7 +1435,23 @@ subroutine calc_wall_shear
         ! ypl(iWall) = den(ijb)*sqrt( Tau(iWall) / den(ijb) )*dnw(iWall)/viscos ! reduce to =>
           ypl(iWall) =          sqrt( Tau(iWall) * den(ijb) )*dnw(iWall)/viscos
 
+
       enddo
+
+      ! ! Let's print the skin friction coefficient - Cf
+      ! ! Below we print tau_wall v.s. Rex ( this is hardcoded for turb flat plate case)
+      ! write(*,'(a)') ' '  
+      ! write(*,'(a)') '  Skin friction coefficient: '//trim( bcname(ib) )  
+      ! write(*,'(a)') ' '  
+
+      ! iwall = iwall - nfaces(ib)
+      ! do i=1,nfaces(ib)
+      !   iface = startFace(ib) + i
+      !   iWall = iWall + 1       
+      !   write(*,*) rhoref*xf(iFace)*Uref/viscos, tau(iWall) / (0.5*rhoref*uref**2)
+      ! enddo
+
+
 
     endif 
 
