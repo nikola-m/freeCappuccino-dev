@@ -144,7 +144,9 @@ cappuccino input.nml monitor <case_name>.rst
 
 __The alternative workflow__ would start from a given mesh in OpenFOAM polyMesh format. Then you can convert the mesh to native freeCappuccino format using _foamToCappuccino_ tool, or using OpenFOAM polyMesh format directly, just making some modifications. Most of these modifications can be done with provided toolset from the _utilities_ directory. 
 
-An example of converting OpenFOAM mesh and preparing the simulation case can be seen in [![this video](https://img.youtube.com/vi/sYMfoQ61BcY/default.jpg)](https://www.youtube.com/watch?v=sYMfoQ61BcY)
+An example of converting OpenFOAM mesh and preparing the simulation case can be seen in this short video tutorial:
+
+[![mesh conversion video](https://img.youtube.com/vi/sYMfoQ61BcY/default.jpg)](https://www.youtube.com/watch?v=sYMfoQ61BcY)
 
 License
 ------------------
