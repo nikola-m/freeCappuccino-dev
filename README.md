@@ -146,7 +146,7 @@ __The alternative workflow__ would start from a given mesh in OpenFOAM polyMesh 
 
 An example of converting OpenFOAM mesh and preparing the simulation case can be seen in this short video tutorial:
 
-[![mesh conversion video](https://img.youtube.com/vi/sYMfoQ61BcY/default.jpg)](https://www.youtube.com/watch?v=sYMfoQ61BcY)
+[![mesh conversion video](https://img.youtube.com/vi/sYMfoQ61BcY/0.jpg)](https://www.youtube.com/watch?v=sYMfoQ61BcY)
 
 License
 ------------------
