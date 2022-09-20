@@ -37,7 +37,7 @@ integer :: ninl ! No. of inlet boundary faces
 integer :: nout ! No. of outlet boundary faces
 integer :: nper ! Stores the number of periodic boundary pairs, which will be treated as a single inner boundary               
 
-integer, parameter :: nomax = 30 ! Max no. of nodes in face - determines size of some arrays, just change this if necessary.
+integer, parameter :: nomax = 6 ! ### Max number of nodes in face - determines size of some arrays, just change this if necessary. ###
 real(dp), parameter :: tiny = 1e-30
 
 ! Mesh file units
@@ -75,18 +75,11 @@ real(dp), dimension(:), allocatable :: srdw,dnw    ! srdw = |are|/|dnw|, dnw = n
 integer, dimension(:), allocatable :: owner     ! Index of the face owner cell
 integer, dimension(:), allocatable :: neighbour ! Index of the neighbour cell  - it shares the face with owner
 
-! Stuff related to Cell-to-Node interpolation using weighted Pseudo-Laplacian interpolation method.
-! This is approached using CSR like data format, where, 
-! iCellNode[1:numNodes+1] are offsets for each mesh node, 
-! jCellNode[1:nCellNode]  are surrounding cells of each mesh node in a linear list, and
-! wCellNode[1:nCellNode]  are weights for cell-to-node interpolation.
-! nCellNode's value is sum( noel(cellType) ), therefore min is 4*numCells (all tets), max is 8*numCells (all hex).
-integer :: nCellNode
-integer, dimension(:), allocatable :: iCellNode, jCellNode 
-real(dp), dimension(:), allocatable :: wCellNode
+integer, dimension(:,:), allocatable :: node  ! It will store global node numbers of face vertices
+integer, dimension(:), allocatable :: nnodes  ! no. of nodes in specific face face size[numFaces].
 
 ! For periodic boundaries
-integer :: startFaceTwin(3)
+integer :: startFaceTwin(3) ! we expect max triple periodic domains..
 
 
 public 
@@ -96,9 +89,7 @@ contains
 
 subroutine read_mesh
 !
-! Simple driver subroutine, that call one of the subrouines below, 
-! based on the specified format. 
-! This allows some form of flexibility
+! Simple driver subroutine that calls one of the mesh reading and processing subrouines below, based on the specified format. 
 !
   if (mesh_format == 'nativeMesh') then
 
@@ -154,9 +145,6 @@ subroutine read_mesh_native
   integer :: inp,inn,ijp
 
   character(len=80) :: line_string
-
-  integer, dimension(:,:), allocatable :: node  ! It will store global node numbers of face vertices
-  integer, dimension(:), allocatable :: nnodes  ! no. of nodes in face
 
   ! Parameters
   real(dp), parameter :: half = 0.5_dp
@@ -568,7 +556,7 @@ subroutine read_mesh_native
       !
       call find_intersection_point(&
                                    ! plane defined by three face vertices:
-                                   x( node(1,iface) ), y( node(1,iface) ), z( node(1,iface) ),&
+                                   x( node(1,iface) ), y( node(1,iface) ), z( node(1,iface) ), &
                                    x( node(2,iface) ), y( node(2,iface) ), z( node(2,iface) ), &
                                    x( node(3,iface) ), y( node(3,iface) ), z( node(3,iface) ), &
                                    ! line defined by cell center and neighbour center:
@@ -617,8 +605,9 @@ subroutine read_mesh_native
 
   endif
   
-  deallocate(nnodes)
-  deallocate(node)  
+  ! Note: don't deallocate we use it for cell to node interpolation weights calculation (node_interpolation module) - only then deallocate.
+  ! deallocate(nnodes)
+  ! deallocate(node)  
 
 
   ! Loop over wall boundaries to calculate normal distance from cell center of the first cell layer - dnw, and
@@ -772,8 +761,8 @@ subroutine read_mesh_openfoam
   character(len=20) :: char_string,char_string2
   character(len=80) :: line_string
 
-  integer, dimension(nomax) :: node  ! It will store global node numbers of cell vertexes
-  integer :: nnodes                  ! no. of nodes in face
+  integer, dimension(nomax) :: nodeOF  ! It will store global node numbers of cell vertexes
+  integer :: nnodesOF              ! no. of nodes in face
 
   ! Parameters
   real(dp), parameter :: half = 0.5_dp
@@ -1186,6 +1175,25 @@ subroutine read_mesh_openfoam
     neighbour(i) = neighbour(i) + 1 ! fortran starts from 1
   end do
 
+
+  ! The 'faces' file
+
+  ! Allocate tmp array of number of nodes for each face - nnodes, and node array
+  allocate( nnodes(numFaces) )
+  allocate( node(nomax,numFaces) )
+
+  do iface=1,numFaces
+
+    call read_line_faces_file_polyMesh(faces_file,nnodesOF,nodeOF,nomax)
+
+    nnodes(iface) = nnodesOF
+
+    do k=1,nnodesOF
+      node(k,iface) = nodeOF(k)
+    enddo
+
+  enddo 
+
    
   ! Allocate tmp array of doubles 
   allocate( r8tmp(numCells))
@@ -1200,26 +1208,37 @@ subroutine read_mesh_openfoam
 
     inp = owner(iface)
 
-    ! Initialize array of node indexes that construct the face
-    node = 0
+    ! ! Initialize array of node indexes that construct the face
+    ! node = 0
 
-    ! Read line in 'faces' file
-    call read_line_faces_file_polyMesh(faces_file,nnodes,node,nomax)
+    ! ! Read line in 'faces' file
+    ! call read_line_faces_file_polyMesh(faces_file,nnodes,node,nomax)
 
     ! Initialize total area of polygon.
     areasum = 0.0_dp
 
     ! We decompose a polygon to a series of triangles, all having first node in common.
-    do i=1,nnodes-2 
+    do i=1, nnodes(iface)-2 
+
       ! Vectors to vertices
       ! 2-1
-      px = x(node(i+1))-x(node(1))
-      py = y(node(i+1))-y(node(1))
-      pz = z(node(i+1))-z(node(1))
+      px = x( node(i+1,iface) )-x( node(1,iface) )
+      py = y( node(i+1,iface) )-y( node(1,iface) )
+      pz = z( node(i+1,iface) )-z( node(1,iface) )
       ! 3-1
-      qx = x(node(i+2))-x(node(1))
-      qy = y(node(i+2))-y(node(1))
-      qz = z(node(i+2))-z(node(1))
+      qx = x( node(i+2,iface) )-x( node(1,iface) )
+      qy = y( node(i+2,iface) )-y( node(1,iface) )
+      qz = z( node(i+2,iface) )-z( node(1,iface) )
+
+      ! ! Vectors to vertices
+      ! ! 2-1
+      ! px = x(node(i+1))-x(node(1))
+      ! py = y(node(i+1))-y(node(1))
+      ! pz = z(node(i+1))-z(node(1))
+      ! ! 3-1
+      ! qx = x(node(i+2))-x(node(1))
+      ! qy = y(node(i+2))-y(node(1))
+      ! qz = z(node(i+2))-z(node(1))
 
 
       call triangle_area_vector( px,py,pz, qx,qy,qz, nx,ny,nz )
@@ -1233,9 +1252,14 @@ subroutine read_mesh_openfoam
       arz(iface) = arz(iface) + nz
 
       ! Face center for a triangle
-      cx = third*( x(node(i+2)) + x(node(i+1)) + x(node(1)) )
-      cy = third*( y(node(i+2)) + y(node(i+1)) + y(node(1)) )
-      cz = third*( z(node(i+2)) + z(node(i+1)) + z(node(1)) ) 
+      cx = third*( x( node(i+2,iface) ) + x( node(i+1,iface) ) + x( node(1,iface) ) )
+      cy = third*( y( node(i+2,iface) ) + y( node(i+1,iface) ) + y( node(1,iface) ) )
+      cz = third*( z( node(i+2,iface) ) + z( node(i+1,iface) ) + z( node(1,iface) ) ) 
+
+      ! ! Face center for a triangle
+      ! cx = third*( x(node(i+2)) + x(node(i+1)) + x(node(1)) )
+      ! cy = third*( y(node(i+2)) + y(node(i+1)) + y(node(1)) )
+      ! cz = third*( z(node(i+2)) + z(node(i+1)) + z(node(1)) ) 
 
       !
       ! > Cell-face centroid components - accumulation stage
@@ -1320,15 +1344,15 @@ subroutine read_mesh_openfoam
   deallocate(r8tmp)
 
 
-  ! Rewind 'faces' file for one more sweep
-  rewind( faces_file )
-  ch = ' '
-  do
-    read(faces_file,*) ch
-    if (ch == "(") then
-      exit
-    endif
-  end do 
+  ! ! Rewind 'faces' file for one more sweep
+  ! rewind( faces_file )
+  ! ch = ' '
+  ! do
+  !   read(faces_file,*) ch
+  !   if (ch == "(") then
+  !     exit
+  !   endif
+  ! end do 
 
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! > Interpolation factor
@@ -1345,10 +1369,10 @@ subroutine read_mesh_openfoam
       inp = owner(iface)
       inn = neighbour(iface)
 
-      node = 0
+      ! node = 0
 
-      ! Read line in 'faces' file
-      call read_line_faces_file_polyMesh(faces_file,nnodes,node,nomax)
+      ! ! Read line in 'faces' file
+      ! call read_line_faces_file_polyMesh(faces_file,nnodes,node,nomax)
 
       xpn = xc(inn)-xc(inp)
       ypn = yc(inn)-yc(inp)
@@ -1361,15 +1385,26 @@ subroutine read_mesh_openfoam
       !
       call find_intersection_point(&
                                    ! plane defined by three face vertices:
-                                   x(node(1)),y(node(1)),z(node(1)),&
-                                   x(node(2)),y(node(2)),z(node(2)), &
-                                   x(node(3)),y(node(3)),z(node(3)), &
+                                   x( node(1,iface) ), y( node(1,iface) ), z( node(1,iface) ), &
+                                   x( node(2,iface) ), y( node(2,iface) ), z( node(2,iface) ), &
+                                   x( node(3,iface) ), y( node(3,iface) ), z( node(3,iface) ), &
                                    ! line defined by cell center and neighbour center:
                                    xc(inp),yc(inp),zc(inp), &
                                    xc(inn),yc(inn),zc(inn), &
                                    ! intersection point (output):
                                    xjp,yjp,zjp &
                                   )
+      ! call find_intersection_point(&
+      !                              ! plane defined by three face vertices:
+      !                              x(node(1)),y(node(1)),z(node(1)), &
+      !                              x(node(2)),y(node(2)),z(node(2)), &
+      !                              x(node(3)),y(node(3)),z(node(3)), &
+      !                              ! line defined by cell center and neighbour center:
+      !                              xc(inp),yc(inp),zc(inp), &
+      !                              xc(inn),yc(inn),zc(inn), &
+      !                              ! intersection point (output):
+      !                              xjp,yjp,zjp &
+      !                             )
       xpn = xjp - xc(inp)
       ypn = yjp - yc(inp)
       zpn = zjp - zc(inp)
@@ -1662,9 +1697,48 @@ end subroutine
 
 
 subroutine face_mapping
-
+!
+!  Purpose: 
+!
+!    Used to map faces at periodic boundaries, that is 
+!    to find pairs of periodic faces at two opposite periodic boundaries.
+!
+!  Discussion:
+!
+!    The order of the faces at two twin periodic boundaries is not the same in a way
+!    that the 17th face of one periodic boundary region is not the match for the 17th
+!    face in its twin periodic boundary.
+!
+!    At the moment we find twin periodic faces based on criteria that the distance
+!    vecttor between real twins is minimized.
+!
+!    # NOTE: The concept used below is not universal!
+!    In a case when two mapped periodic boundaries are not made by translation,
+!    then an alternative has to be programmed.
+!    I will put this warning in some user's guide, when describing periodic BC.
+!    
+!
+!  Licensing:
+!
+!    This code is distributed under the GNU GPL license. 
+!
+!  Modified:
+!
+!    circa April 2020.
+!
+!  Author:
+!
+!    Nikola Mirkov/Email: largeddysimulation@gmail.com
+!
+!  Reference:
+!
+!    -
+!
+!  Parameters:
+!
+!    -
+!
   implicit none
-
 
   integer :: i,ib,ijp,ijn,iface
   integer :: iPer, itemp, indx
@@ -1768,94 +1842,11 @@ subroutine face_mapping
   enddo 
 
 
-  write(*,'(a)') '  **Mapped faces at periodic boundaries.'
+  write(*,'(a)') '  **Mapped opposite faces at periodic boundaries-minimum distance criteria.'
 
 
 end subroutine
 
-
-subroutine calcWeightCellToNode
-!
-! Purpose:
-! Calculating weights for cell center to cell node weighted interpolation
-! used for e.g. Gauss Node based gradients or for post processing.
-!
-! Description:
-! Implementation based on pseudo_laplacian weighted interpolation method,
-! proposed by Holmes and Connell, which is 2nd order accurate on unstructured meshes.
-!
-! Author:
-! Nikola Mirkov (Email: largeddysimulation@gmail.com) 
-! 10/2020
-!
-  integer :: i,k,jcn
-  real(dp) :: rx,ry,rz
-  real(dp) :: ixx,iyy,izz,ixy,ixz,iyz
-  real(dp) :: D,lamx,lamy,lamz
-
-
-  do i=1,numNodes ! <- loop over mesh nodes
-
-    ! Lambdas (lamx,lamy,lamz) are valid for one mesh node 
-    ! and surrounding set of cell centers.
-    ! We reinitialize these below because they participate in
-    ! calculation of lambdas.
-    rx = 0.
-    ry = 0.
-    rz = 0.
-
-    ixx = 0.
-    iyy = 0.
-    izz = 0.
-
-    ixy = 0.
-    ixz = 0. 
-    iyz = 0.
-
-    do k = iCellNode(i),iCellNode(i+1)-1
-
-      jcn = jCellNode(k) ! <- every cell surrounding this particular node is listed here in ascending order.
-
-      rx = rx + ( xc( jcn ) - x( i ) )
-      ry = ry + ( yc( jcn ) - y( i ) )
-      rz = rz + ( zc( jcn ) - z( i ) )
-
-      ixx = ixx + ( xc( jcn ) - x( i ) )**2
-      iyy = iyy + ( yc( jcn ) - y( i ) )**2
-      izz = izz + ( zc( jcn ) - z( i ) )**2
-
-      ixy = ixy + ( xc( jcn ) - x( i ) )*( yc( jcn ) - y( i ) )
-      ixz = ixz + ( xc( jcn ) - x( i ) )*( zc( jcn ) - z( i ) )
-      iyz = iyz + ( yc( jcn ) - y( i ) )*( zc( jcn ) - z( i ) )
-
-    enddo
-
-    D = ixx*(iyy*izz-iyz**2)-ixy*(ixy*izz-ixz*iyz)+ixz*(ixy*iyz-iyy*ixz)
-    
-    lamx = (-rx*(ixx*izz-iyz**2)  + ry*(ixy*izz-ixz*iyz) - rz*(ixy*iyz-iyy*ixz) )/( D + tiny )
-    lamy = ( rx*(ixy*izz-ixz*iyz) - ry*(ixx*izz-ixz**2)  + rz*(ixx*iyz-ixy*ixz) )/(D + tiny)
-    lamz = (-rx*(ixy*iyz-iyy*ixz) + ry*(ixx*iyz-ixy*ixz) - rz*(ixx*iyy-ixy**2) )/(D + tiny)
-
-    ! **Pseudo-Laplacian weight for each cell-to-node interpolaton**
-    ! NOTE: If you want to change mesh during simulation (moving mesh),
-    ! (xn-xp), (yn-yp) and (zn-zp) changes over time, then
-    ! save lamx,lamy,lamz, and update weight (wc2n) after each mesh update.
-
-    do k = iCellNode(i),iCellNode(i+1)-1
-
-      jcn = jCellNode(k) 
-
-      wCellNode( jcn ) = 1.0_dp + lamx*( xc( jcn ) - x( i ) ) &
-                                + lamy*( yc( jcn ) - y( i ) ) &
-                                + lamz*( zc( jcn ) - z( i ) )
-
-    enddo
-
-  enddo
-
-
-
-end subroutine
 
 
 end module

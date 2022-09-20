@@ -1,6 +1,6 @@
 module gradients
 !
-! Module for cell center gradients, gradient limiters and surface normal gradients.
+! Module for cell centered gradients, gradient limiters and surface normal gradients.
 !
 
 use types
@@ -9,7 +9,7 @@ use sparse_matrix, only: ioffset,ja,diag
 
 implicit none
 
-logical :: lstsq, lstsq_qr, lstsq_dm, gauss        ! Gradient discretization approach
+logical :: lstsq, lstsq_qr, lstsq_dm, gauss, node_gauss  ! Gradient discretization approach
 character(len=20) :: limiter                       ! Gradient limiter. Options: none, Barth-Jespersen, Venkatakrishnan, multidimensional
 
 real(dp),dimension(:,:), allocatable ::  Dmat      !  d(6,nxyz) - when using bn, or dm version of the subroutine
@@ -32,7 +32,7 @@ end interface
 
 private
 
-public :: lstsq, lstsq_qr, lstsq_dm, gauss,limiter
+public :: lstsq, lstsq_qr, lstsq_dm, gauss, node_gauss, limiter
 public :: grad,grad_gauss,grad_gauss_corrected,sngrad,create_lsq_grad_matrix
 
 
@@ -135,7 +135,11 @@ implicit none
 
     call grad_gauss_corrected(phi,dPhidxi) 
 
-  else 
+  elseif ( node_gauss ) then
+
+    call grad_node_based_gauss(phi,dPhidxi)
+
+  else ! if(gauss) then
 
     call grad_gauss(phi,dPhidxi)
 
@@ -144,11 +148,11 @@ implicit none
   !
   ! Gradient limiter:
   !
-  if(adjustl(limiter) == 'Barth-Jespersen') then
+  if( adjustl(limiter) == 'Barth-Jespersen') then
 
     call slope_limiter_Barth_Jespersen(phi, dPhidxi)
 
-  elseif(adjustl(limiter) == 'Venkatakrishnan') then
+  elseif( adjustl(limiter) == 'Venkatakrishnan') then
 
     call slope_limiter_Venkatakrishnan(phi, dPhidxi)
 
@@ -520,8 +524,8 @@ subroutine slope_limiter_r345(phi, dPhidxi)
        r = deltamin/delta_face
      endif
 
-     slopelimit = min( slopelimit , (r**3+4*r)/(r**3+r**2+r+4.0) ) ! R3
-        ! slopelimit = min( slopelimit , (r**4+2*r**3-4*r**2+8*r)/(r**4+r**3+2*r**2-4*r+8.0) ) ! R4
+     ! slopelimit = min( slopelimit , (r**3+4*r)/(r**3+r**2+r+4.0) ) ! R3
+        slopelimit = min( slopelimit , (r**4+2*r**3-4*r**2+8*r)/(r**4+r**3+2*r**2-4*r+8.0) ) ! R4
           ! slopelimit = min( slopelimit , (r**5+8*r**3-16*r**2+16*r)/(r**5+r**4+8*r**2-16*r+16) ) ! R5    
 
     enddo
@@ -705,31 +709,33 @@ subroutine grad_lsq(Phi,dPhidxi,istage)
   Dmat = 0.0_dp
 
   ! Inner faces:                                             
-  do i=1,numInnerFaces                                                       
-        ijp = owner(i)
-        ijn = neighbour(i)
+  do i=1,numInnerFaces   
 
-        Dx = xc(ijn)-xc(ijp)
-        Dy = yc(ijn)-yc(ijp)
-        Dz = zc(ijn)-zc(ijp)
+    ijp = owner(i)
+    ijn = neighbour(i)
 
-        Dmat(1,ijp) = Dmat(1,ijp) + Dx*Dx
-        Dmat(1,ijn) = Dmat(1,ijn) + Dx*Dx 
+    Dx = xc(ijn)-xc(ijp)
+    Dy = yc(ijn)-yc(ijp)
+    Dz = zc(ijn)-zc(ijp)
 
-        Dmat(4,ijp) = Dmat(4,ijp) + Dy*Dy
-        Dmat(4,ijn) = Dmat(4,ijn) + Dy*Dy
+    Dmat(1,ijp) = Dmat(1,ijp) + Dx*Dx
+    Dmat(1,ijn) = Dmat(1,ijn) + Dx*Dx 
 
-        Dmat(6,ijp) = Dmat(6,ijp) + Dz*Dz
-        Dmat(6,ijn) = Dmat(6,ijn) + Dz*Dz  
+    Dmat(4,ijp) = Dmat(4,ijp) + Dy*Dy
+    Dmat(4,ijn) = Dmat(4,ijn) + Dy*Dy
 
-        Dmat(2,ijp) = Dmat(2,ijp) + Dx*Dy
-        Dmat(2,ijn) = Dmat(2,ijn) + Dx*Dy
+    Dmat(6,ijp) = Dmat(6,ijp) + Dz*Dz
+    Dmat(6,ijn) = Dmat(6,ijn) + Dz*Dz  
 
-        Dmat(3,ijp) = Dmat(3,ijp) + Dx*Dz
-        Dmat(3,ijn) = Dmat(3,ijn) + Dx*Dz
-   
-        Dmat(5,ijp) = Dmat(5,ijp) + Dy*Dz
-        Dmat(5,ijn) = Dmat(5,ijn) + Dy*Dz                                                                 
+    Dmat(2,ijp) = Dmat(2,ijp) + Dx*Dy
+    Dmat(2,ijn) = Dmat(2,ijn) + Dx*Dy
+
+    Dmat(3,ijp) = Dmat(3,ijp) + Dx*Dz
+    Dmat(3,ijn) = Dmat(3,ijn) + Dx*Dz
+
+    Dmat(5,ijp) = Dmat(5,ijp) + Dy*Dz
+    Dmat(5,ijn) = Dmat(5,ijn) + Dy*Dz
+
   enddo     
  
 
@@ -737,19 +743,21 @@ subroutine grad_lsq(Phi,dPhidxi,istage)
   ! Boundary faces:
 
   do i=1,numBoundaryFaces
+
     iface = numInnerFaces + i
     ijp = owner(iface)
 
-        Dx = xf(iface)-xc(ijp)
-        Dy = yf(iface)-yc(ijp)
-        Dz = zf(iface)-zc(ijp)
+    Dx = xf(iface)-xc(ijp)
+    Dy = yf(iface)-yc(ijp)
+    Dz = zf(iface)-zc(ijp)
 
-        Dmat(1,ijp) = Dmat(1,ijp) + Dx*Dx
-        Dmat(4,ijp) = Dmat(4,ijp) + Dy*Dy
-        Dmat(6,ijp) = Dmat(6,ijp) + Dz*Dz
-        Dmat(2,ijp) = Dmat(2,ijp) + Dx*Dy 
-        Dmat(3,ijp) = Dmat(3,ijp) + Dx*Dz 
-        Dmat(5,ijp) = Dmat(5,ijp) + Dy*Dz 
+    Dmat(1,ijp) = Dmat(1,ijp) + Dx*Dx
+    Dmat(4,ijp) = Dmat(4,ijp) + Dy*Dy
+    Dmat(6,ijp) = Dmat(6,ijp) + Dz*Dz
+    Dmat(2,ijp) = Dmat(2,ijp) + Dx*Dy 
+    Dmat(3,ijp) = Dmat(3,ijp) + Dx*Dz 
+    Dmat(5,ijp) = Dmat(5,ijp) + Dy*Dz 
+
   end do
 
 
@@ -805,7 +813,8 @@ subroutine grad_lsq(Phi,dPhidxi,istage)
 
   ! Inner faces:
 
-  do i=1,numInnerFaces                                                       
+  do i=1,numInnerFaces    
+
     ijp = owner(i)
     ijn = neighbour(i)
 
@@ -826,6 +835,7 @@ subroutine grad_lsq(Phi,dPhidxi,istage)
   ! Boundary faces:
 
   do i=1,numBoundaryFaces
+
     iface = numInnerFaces + i
     ijp = owner(iface)
     ijn = numCells + i
@@ -1064,7 +1074,7 @@ subroutine grad_lsq_qr(Phi,dPhidxi,istage)
         b(l,ijp) = Phi(ijn)-Phi(ijp)
   enddo
 
-! Solve overdetermined system in least-sqare sense
+! Solve overdetermined system in least-square sense
 
   ! Cell loop
   do inp=1,numCells
@@ -1386,6 +1396,120 @@ end subroutine
 
 
 
+! Node based Gauss gradients
+subroutine grad_node_based_gauss(u,dudxi)
+!
+!  Purpose: 
+!
+!    This subroutine implements so called Green-Gauss Node Based Gradients.
+!
+!  Discussion:
+!
+!    First interpolated values at nodes are found using pseudolaplacian 
+!    technique (from node_interpolation module). Then face centroid values
+!    are found using node (vertex) averaging. After that we proceed with 
+!    conventional Gauss gradient approach.
+!
+!  Licensing:
+!
+!    This code is distributed under the GNU GPL license. 
+!
+!  Modified:
+!
+!    19th September 2022
+!
+!  Author:
+!
+!    Nikola Mirkov/Email: largeddysimulation@gmail.com
+!
+!  Reference:
+!
+!    S.-E.Kim,B.Makarov, and D.Caraeni, A Multi-Dimensional Linear Reconstruction Scheme for Arbitrary Unstructured Grids, AIAA 2003-3990, 2003.
+!
+!  Parameters:
+!
+!    Input, real, u( numTotal ), a scalar field for which we calculate gradients.
+!    Input/Output, real, dudxi( 3,numTotal ), gradient vector.
+!
+  use node_interpolation, only: interpolate_to_nodes
+
+  implicit none
+!
+! Parameters
+!
+  real(dp), dimension(numTotal), intent(in) :: u
+  real(dp), dimension(3,numTotal), intent(inout) :: dudxi
+!
+! Local variables
+!
+  integer :: iface,k,ino,ijp,ijn
+  real(dp) :: fie, dfxe, dfye, dfze
+  real(dp), dimension(:), allocatable :: uN
+
+
+  allocate( uN(numNodes) )
+
+  ! Interpolate to nodes using interpolation weights generated at init stage.
+  call interpolate_to_nodes(u, uN)
+   
+  ! Initialize new gradient vector field
+  dudxi = 0.0_dp
+
+  ! Loop over inner faces
+  do iface=1,numFaces
+
+    ! Initialize face centroid interpolated value
+    fie = 0.0_dp
+
+    ! Loop over face nodes
+    do k=1,nnodes(iface)
+
+        ! Take global index of the node
+        ino = node(k,iface)
+
+        ! Accumulate to the sum the field value at the specific node
+        fie = fie + uN(ino)
+
+    enddo
+
+    ! Make arithmetic average based on number of nodes at face
+    fie = fie / dble( nnodes(iface) )
+
+    ! (interpolated mid-face value)x(area)
+    dfxe = fie*arx(iface)
+    dfye = fie*ary(iface)
+    dfze = fie*arz(iface)
+
+    ! Get indices of the owner and neighbor cells, and
+    ! accumulate contribution at owner and neighbour cell center.
+
+    ijp = owner(iface)
+    dudxi(1,ijp) = dudxi(1,ijp) + dfxe
+    dudxi(2,ijp) = dudxi(2,ijp) + dfye
+    dudxi(3,ijp) = dudxi(3,ijp) + dfze
+  
+    if (iface .le. numInnerFaces ) then
+
+    ijn = neighbour(iface)   
+    dudxi(1,ijn) = dudxi(1,ijn) - dfxe
+    dudxi(2,ijn) = dudxi(2,ijn) - dfye
+    dudxi(3,ijn) = dudxi(3,ijn) - dfze
+
+    endif
+
+  enddo
+
+
+  ! Calculate gradient components at cv-centers
+  do ijp=1,numCells
+    dudxi(:,ijp) = dudxi(:,ijp)/vol(ijp)
+  enddo
+
+  deallocate( uN )
+
+end subroutine
+
+
 
 ! Gauss gradients
 subroutine grad_gauss(u,dudxi)
@@ -1395,8 +1519,8 @@ subroutine grad_gauss(u,dudxi)
 !   Purpose:
 !     Calculates cell centered gradient using Gauss theorem.
 !   Parameters:
-!     u - field, the gradient of which we are looking for
-!     dudxi - array where the gradient components are stored
+!     u - the field for which we compute the gradient
+!     dudxi - gradient vector field
 !
 !     gauss gradient rule:
 !     ------->                                 ->
@@ -1410,7 +1534,7 @@ subroutine grad_gauss(u,dudxi)
 !
 !***********************************************************************
 !
-  use parameters, only: nigrad
+  ! use parameters, only: nigrad
 
   implicit none
 
@@ -1419,23 +1543,23 @@ subroutine grad_gauss(u,dudxi)
   real(dp), dimension(3,numTotal), intent(inout) :: dudxi
 
   ! Local
-  integer :: i,ijp,ijn,ijb,lc,iface
-  real(dp) :: volr,dfxe, dfye, dfze
-  real(dp), dimension(:), allocatable :: dfxo,dfyo,dfzo
+  ! integer :: lc
+  integer :: i,ijp,ijn,ijb,iface
+  real(dp) :: volr,dfxe,dfye,dfze,fie
+  ! real(dp), dimension(:), allocatable :: dfxo,dfyo,dfzo
 
 
-  allocate( dfxo(numCells) )
-  allocate( dfyo(numCells) )
-  allocate( dfzo(numCells) )
+  ! allocate( dfxo(numCells) )
+  ! allocate( dfyo(numCells) )
+  ! allocate( dfzo(numCells) )
 
-  ! Initialize
-  dfxo = 0.0_dp
-  dfyo = 0.0_dp
-  dfzo = 0.0_dp
+  ! ! Initialize
+  ! dfxo = 0.0_dp
+  ! dfyo = 0.0_dp
+  ! dfzo = 0.0_dp
 
-
-  ! Start iterative calculation of gradients
-  do lc = 1,nigrad
+  ! ! Start iterative calculation of gradients
+  ! do lc = 1,nigrad
     
     ! Initialize new gradient
     dudxi = 0.0_dp
@@ -1447,8 +1571,17 @@ subroutine grad_gauss(u,dudxi)
       ijp = owner(i)
       ijn = neighbour(i)
 
-      call gradco(ijp, ijn, xf(i), yf(i), zf(i), arx(i), ary(i), arz(i), facint(i), &
-                  u, dfxo, dfyo, dfzo, dfxe, dfye, dfze)
+      ! call gradco(ijp, ijn, xf(i), yf(i), zf(i), arx(i), ary(i), arz(i), facint(i), &
+      !             u, dfxo, dfyo, dfzo, dfxe, dfye, dfze)
+
+      ! Linear interpolation to face
+      fie = u(ijp) + (u(ijn)-u(ijp))*facint(i)
+
+      ! (interpolated mid-face value)x(area)
+      dfxe = fie*arx(i)
+      dfye = fie*ary(i)
+      dfze = fie*arz(i)
+
 
       ! Accumulate contribution at cell center and neighbour
       dudxi(1,ijp) = dudxi(1,ijp) + dfxe
@@ -1482,20 +1615,18 @@ subroutine grad_gauss(u,dudxi)
 
     enddo
 
-      ! Set old gradient = new gradient for the next iteration
-      if(lc.le.nigrad) then
-        dfxo = dudxi(1,1:numCells)
-        dfyo = dudxi(2,1:numCells)
-        dfzo = dudxi(3,1:numCells)
-      endif
+    ! ! Set old gradient = new gradient for the next iteration
+    ! if(lc.le.nigrad) then
+    !   dfxo = dudxi(1,1:numCells)
+    !   dfyo = dudxi(2,1:numCells)
+    !   dfzo = dudxi(3,1:numCells)
+    ! endif
 
+  ! enddo ! lc-loop
 
-  enddo ! lc-loop
-
-
-  deallocate( dfxo )
-  deallocate( dfyo )
-  deallocate( dfzo )
+  ! deallocate( dfxo )
+  ! deallocate( dfyo )
+  ! deallocate( dfzo )
 
 
 end subroutine

@@ -27,7 +27,7 @@ write(6,'(a)')' '
 write(6,'(a)')'             MM          MMM'
 write(6,'(a)')'            NMN.           MM'
 write(6,'(a)')'           MMM..   OMM.    MMM.'
-write(6,'(a)')'          .MMO.    MMM      MMM                         ...'
+write(6,'(a)')'          .MMO.    MMM      MMM                            ...'
 write(6,'(a)')'          MMM:     MMM      MMM                       .. .?DMD7..'
 write(6,'(a)')'          MMM      MMM      MMM                      ..MMMMMMMMMMM~'
 write(6,'(a)')'          MMM:     .M       MMM.                    .NMMMMMMMMMMMMMM'
@@ -772,7 +772,7 @@ subroutine i4vec2_compare ( n, a1, a2, i, j, isgn )
 
          if ( a2(i) < a2(j) ) then
       isgn = -1
-    else if ( a2(i) < a2(j) ) then
+    else if ( a2(i) == a2(j) ) then ! changed < to ==, error?
       isgn = 0
     else if ( a2(j) < a2(i) ) then
       isgn = +1

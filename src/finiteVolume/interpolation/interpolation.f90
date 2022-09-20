@@ -85,14 +85,14 @@ function face_value(ijp,ijn,xf,yf,zf,lambda,u,dUdxi,scheme) result(vf)
     case ( 'cds' )
       vf = face_value_cds(ijp,ijn, lambda, u) 
 
-    case ( 'cdscorr' )
-      vf = face_value_cds_corrected(ijp, ijn, xf, yf, zf, lambda, u, dUdxi)
+    ! case ( 'cdscorr' )
+    !   vf = face_value_cds_corrected(ijp, ijn, xf, yf, zf, lambda, u, dUdxi)
 
     case ( 'central' )
       vf = face_value_central(ijp, ijn, xf, yf, zf, u, dUdxi)
 
-    case ('harmonic')
-      vf = face_value_harmonic(ijp,ijn, lambda, u) 
+    ! case ('harmonic')
+    !   vf = face_value_harmonic(ijp,ijn, lambda, u) 
 
     case ('linearUpwind')
       vf = face_value_2nd_upwind(ijp, xf, yf, zf, u, dUdxi)
@@ -406,7 +406,7 @@ function face_value_kappa(inp,inn, xf, yf, zf, fi, gradfi) result(vf)
   real(dp) :: theta
 
   ! theta = 0.125_dp ! Fluent theta = 1/8
-  theta = 2./3.    ! CUI
+  theta = 2./3.      ! CUI
   ! theta = 0.5_dp   ! Fromm
 
 
@@ -457,12 +457,14 @@ end function
 !   real(dp), dimension(numTotal) :: fi
 !   real(dp), dimension(3,numCells) :: gradfi
 
-! ! Local variables
-!   real(dp) :: fxn,fxp,xpn,ypn,zpn,dpn,gradP,gradN
+!   ! Local variables
+!   real(dp) :: xpn,ypn,zpn,dpn,gradP,gradN
 
 !   ! Face interpolation factor
-!   fxn=lambda 
-!   fxp=1.0_dp-lambda
+!   ! fxn=lambda 
+!   ! fxp=1.0_dp-lambda
+
+!   lambda = 1.-lambda
 
 !   ! Distance vector between cell centers
 !   xpn=xc(inn)-xc(inp)
@@ -482,9 +484,13 @@ end function
 !   gradN = gradfi(1,inn)*xpn+gradfi(2,inn)*ypn+gradfi(3,inn)*zpn
 
 !   ! Cubic interpolation formula
-!   vf = fxp*fi(inp) + fxn*fi(inn) + fxp*fxn*(1.-2*fxp)*(fi(inn)-fi(inp)) + fxp**2*fxn*gradP - fxp*fxn*(1+fxp)*gradN
+!   ! vf = fxp*fi(inp) + fxn*fi(inn) + fxp*fxn*(1.-2*fxp)*(fi(inn)-fi(inp)) - fxp**2*fxn*gradP - fxp*fxn*(1+fxp)*gradN
 
-  
+!   vf = lambda*fi(inp)+(1.-lambda)*fi(inn) &
+!      +(lambda*(1. - lambda*(3. - 2*lambda)))*(fi(inn)-fi(inp)) &
+!      -( sqrt(lambda)*(lambda - 1.)) *gradP &
+!      -( sqrt(1. - lambda)*lambda )*gradN
+    
 ! end function
 
 

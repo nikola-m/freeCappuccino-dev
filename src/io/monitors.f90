@@ -153,6 +153,9 @@ subroutine log_monitored_values
       case( 'surf_avg_shear' )
         call surf_avg_shear( monitored_location(i) )
 
+      case( 'mean_ke_diss')
+        call mean_ke_dissipation
+
       ! case( 'field_value' )
       !   call field_value( monitored_location(i) )
 
@@ -257,6 +260,53 @@ subroutine surf_avg_shear( boundary_name )
   write(*,'(3a,es15.7)') '  Shear at ', trim( boundary_name ) ,' =', sumss / sumsf
 
 end subroutine
+
+
+subroutine mean_ke_dissipation
+!
+!  Purpose: 
+!
+!    This subroutine computes and writes to monitor the dissipation of mean resolved kinetic energy.
+!
+!  Licensing:
+!
+!    This code is distributed under the GNU GPL license. 
+!
+!  Modified:
+!
+!    16. August 2022
+!
+!  Author:
+!
+!    Nikola Mirkov/Email: largeddysimulation@gmail.com
+!
+!  Parameters:
+!
+!    -
+!
+ 
+  use fieldManipulation, only: volumeWeightedAverage
+
+  implicit none
+
+!
+! Local variables
+!
+  real(dp) :: K,Ko,diss
+
+
+  Ko = volumeWeightedAverage( uo*uo+vo*vo+wo*wo )  
+
+  K = volumeWeightedAverage( u*u+v*v+w*w )
+
+  diss = -0.5*(K-Ko) / timestep
+
+
+  write(*,'(1a,es15.7)') '  Mean resolved kinetic energy =', K
+  write(*,'(1a,es15.7)') '  Dissipation of the mean resolved kinetic energy =', diss
+
+end subroutine
+
 
 end module
 

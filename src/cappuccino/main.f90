@@ -16,7 +16,7 @@ program cappuccino
 !             MM          MMM
 !            NMN.           MM
 !           MMM..   OMM.    MMM.
-!          .MMO.    MMM      MMM                         ...
+!          .MMO.    MMM      MMM                            ...
 !          MMM:     MMM      MMM                       .. .?DMD7..
 !          MMM      MMM      MMM                      ..MMMMMMMMMMM~
 !          MMM:     .M       MMM.                    .NMMMMMMMMMMMMMM
@@ -175,8 +175,8 @@ program cappuccino
 
       !--- END: Sequential equation solution -------------------------------------------------------
 
-      !  Observe change in values during simulation
-      call log_monitored_values
+      ! !  Observe change in values during simulation
+      ! call log_monitored_values
 
       call cpu_time(finish)
       write(timechar,'(f9.5)') finish-start
@@ -211,7 +211,10 @@ program cappuccino
         ! Has converged within timestep or has reached maximum no. of SIMPLE iterations per timestep:
         if( source.lt.tolerance .or. iter.ge.maxit ) then 
 
-          ! Write values at monitoring points // comment out for now.
+          !  Observe change in values during simulation
+          call log_monitored_values
+
+          ! Write values at monitoring points
           ! call writehistory
 
           ! Recalculate time-average values for statistics:

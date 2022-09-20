@@ -1,0 +1,7 @@
+#set logscale y 
+set title "Monitors"
+set ylabel '-dK/dt'
+set xlabel 'Timestep'
+plot "< cat monitor | grep 'Dissipation' | cut -d' ' -f12" title 'dissipation' with lines
+pause 5
+reread

@@ -1,4 +1,3 @@
-![fCp logo](https://github.com/nikola-m/freeCappuccino-dev/blob/master/doc/logo-freeCappuccino-traced.png) 
 # freeCappuccino
 
 ### This is development version of freeCappuccino, a place for refactoring where a lot of unfinished code will be found.

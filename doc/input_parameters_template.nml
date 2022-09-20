@@ -1,6 +1,6 @@
 &input_parameters
-              title = 'Cavity'    ! Descriptive name of the case which will be written in monitor file.                                      
-        mesh_format = 'foamMesh'  ! Mesh format 'nativeMesh' for native polyMesh format or 'foamMesh' for OpenFOAM polyMesh.
+              title = 'Cavity at Reynolds number 100.'  ! Descriptive name of the case which will be written in monitor file.                                      
+        mesh_format = 'nativeMesh'  ! Mesh format 'nativeMesh' for native polyMesh format or 'foamMesh' for OpenFOAM polyMesh.
               lread = F           ! Read restart file - continue simulation from saved state?  True/False.
               ltest = F           ! Verbosity for linear solver convergence (for troubleshooting) True/False. 
         !
@@ -152,7 +152,7 @@ non_newtonian_model = 'PowerLaw'  ! Self-explanatory
         !
         ! Unsteady simulation
         !    
-         ltransient = F           !% |Unsteady simulation True/False and chose ONE algorithm  below
+         ltransient = T           !% |Unsteady simulation True/False and chose ONE algorithm  below
                 bdf = T           !% |Backward-Euler; First-Order Implicit, or...
                bdf2 = f           !% |Second-Order Backward Euler; Second-Order Implicit, or...
                bdf3 = f           !% |Third-order backard, or...
@@ -163,9 +163,10 @@ non_newtonian_model = 'PowerLaw'  ! Self-explanatory
               lstsq = F           !@ |Gradient approximation, chose ONE: Unweighted Least-Square gradient approximation, or...
            lstsq_qr = F           !@ |Least square gradients based on thin QR decomposition, or...
            lstsq_dm = F           !@ |Distance-square weighted version of Least-Square Gradient, or...
+         node_gauss = F           !@ |Node based Gauss gradient using pseudolaplacian interpolation, or...
               gauss = T           !@ |Cell based Gauss gradient with simple linear interpolation.
              nigrad = 1              ! Number of iterations for Gauss gradient approximation.   
-            limiter = 'no-limit'     ! Gradient limiter - default for all gradients (no-limit, Barth-Jespersen, Venkatakishnan,..)
+            limiter = 'Venkatakishnan' ! Gradient limiter - default for all gradients (no-limit, Barth-Jespersen, Venkatakishnan, multidimensional, R3,...)
         !
         ! Solution method: pressure-velocity coupling
         !    

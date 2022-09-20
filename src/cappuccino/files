@@ -8,6 +8,7 @@ output.f90
 field_initialization.f90
 sparse_matrix.f90
 tensorFields.f90
+node_interpolation.f90
 gradients.f90
 interpolation.f90
 fieldManipulation.f90

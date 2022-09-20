@@ -95,4 +95,8 @@ While running you may visualy inspect the residuals by calling:
 
 `gnuplot plotResiduals`
 
+You can also plot the development of the monitored variable - dissipation of the mean resolved kineric energy,
+
+`gnuplot plotMonitors`
+
 As simulation is progressing, new files will be written into `vtk` folder.

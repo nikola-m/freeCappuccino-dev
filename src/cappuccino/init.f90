@@ -27,6 +27,7 @@ subroutine init
   use TurbModelData
   use mhd
   use wall_distance
+  use node_interpolation
   ! use fieldManipulation, only: add_random_noise_to_field
 
   implicit none
@@ -128,8 +129,8 @@ subroutine init
     ! enddo
 
     ! ! Initialize field values for Taylor-Green vortex
-    ! do inp=1,numCells
-    !   call initialize_tgv( xc(inp),yc(inp),zc(inp),u(inp),v(inp),w(inp),p(inp) )
+    ! do ijp=1,numCells
+    !   call initialize_tgv( xc(ijp),yc(ijp),zc(ijp),u(ijp),v(ijp),w(ijp),p(ijp) )
     ! enddo
 
 
@@ -282,6 +283,13 @@ subroutine init
 !
   if(lread) call readfiles
 
+
+!
+! Set interpolation weights for cell-to-node interpolation
+!
+  call set_interpolation_weights
+
+  
 !
 ! Initial Gradient Calculation
 !

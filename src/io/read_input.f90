@@ -8,7 +8,7 @@ subroutine read_input_file
 !
   use types
   use parameters
-  use gradients, only: lstsq, lstsq_qr, lstsq_dm, gauss, limiter
+  use gradients, only: lstsq, lstsq_qr, lstsq_dm, gauss, node_gauss, limiter
   use velocity, only: calcU, urfU, gdsU, cSchemeU, dSchemeU, nrelaxU, lSolverU, maxiterU, tolAbsU, tolRelU
   use pressure, only: calcP, urfP, lSolverP, maxiterP, tolAbsP, tolRelP
   use nablap, only: pscheme
@@ -61,7 +61,7 @@ subroutine read_input_file
         !
         ! Physical model: Viscous flows - Laminar/Turbulent, Activation and model details.
         !
-        TurbModel, &          ! Turbulence model. Now a number, maybe char string in the future.    
+        TurbModel, &          ! Turbulence model.   
         !
         ! Physical model: Rheology - Non-Newtonian fluids - model and solution details
         ! 
@@ -172,6 +172,7 @@ subroutine read_input_file
         lstsq, &              !@ |Gradient approximation, chose ONE: Unweighted Least-Square gradient approximation, or...
         lstsq_qr, &           !@ |Least square gradients based on thin QR decomposition, or...
         lstsq_dm, &           !@ |Distance-square weighted version of Least-Square Gradient, or...
+        node_gauss, &         !@ |Node based Gauss gradient using pseudolaplacian interpolation, or...
         gauss, &              !@ |Cell based Gauss gradient with simple linear interpolation.
         nigrad, &             ! Number of iterations for Gauss gradient approximation.   
         limiter, &            ! Gradient limiter - used for all fields

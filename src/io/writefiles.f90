@@ -25,6 +25,7 @@ subroutine writefiles
   use rheology
   use mhd
   use velocity, only: calc_wall_shear
+  use node_interpolation
 
   implicit none
 !
@@ -40,6 +41,9 @@ subroutine writefiles
   integer :: iWall
   integer :: output_unit, mesh_file
 
+  real(dp), dimension(:), allocatable :: uN,vN, wN
+
+ 
  ! Write in a char variable current timestep number and create a folder with this name
   call i4_to_s_left ( itime, timechar )  
 
@@ -95,10 +99,33 @@ subroutine writefiles
   open( unit = mesh_file, file='vtk/mesh/mesh_0_0.vtu' )
   rewind mesh_file
 
-  do i=1,6
-    read( mesh_file, '(a)' ) line! A line where numCells is.
+!
+! > Vectors in mesh vertices - nodes. 
+!
+
+  do i=1,4 ! Read to the line where <PontData> tag is open.
+    read( mesh_file, '(a)' ) line
     write ( output_unit, '(a)' ) adjustl( line )
   enddo  
+  
+  allocate( uN(numNodes),vN(numNodes), wN(numNodes) )
+
+  uN = 0.; vN = 0.; wN = 0.
+
+  ! Interpolate to nodes using interpolation weights generated at init stage.
+  call interpolate_to_nodes(u, uN)
+  call interpolate_to_nodes(v, vN)
+  call interpolate_to_nodes(w, wN)
+
+  call vtu_write_XML_vector_field_node( output_unit, 'U', uN, vN, wN )
+
+  deallocate( uN,vN, wN )
+
+  do i=1,2! Lines where we close PointData tag and open CellData
+    read( mesh_file, '(a)' ) line
+    write ( output_unit, '(a)' ) adjustl( line )
+  enddo  
+
 
 !
 ! > Vectors in cell-centers 
