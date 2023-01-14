@@ -1,0 +1,18 @@
+internalField
+  uniform
+    0.976296007 0.0 0.216439614
+boundaryField
+Wall
+  Dirichlet
+    uniform
+      0.0 0.0 0.0
+Symmetry
+  Neumann
+    zeroGradient
+Farfield
+  Dirichlet
+    uniform
+      0.976296007 0.0 0.216439614
+ZeroMeasureFaces
+  Neumann
+    zeroGradient

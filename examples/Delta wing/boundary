@@ -1,0 +1,5 @@
+# bcName bcType nFaces startFace
+Wall wall 896 76576
+Symmetry symmetry 1344 77472
+Farfield inlet 1088 78816
+ZeroMeasureFaces none 192 79904

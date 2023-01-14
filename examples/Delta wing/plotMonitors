@@ -1,0 +1,7 @@
+#set logscale y
+set title "Monitors"
+set ylabel 'wall shear'
+set xlabel 'Iteration'
+plot "< cat monitor | grep 'Wall' | cut -d' ' -f8" title 'Wing-wall shear' with lines
+pause 5
+reread
