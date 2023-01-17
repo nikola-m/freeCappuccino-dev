@@ -1,4 +1,0 @@
-<map id="k_omega_sst::correct_turbulence_inlet_k_omega_sst" name="k_omega_sst::correct_turbulence_inlet_k_omega_sst">
-<area shape="rect" id="node2" href="$classk__epsilon__rng.html#ac9112e6bf146afd6c79028a23415676c" title="k_epsilon_rng::modify\l_mu_eff_inlet" alt="" coords="259,5,408,46"/>
-<area shape="rect" id="node3" href="$continuityErrors_8h.html#a19cbc190a1e0c99367ace992bda3cc11" title="nfaces" alt="" coords="456,12,517,39"/>
-</map>

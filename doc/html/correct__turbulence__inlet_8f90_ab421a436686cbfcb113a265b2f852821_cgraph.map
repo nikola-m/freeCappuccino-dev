@@ -1,9 +1,0 @@
-<map id="correct_turbulence_inlet" name="correct_turbulence_inlet">
-<area shape="rect" id="node2" href="$classk__epsilon__std.html#a1f9fe4f360a65f9d3f13c90cc30870b0" title="k_epsilon_std::correct\l_turbulence_inlet_k_epsilon_std" alt="" coords="185,5,391,46"/>
-<area shape="rect" id="node5" href="$classk__epsilon__rng.html#a26639f5f7047e9c797b92d7383543509" title="k_epsilon_rng::correct\l_turbulence_inlet_k_epsilon_rng" alt="" coords="185,70,391,111"/>
-<area shape="rect" id="node6" href="$classk__omega__sst.html#a7517fe9a1330e8b029752fc148aefa1c" title="k_omega_sst::correct\l_turbulence_inlet_k_omega_sst" alt="" coords="185,135,391,177"/>
-<area shape="rect" id="node7" href="$classspalart__allmaras.html#a2ffe9e1ca257402ec463076fa2318a21" title="spalart_allmaras::correct\l_turbulence_inlet_spalart\l_allmaras" alt="" coords="205,200,371,256"/>
-<area shape="rect" id="node8" href="$classk__eqn__eddy.html#ad5bb72a91afad8c4bf8ad7a1cbe1896c" title="k_eqn_eddy::correct\l_turbulence_inlet_k\l_eqn_eddy" alt="" coords="218,280,358,336"/>
-<area shape="rect" id="node3" href="$classk__epsilon__rng.html#ac9112e6bf146afd6c79028a23415676c" title="k_epsilon_rng::modify\l_mu_eff_inlet" alt="" coords="440,135,589,177"/>
-<area shape="rect" id="node4" href="$continuityErrors_8h.html#a19cbc190a1e0c99367ace992bda3cc11" title="nfaces" alt="" coords="637,143,699,169"/>
-</map>

@@ -1,6 +1,0 @@
-<map id="gradients::slope_limiter_modified_venkatakrishnan" name="gradients::slope_limiter_modified_venkatakrishnan">
-<area shape="rect" id="node2" href="$global__min__mpi_8f90.html#a8d3f5ccc1e5e38338c50893c1b241b98" title="global_min" alt="" coords="255,5,339,32"/>
-<area shape="rect" id="node3" href="$global__max__mpi_8f90.html#a3969dba31b39f0efc28bf16a22bb0f63" title="global_max" alt="" coords="253,56,341,83"/>
-<area shape="rect" id="node4" href="$classgradients.html#af5ae74b1fab366ce3167820e0c6c5c3d" title="gradients::set_phi\l_min_max" alt="" coords="235,107,360,149"/>
-<area shape="rect" id="node5" href="$continuityErrors_8h.html#a19cbc190a1e0c99367ace992bda3cc11" title="nfaces" alt="" coords="408,115,469,141"/>
-</map>

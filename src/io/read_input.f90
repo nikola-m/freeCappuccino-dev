@@ -21,6 +21,7 @@ subroutine read_input_file
                       muplastic, muzero, muinfty, lamtime, acy,&    
                       calcVis, urfVis, non_newtonian_model
   use monitors
+  use timescale, only: autotime, lenscale_option
 
 
   implicit none
@@ -166,6 +167,8 @@ subroutine read_input_file
         bdf2, &               !% |Second-Order Backward Euler; Second-Order Implicit, or...
         bdf3, &               !% |Third-order backard, or...
         CN, &                 !% |Crank-Nicolson.
+        autotime, &           !# Automatic timestep for pseudotransient runs,
+        lenscale_option, &    !# length scale option for pseudotransient runs.
         !
         ! Numerical approximation: Gradient approximation and limiting
         !

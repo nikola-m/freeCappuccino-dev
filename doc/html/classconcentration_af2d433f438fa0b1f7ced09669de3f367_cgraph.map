@@ -1,9 +1,0 @@
-<map id="concentration::calculate_concentration_field" name="concentration::calculate_concentration_field">
-<area shape="rect" id="node2" href="$classconcentration.html#aeaccaf796f91761fea54318665fd2910" title="concentration::calcsc" alt="" coords="213,107,360,133"/>
-<area shape="rect" id="node3" href="$continuityErrors_8h.html#a19cbc190a1e0c99367ace992bda3cc11" title="nfaces" alt="" coords="680,5,741,32"/>
-<area shape="rect" id="node4" href="$bicgstab_8f90.html#aced1c5bc8683ea5e84054decb03ceaf4" title="bicgstab" alt="" coords="417,56,487,83"/>
-<area shape="rect" id="node6" href="$exchange_8f90.html#a5fc820a1936a17b779afe691729f2e84" title="exchange" alt="" coords="549,107,627,133"/>
-<area shape="rect" id="node7" href="$global__min__mpi_8f90.html#a8d3f5ccc1e5e38338c50893c1b241b98" title="global_min" alt="" coords="410,157,494,184"/>
-<area shape="rect" id="node8" href="$global__max__mpi_8f90.html#a3969dba31b39f0efc28bf16a22bb0f63" title="global_max" alt="" coords="408,208,496,235"/>
-<area shape="rect" id="node5" href="$CourantNo_8h.html#ab0e3150c9a3c9779b293090ed029de60" title="global_sum" alt="" coords="544,56,632,83"/>
-</map>

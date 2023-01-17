@@ -1,8 +1,0 @@
-<map id="concentration::calcsc" name="concentration::calcsc">
-<area shape="rect" id="node2" href="$continuityErrors_8h.html#a19cbc190a1e0c99367ace992bda3cc11" title="nfaces" alt="" coords="472,5,533,32"/>
-<area shape="rect" id="node3" href="$bicgstab_8f90.html#aced1c5bc8683ea5e84054decb03ceaf4" title="bicgstab" alt="" coords="209,56,279,83"/>
-<area shape="rect" id="node5" href="$exchange_8f90.html#a5fc820a1936a17b779afe691729f2e84" title="exchange" alt="" coords="341,107,419,133"/>
-<area shape="rect" id="node6" href="$global__min__mpi_8f90.html#a8d3f5ccc1e5e38338c50893c1b241b98" title="global_min" alt="" coords="202,157,286,184"/>
-<area shape="rect" id="node7" href="$global__max__mpi_8f90.html#a3969dba31b39f0efc28bf16a22bb0f63" title="global_max" alt="" coords="200,208,288,235"/>
-<area shape="rect" id="node4" href="$CourantNo_8h.html#ab0e3150c9a3c9779b293090ed029de60" title="global_sum" alt="" coords="336,56,424,83"/>
-</map>

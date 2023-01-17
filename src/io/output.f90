@@ -241,7 +241,7 @@ subroutine vtu_write_XML_vector_field_boundary ( output_unit, field_name, u, v, 
   character ( len = * ), intent(in) :: field_name
   real(dp), dimension(numTotal), intent(in) :: u, v, w
 
-  integer :: icell
+  integer :: i
 
 ! <Vectors in cell-centers>
   write ( output_unit, '(8x,3a)' ) '<DataArray type="Float32" Name="',trim( field_name ),'" NumberOfComponents="3" Format="ascii">'
@@ -249,14 +249,44 @@ subroutine vtu_write_XML_vector_field_boundary ( output_unit, field_name, u, v, 
 !
 ! > Vectors in cell-centers 
 !
-    do icell=istart,iend
-      write( output_unit, '(10x,3(1x,e15.7))') u(icell), v(icell), w(icell)
+    do i=istart,iend
+      write( output_unit, '(10x,3(1x,e15.7))') u(i), v(i), w(i)
     enddo
 
   write ( output_unit, '(8x,a)' ) '</DataArray>'
 ! </Vectors in cell-centers>
 
 end subroutine vtu_write_XML_vector_field_boundary
+
+
+
+subroutine vtu_write_XML_scalar_field_node ( output_unit, field_name, u )
+!
+! Writes scalar field data to Paraview XML, unstructured, ".vtu" file. This is for <PointData> tag.
+!
+  implicit none
+
+  integer, intent(in) :: output_unit
+  character ( len = * ), intent(in) :: field_name
+  real(dp), dimension(numNodes), intent(in) :: u
+
+  integer :: i
+
+! <Vectors in mes vertices>
+  write ( output_unit, '(8x,3a)' ) '<DataArray type="Float32" Name="',trim( field_name ),'" Format="ascii">'
+
+!
+! > Vectors in mesh vertices
+!
+    do i=1,numNodes
+      write( output_unit, '(10x,e15.7)') u(i)
+    enddo
+
+  write ( output_unit, '(8x,a)' ) '</DataArray>'
+! </Vectors in mesh vertices>
+
+end subroutine vtu_write_XML_scalar_field_node
+
 
 
 subroutine vtu_write_XML_vector_field_node ( output_unit, field_name, u, v, w )
@@ -269,7 +299,7 @@ subroutine vtu_write_XML_vector_field_node ( output_unit, field_name, u, v, w )
   character ( len = * ), intent(in) :: field_name
   real(dp), dimension(numNodes), intent(in) :: u, v, w
 
-  integer :: icell
+  integer :: i
 
 ! <Vectors in mes vertices>
   write ( output_unit, '(8x,3a)' ) '<DataArray type="Float32" Name="',trim( field_name ),'" NumberOfComponents="3" Format="ascii">'
@@ -277,8 +307,8 @@ subroutine vtu_write_XML_vector_field_node ( output_unit, field_name, u, v, w )
 !
 ! > Vectors in mesh vertices
 !
-    do icell=1,numNodes
-      write( output_unit, '(10x,3(1x,e15.7))') u(icell), v(icell), w(icell)
+    do i=1,numNodes
+      write( output_unit, '(10x,3(1x,e15.7))') u(i), v(i), w(i)
     enddo
 
   write ( output_unit, '(8x,a)' ) '</DataArray>'

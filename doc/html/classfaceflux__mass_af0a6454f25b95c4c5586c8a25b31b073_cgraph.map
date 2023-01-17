@@ -1,9 +1,0 @@
-<map id="faceflux_mass::facefluxmass2" name="faceflux_mass::facefluxmass2">
-<area shape="rect" id="node2" href="$classinterpolation.html#ab244a4491720b6c92b4f5e6e2539e06c" title="interpolation::face\l_value_central" alt="" coords="253,141,379,182"/>
-<area shape="rect" id="node3" href="$classinterpolation.html#a4906644e7abbc98fe9e87749dd7ca907" title="interpolation::face\l_value" alt="" coords="427,141,552,182"/>
-<area shape="rect" id="node4" href="$classinterpolation.html#a2955420d11e2fbe30a99e4fefc374759" title="interpolation::face\l_value_cds" alt="" coords="620,5,745,46"/>
-<area shape="rect" id="node5" href="$classinterpolation.html#aebfa91890374b7e5e59f1342aa091a58" title="interpolation::face\l_value_cds_corrected" alt="" coords="608,70,757,111"/>
-<area shape="rect" id="node6" href="$classinterpolation.html#aad6795e9522c835edaf6484a063343cc" title="interpolation::face\l_value_2nd_upwind" alt="" coords="813,141,949,182"/>
-<area shape="rect" id="node7" href="$classinterpolation.html#a69b9fafef9c399b908b8c8b6b7c7862d" title="interpolation::face\l_value_muscl" alt="" coords="620,290,745,331"/>
-<area shape="rect" id="node8" href="$classinterpolation.html#af5ae37f4a0cb45e47998b454659a6eb9" title="interpolation::face\l_value_2nd_upwind_flux\l_limiter" alt="" coords="601,211,765,267"/>
-</map>

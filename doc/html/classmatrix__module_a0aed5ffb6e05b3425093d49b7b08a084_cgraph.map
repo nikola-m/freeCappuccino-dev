@@ -1,6 +1,0 @@
-<map id="matrix_module::eig" name="matrix_module::eig">
-<area shape="rect" id="node2" href="$classmatrix__module.html#ac88cca09a0310ee3f4f32c86f6aac9e6" title="matrix_module::householder_qr" alt="" coords="187,64,389,91"/>
-<area shape="rect" id="node3" href="$classmatrix__module.html#a5d18b03838a0ba41d729284188c492cb" title="matrix_module::eye" alt="" coords="445,5,581,32"/>
-<area shape="rect" id="node4" href="$classmatrix__module.html#a8bf812de99eb57e458068660b1f18489" title="matrix_module::rank\l_one_update" alt="" coords="443,57,583,98"/>
-<area shape="rect" id="node5" href="$classmatrix__module.html#ad5e55e5a4eb29b1279b288d6be4ceaf1" title="matrix_module::matrix\l_update" alt="" coords="438,122,589,163"/>
-</map>

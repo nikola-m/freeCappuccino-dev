@@ -1,9 +1,0 @@
-<map id="k_omega_sst::calcsc" name="k_omega_sst::calcsc">
-<area shape="rect" id="node2" href="$calcheatflux_8f90.html#a1d121507832c2a426ccf16757c03ad46" title="calcheatflux" alt="" coords="201,5,293,32"/>
-<area shape="rect" id="node3" href="$exchange_8f90.html#a5fc820a1936a17b779afe691729f2e84" title="exchange" alt="" coords="346,5,425,32"/>
-<area shape="rect" id="node4" href="$continuityErrors_8h.html#a19cbc190a1e0c99367ace992bda3cc11" title="nfaces" alt="" coords="477,56,539,83"/>
-<area shape="rect" id="node5" href="$bicgstab_8f90.html#aced1c5bc8683ea5e84054decb03ceaf4" title="bicgstab" alt="" coords="211,107,282,133"/>
-<area shape="rect" id="node7" href="$global__min__mpi_8f90.html#a8d3f5ccc1e5e38338c50893c1b241b98" title="global_min" alt="" coords="205,208,289,235"/>
-<area shape="rect" id="node8" href="$global__max__mpi_8f90.html#a3969dba31b39f0efc28bf16a22bb0f63" title="global_max" alt="" coords="203,259,291,285"/>
-<area shape="rect" id="node6" href="$CourantNo_8h.html#ab0e3150c9a3c9779b293090ed029de60" title="global_sum" alt="" coords="341,107,429,133"/>
-</map>

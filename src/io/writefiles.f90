@@ -99,6 +99,7 @@ subroutine writefiles
   open( unit = mesh_file, file='vtk/mesh/mesh_0_0.vtu' )
   rewind mesh_file
 
+
 !
 ! > Vectors in mesh vertices - nodes. 
 !
@@ -118,6 +119,13 @@ subroutine writefiles
   call interpolate_to_nodes(w, wN)
 
   call vtu_write_XML_vector_field_node( output_unit, 'U', uN, vN, wN )
+
+  ! !#--
+  ! ! A temporary insertion - write mu-effective in nodes
+  ! uN = 0.
+  ! call interpolate_to_nodes(vis,uN)
+  ! call vtu_write_XML_scalar_field_node ( output_unit, 'mueff', uN )
+  ! !#--
 
   deallocate( uN,vN, wN )
 
@@ -306,8 +314,6 @@ subroutine writefiles
 
   enddo ! Boundary loop
 
-  ! ! Added for Bingham fluids tests
-  ! call YieldRegion
 
 end subroutine
 

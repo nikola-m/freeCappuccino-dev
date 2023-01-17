@@ -74,6 +74,7 @@ program cappuccino
   use rheology
   use statistics
   use monitors
+  use timescale
   use utils, only: show_logo
 
   implicit none
@@ -132,10 +133,15 @@ program cappuccino
       ! Update variables - shift in time: 
       call time_shift
 
+      ! Automatic timescale for pseudotransient
+      if ( autotime ) call set_timescale
+
       ! Courant number report:
       call CourantNo
     
     endif 
+
+
 
 
     iteration_loop: do iter=1,maxit 
