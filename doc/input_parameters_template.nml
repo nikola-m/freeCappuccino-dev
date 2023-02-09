@@ -157,6 +157,8 @@ non_newtonian_model = 'PowerLaw'  ! Self-explanatory
                bdf2 = f           !% |Second-Order Backward Euler; Second-Order Implicit, or...
                bdf3 = f           !% |Third-order backard, or...
                  CN = f           !% |Crank-Nicolson.
+           autotime = T           !# Automatic timestep for pseudotransient runs,
+    lenscale_option = 'conservative'    !# length scale option for pseudotransient runs, 'conservative' or 'aggresive'.
         !
         ! Numerical approximation: Gradient approximation and limiting
         !
