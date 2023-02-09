@@ -95,6 +95,11 @@
   write(*,'(3(e13.6,1x))') (VL(3,i), i=1,3)
   write(*,'(a)') ' '
 
+  write(*,'(3(e13.6,1x))') (VR(1,i), i=1,3)
+  write(*,'(3(e13.6,1x))') (VR(2,i), i=1,3)
+  write(*,'(3(e13.6,1x))') (VR(3,i), i=1,3)
+  write(*,'(a)') ' '
+
   call say_goodbye( )
 
 end program
