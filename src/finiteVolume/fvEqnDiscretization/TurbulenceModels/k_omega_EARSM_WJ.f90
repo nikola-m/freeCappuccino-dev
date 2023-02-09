@@ -1,4 +1,4 @@
-module k_omega_sst
+module k_omega_earsm_wj
 !
 ! Implementation of k-omega Shear Stress Transport (SST) two equation turbulence model.
 !
@@ -9,6 +9,17 @@ module k_omega_sst
 !     * Menter, F. R., Kuntz, M., and Langtry, R., "Ten Years of Industrial Experience with the SST Turbulence Model",
 !       Turbulence, Heat and Mass Transfer 4, ed: K. Hanjalic, Y. Nagano, and M. Tummers, Begell House, Inc., 2003, pp. 625 - 632. 
 !
+!======================================================================
+!     Adopting:
+!     A subroutine to calculate the extra anisotropy components and
+!     the effective eddy-viscosity coefficient used with the EARSM.
+!     Date:      Author:     Affiliation:
+!     23.11.2001 Ville H. /  Laboratory of Aerodynamics, Espoo, Finland 
+!     13.12.2011 Nikola M. / Laboratory for Thermal Engineering and Energy,
+!                            Institute of Nuclear Sciences "Vinca", Belgrade, Serbia  
+!
+!     There are two versions here: the original Wallin-Johansson and Menter et. al 2009
+!======================================================================
   use types
   use parameters
   use geometry
@@ -22,26 +33,26 @@ module k_omega_sst
   ! Turbulence model constants 
 
       IF (EARSM_WJ) THEN
-      SIGMK1=1.1d0
-      SIGMK2=1.1d0
-      SIGMOM1=0.53d0
+      SIGMK1=1.1_dp
+      SIGMK2=1.1_dp
+      SIGMOM1=0.53_dp
       SIGMOM2=1.0
       BETAI1=0.0747
       BETAI2=0.0828
-      A1=0.31D0
-      ALPHA1=0.518d0
+      A1=0.31_dp
+      ALPHA1=0.518_dp
       ALPHA2=0.44
       BETTAST=0.09
       END IF
 
       IF (EARSM_M) THEN
-      SIGMK1=0.5d0
-      SIGMK2=1.1d0
-      SIGMOM1=0.5d0
-      SIGMOM2=0.856d0
+      SIGMK1=0.856_dp
+      SIGMK2=1.1_dp
+      SIGMOM1=0.5_dp
+      SIGMOM2=0.856_dp
       BETAI1=0.075
       BETAI2=0.0828
-      A1=0.31D0
+      A1=0.31_dp
       BETTAST=0.09
       ALPHA1=(BETAI1/BETTAST)-CAPPA**2/(SQRT(BETTAST)*SIGMOM1)
       ALPHA2=(BETAI2/BETTAST)-CAPPA**2/(SQRT(BETTAST)*SIGMOM2)
@@ -76,25 +87,22 @@ module k_omega_sst
   private 
 
   public :: LowRe
-  public :: modify_viscosity_k_omega_sst
-  public :: modify_viscosity_inlet_k_omega_sst
+  public :: modify_viscosity_k_omega_earsm_wj
+  public :: modify_viscosity_inlet_k_omega_earsm_wj
 
 contains
 
 
-!***********************************************************************
-!
-subroutine modify_viscosity_k_omega_sst()
-!
-!***********************************************************************
+
+subroutine modify_viscosity_k_omega_earsm_wj()
 !
 ! Main module routine to solve turbulence model equations and update effective viscosity.
 !
-!***********************************************************************
   use types
   use parameters
   use variables
   use gradients
+
   implicit none
 
   if(.not.allocated(fsst)) then
@@ -109,11 +117,8 @@ subroutine modify_viscosity_k_omega_sst()
 end subroutine
 
 
-!***********************************************************************
-!
-subroutine modify_viscosity_inlet_k_omega_sst()
-!
-!***********************************************************************
+
+subroutine modify_viscosity_inlet_k_omega_earsm_wj()
 !
 ! Update effective viscosity at inlet
 !
@@ -124,15 +129,11 @@ subroutine modify_viscosity_inlet_k_omega_sst()
 end subroutine
 
 
-!***********************************************************************
-!
+
 subroutine calcsc(Fi,dFidxi,ifi)
 !
-!***********************************************************************
+!  Discretization and solution of scalar equation.
 !
-!  Discretization of scalar equation
-!
-!***********************************************************************
   use types
   use parameters
   use geometry
@@ -167,10 +168,37 @@ subroutine calcsc(Fi,dFidxi,ifi)
   real(dp) :: alphast,alphasst,bettasst,domega,vist
   real(dp) :: wlog,wvis
   real(dp) :: W_S,Ri,F4
- 
+
+  REAL(PREC) :: P3,P6,TT,C1E,C1P,C1P3,C1PSQ,PRS,EPS2UP,EPS4UP
+  REAL(PREC) :: CT,TSTUR,TSVIS,TTS,HTTS                     ! Turbulence timescale related
+  REAL(PREC) :: S11,S12,S13,S22,S23,S33,S21,S32,W12,W13,W23 ! Components of strain and vorticity tensors
+  REAL(PREC) :: S11SQ,S22SQ,S33SQ,S12SQ,S13SQ,S23SQ         ! Strain rate tensor components squared
+  REAL(PREC) :: W12SQ,W13SQ,W23SQ                           ! Vorticity tensor components squared
+  REAL(PREC) :: SII,WII,WIIP3,SWWIV,SWWIVTT,SSWWV
+  REAL(PREC) :: TERM3C11,TERM3C12,TERM3C13,TERM3C22,TERM3C23
+  REAL(PREC) :: TERM4C11,TERM4C12,TERM4C13,TERM4C22,TERM4C23
+  REAL(PREC) :: TERM6C11,TERM6C12,TERM6C13,TERM6C22,TERM6C23
+  REAL(PREC) :: TERM9C11,TERM9C12,TERM9C13,TERM9C22,TERM9C23
+  REAL(PREC) :: P1,P2,SQP2,PM,PMP,SQPM,FACOS,FNC,DE,FII1,FII2,FN,FNSQ,Q,PQ,PQ1,Q1
+  REAL(PREC) :: BETA1,BETA3,BETA4,BETA6,BETA9,PVIS,EPS2LO,EPS4LO
+  REAL(PREC) :: TERMLR,TERMLR11,TERMLR12,TERMLR13,TERMLR22,TERMLR23
+  REAL(PREC) :: beta1eq 
+
+
 
 ! Variable specific coefficients:
   gam=gds(ifi)
+
+!     Often used numbers
+      P3= 1./3.   ! One third
+      P6= 0.5*P3  ! One sixth
+      TT= 2.0*P3  ! Two thirds
+
+!     Model coefficient and its variants
+      C1E = 1.8
+      C1P = 9.0*(C1E - 1.0)/4.0 ! C1_prime
+      C1P3 = C1P*P3
+      C1PSQ = C1P**2
 
 
 ! Calculate gradient: 
@@ -195,7 +223,6 @@ subroutine calcsc(Fi,dFidxi,ifi)
   !   In find_strain_rate we calculate strain rate as:
   !   S = sqrt (2*Sij*Sij).
   !=========================================================
-
   do inp=1,numCells
 
     ! dudx = dudxi(1,inp)
@@ -220,26 +247,12 @@ subroutine calcsc(Fi,dFidxi,ifi)
     magStrainSq=magStrain(inp)*magStrain(inp)
     gen(inp)=abs(vis(inp)-viscos)*magStrainSq
 
-    ! PRODUCTION LIMITER FOR SST AND SAS MODELS:
-    ! 10*bettainf=10*0.09=0.9 -> see below TODO BETTAST for Low-Re
-
-    ! High-Re version...............................................................
-      gen(inp)=min(gen(inp),0.9_dp*den(inp)*te(inp)*ed(inp))        
-
-      if (LowRe) then
-    ! Low-Re version of Wilcox and SST k-omega......................................
-        tmp=10*bettast*(4./15.0_dp+(den(inp)*te(inp)/(8.0_dp*viscos*ed(inp)))**4) & !
-                      /(1.0_dp    +(den(inp)*te(inp)/(8.0_dp*viscos*ed(inp)))**4)   !  
-        gen(inp)=min(gen(inp),tmp*den(inp)*te(inp)*ed(inp))                         !
-    !...............................................................................!
-      end if 
+    gen(inp)=min(gen(inp),0.9_dp*den(inp)*te(inp)*ed(inp))        
 
   enddo
 
-  !
-  !=====================================
+
   ! VOLUME SOURCE TERMS 
-  !=====================================
   do inp=1,numCells
 
     genp=max(gen(inp),zero)
@@ -248,88 +261,460 @@ subroutine calcsc(Fi,dFidxi,ifi)
     ! Add production term to the rhs:
     su(inp)=genp*vol(inp)  
 
-    !======================================================================
-    !     Note there is possibility to add a source term to eliminate 
-    !     non-physical decay of turbulence variables in the freestream
-    !     for external aerodynamic problems
-    !     Reference:
-    !     Spalart, P. R. and Rumsey, C. L., "Effective Inflow Conditions for 
-    !     Turbulence Models in Aerodynamic Calculations," AIAA Journal,
-    !     Vol. 45, No. 10, 2007, pp. 2544 - 2553.
-    !======================================================================
-    ! ADD SUSTAIN TERMS (ONLY FOR SST!):
-    ! su(inp)=su(inp)+bettast*tein*edin*den(inp)*vol(inp)
-
     ! Add destruction term to the lhs:
-
-    !.....High-Re version.....................................................
     sp(inp)=bettast*ed(inp)*den(inp)*vol(inp)    
 
-    if(LowRe) then                                        
-    !.....Low-Re version of Wilcox and SST k-omega.............................
-        tmp = BETTAST*(4./15.0_dp+(den(inp)*te(inp)/(8*viscos*ed(inp)))**4) & !
-                    /(1.0_dp    +(den(inp)*te(inp)/(8*viscos*ed(inp)))**4)    !
-        sp(inp)=tmp*ed(inp)*den(inp)*vol(inp)                                 !           
-    !.........................................................................!
-    endif
-
-    ! If gen negative move to lhs
+    ! If production negative move to lhs
     sp(inp)=sp(inp)-genn*vol(inp)/(te(inp)+small)
 
 
-    !
-    !=====================================
+
     ! VOLUME SOURCE TERMS: buoyancy
-    !=====================================
-      if(lbuoy) then
-        
-        ! When bouy activated we need the freshest utt,vtt,wtt - turbulent heat fluxes
-        call calcheatflux 
+    if(lbuoy) then
+      
+      ! When bouy activated we need the freshest utt,vtt,wtt - turbulent heat fluxes
+      call calcheatflux 
 
-        if(boussinesq) then
-           uttbuoy=-gravx*den(inp)*utt(inp)*vol(inp)*beta
-           vttbuoy=-gravy*den(inp)*vtt(inp)*vol(inp)*beta
-           wttbuoy=-gravz*den(inp)*wtt(inp)*vol(inp)*beta
-        else
-           uttbuoy=-gravx*den(inp)*utt(inp)*vol(inp)/(t(inp)+273.15_dp)
-           vttbuoy=-gravy*den(inp)*vtt(inp)*vol(inp)/(t(inp)+273.15_dp)
-           wttbuoy=-gravz*den(inp)*wtt(inp)*vol(inp)/(t(inp)+273.15_dp)
-        end if
-
-        utp=max(uttbuoy,zero)
-        vtp=max(vttbuoy,zero)
-        wtp=max(wttbuoy,zero)
-        utn=min(uttbuoy,zero)
-        vtn=min(vttbuoy,zero)
-        wtn=min(wttbuoy,zero)
-
-        su(inp)=su(inp)+utp+vtp+wtp
-        sp(inp)=sp(inp)-(utn+vtn+wtn)/(te(inp)+small)
-
+      if(boussinesq) then
+         uttbuoy=-gravx*den(inp)*utt(inp)*vol(inp)*beta
+         vttbuoy=-gravy*den(inp)*vtt(inp)*vol(inp)*beta
+         wttbuoy=-gravz*den(inp)*wtt(inp)*vol(inp)*beta
+      else
+         uttbuoy=-gravx*den(inp)*utt(inp)*vol(inp)/(t(inp)+273.15_dp)
+         vttbuoy=-gravy*den(inp)*vtt(inp)*vol(inp)/(t(inp)+273.15_dp)
+         wttbuoy=-gravz*den(inp)*wtt(inp)*vol(inp)/(t(inp)+273.15_dp)
       end if
 
-      !
-      !=====================================
-      ! UNSTEADY TERM
-      !=====================================
+      utp=max(uttbuoy,zero)
+      vtp=max(vttbuoy,zero)
+      wtp=max(wttbuoy,zero)
+      utn=min(uttbuoy,zero)
+      vtn=min(vttbuoy,zero)
+      wtn=min(wttbuoy,zero)
+
+      su(inp)=su(inp)+utp+vtp+wtp
+      sp(inp)=sp(inp)-(utn+vtn+wtn)/(te(inp)+small)
+
+    end if
+
+
+    ! UNSTEADY TERM
+    if (ltransient) then
+      apotime = den(inp)*vol(inp)/timestep
       if( bdf .or. cn ) then
-        apotime = den(inp)*vol(inp)/timestep
         su(inp) = su(inp) + apotime*teo(inp)
         sp(inp) = sp(inp) + apotime
       elseif( bdf2 ) then
-        apotime=den(inp)*vol(inp)/timestep
         su(inp) = su(inp) + apotime*( 2*teo(inp) - 0.5_dp*teoo(inp) )
         sp(inp) = sp(inp) + 1.5_dp*apotime
       endif
+    endif
 
   ! End of TKE volume source terms
   enddo
+
+
+
 
 !****************************************
   elseif(ifi.eq.ied) then
 !****************************************
 
   ! Omega volume source terms
+
+
+
+
+
+
+
+
+
+!     Often used numbers
+      P3= 1./3.   ! One third
+      P6= 0.5*P3  ! One sixth
+      TT= 2.0*P3  ! Two thirds
+
+!     Model coefficient and its variants
+      C1E = 1.8
+      C1P = 9.0*(C1E - 1.0)/4.0 ! C1_prime
+      C1P3 = C1P*P3
+      C1PSQ = C1P**2
+
+!=====Velocity Gradient Tensor computation=============================
+
+!.....FIND GRADIENTS OF VELOCITIES U,V, AND W
+
+      DO K=2,NKM
+      DO I=2,NIM
+      DO J=2,NJM
+
+      INP=LK(K)+LI(I)+J
+      INB=(I-1)*NJ+J
+
+!.....Turbulence Timescale
+      CT = 6.0                                          ! Model coefficient
+      TSTUR = 1./(CMU*ED(INP))                          ! BETTAST=0.09
+      TSVIS = CT*SQRT(          VISCOS                  &
+                    /( DENSIT*CMU*ED(INP)*TE(INP) )  )
+      TTS = MAX(TSTUR,TSVIS)                            ! Limiter for turbulence time-scale
+
+!.....Half of the time scale
+      HTTS = 0.5*TTS
+
+!
+!--------------------------------
+!      [VELOCITY GRADIENTS: ]
+!--------------------------------
+      DUDX = gradU(1,INP)
+      DUDY = gradU(2,INP)
+      DUDZ = gradU(3,INP)
+      
+      DVDX = gradV(1,INP)
+      DVDY = gradV(2,INP)
+      DVDZ = gradV(3,INP)
+
+      DWDX = gradW(1,INP)
+      DWDY = gradW(2,INP)
+      DWDZ = gradW(3,INP)
+
+
+
+!.....FIND SCALAR INVARIANT OF THE STRAIN RATE AND VORTICITY TENSOR
+!     Found it in find_strain_rate subroutine
+!      SIJMOD(INP) >>>       STRAIN(INP)
+!      OMIJMOD(INP) = DSQRT(W12**2 + W13**2 + W23**2)
+
+!     Strain-rate and vorticity tensor components
+      S11=TTS*dUdx
+      S22=TTS*dVdy
+      S33=TTS*dWdz
+
+      S12=HTTS*(dUdy + dVdx)
+      S13=HTTS*(dUdz + dWdx)
+      S23=HTTS*(dVdz + dWdy)
+ 
+      S21=S12     
+      S32=S23
+
+      W12=HTTS*(dUdy - dVdx)
+      W13=HTTS*(dUdz - dWdx)
+      W23=HTTS*(dVdz - dWdy)
+
+!     Squares of strain-rate and vorticity tensor components
+      S11SQ = S11*S11
+      S22SQ = S22*S22
+      S33SQ = S33*S33
+
+      S12SQ = S12*S12
+      S13SQ = S13*S13
+      S23SQ = S23*S23  
+
+      W12SQ = W12*W12
+      W13SQ = W13*W13
+      W23SQ = W23*W23
+
+!     Second invariants of the strain rate and vorticity tensors
+      SII = S11SQ + S22SQ + S33SQ + 2.0*(S12SQ+S13SQ+S23SQ)
+      WII =-2.0*(W12SQ + W13SQ + W23SQ)
+      WIIP3 = P3*WII ! One third of the invariant
+
+!     Third invanriant of the strain rate and vorticity tensors:
+      SWWIV =-S11*(W12SQ + W13SQ) - S22*(W12SQ + W23SQ)     &
+            - S33*(W13SQ + W23SQ)                           &
+            + 2.0*(-S12*W13*W23 + S13*W12*W23 - S23*W12*W13)
+      SWWIVTT= TT*SWWIV ! Two thirds of the invariant
+
+!     Fourth invariant of the strain rate and vorticity tensors
+      SSWWV = 2.0*(-(S12*S13 + S22*S23 + S23*S33)*W12*W13    &
+                  +(S11*S13 + S12*S23 + S13*S33)*W12*W23     &
+                  -(S11*S12 + S12*S22 + S13*S23)*W13*W23)    &
+        - (S11SQ + S12SQ + S13SQ)*(W12SQ + W13SQ)            &
+        - (S12SQ + S22SQ + S23SQ)*(W12SQ + W23SQ)            &
+        - (S13SQ + S23SQ + S33SQ)*(W13SQ + W23SQ)
+
+!     Tensor component terms for beta 3
+      TERM3C11 = - W12SQ - W13SQ - WIIP3
+      TERM3C22 = - W12SQ - W23SQ - WIIP3
+      TERM3C12 = - W13*W23
+      TERM3C13 =   W12*W23
+      TERM3C23 = - W12*W13
+
+!     Tensor component terms for beta 4
+      TERM4C11 =-2.0*(S12*W12 + S13*W13)
+      TERM4C22 = 2.0*(S12*W12 - S23*W23)
+      TERM4C12 = (S11-S22)*W12       - S23*W13       - S13*W23
+      TERM4C13 =     - S23*W12 + (S11-S33)*W13       + S12*W23
+      TERM4C23 =       S13*W12       + S12*W13 + (S22-S33)*W23
+
+!     tensor component terms for beta 6
+      TERM6C11 = -2.0*((S12*W13 - S13*W12)*W23       &
+                     + S11*(W12SQ + W13SQ)) - SWWIVTT- WII*S11
+      TERM6C22 = -2.0*((S23*W12 + S12*W23)*W13       &
+                     + S22*(W12SQ + W23SQ)) - SWWIVTT- WII*S22
+      TERM6C12 = -S12*(2.0*W12SQ + W13SQ + W23SQ)    &
+               - (S13*W13-S23*W23)*W12 - (S11+S22)*W13*W23- WII*S12
+      TERM6C13 = -S13*(W12SQ + 2.0*W13SQ + W23SQ)    &
+               - (S12*W12+S23*W23)*W13 + (S11+S33)*W12*W23- WII*S13
+      TERM6C23 = -S23*(W12SQ + W13SQ + 2.0*W23SQ)    &
+               + (S12*W12-S13*W13)*W23 - (S22+S33)*W12*W13- WII*S23
+
+!     Tensor component terms for beta 9
+      TERM9C11 =-2.0*(( S12*W12 + S13*W13 - S23*W23)*W12SQ  &
+                     +( S12*W12 + S13*W13 + S23*W23)*W13SQ  &
+                     +( S22-S33)*W12*W13*W23)
+      TERM9C22 =-2.0*((-S12*W12 - S13*W13 + S23*W23)*W12SQ  &
+                     +(-S12*W12 + S13*W13 + S23*W23)*W23SQ  &
+                     +(-S11+S33)*W12*W13*W23)
+      TERM9C12 = ((S11-S22)*W12 - 2.0*(S13*W23+S23*W13))*W12SQ  &
+               + ((S11-S33)*W12 - 2.0* S13*W23)         *W13SQ  &
+               + ((S33-S22)*W12 - 2.0* S23*W13)         *W23SQ
+      TERM9C13 = ((S11-S22)*W13 + 2.0* S12*W23)         *W12SQ  &
+               + ((S11-S33)*W13 + 2.0*(S12*W23-S23*W12))*W13SQ  &
+               + ((S22-S33)*W13 - 2.0* S23*W12)         *W23SQ
+      TERM9C23 = ((S22-S11)*W23 + 2.0* S12*W13)         *W12SQ  &
+               + ((S11-S33)*W23 + 2.0* S13*W12)         *W13SQ  &
+               + ((S22-S33)*W23 + 2.0*(S12*W13+S13*W12))*W23SQ
+
+!     Solution of the third degree equation for N_c
+!.....Correction to C1p (A3') appearing in Anti's thesis.......
+!      beta1eq = -6./5.* (4.05/(16.4025 -2.*WII))              !
+!      C1P = C1P + 9./4. * 2.2 * max(1+beta1eq*SII,0.)         !
+!      C1PSQ = C1P**2                                          !
+!      C1P3 = C1P*P3                                           !
+!.............................................................!
+      P1     = (C1PSQ/27.0 + 0.45*SII - TT*WII)*C1P
+      P2     = P1**2 - (C1PSQ*P3**2 + 0.9*SII + TT*WII)**3
+      IF (P2 .GE. 0.0) THEN
+        SQP2 = SQRT(P2)
+        PM = P1 - SQP2
+        PMP = ABS(PM)**P3
+        FNC = C1P3 + (P1+SQP2)**P3 + SIGN(PMP,PM)
+      ELSE
+        PM = P1**2 - P2
+        SQPM = SQRT(PM)
+        FACOS = P3*ACOS(P1/SQPM)
+        FNC = C1P3 + 2.0*(PM**P6)*COS(FACOS)
+      END IF
+
+!.....Improvement of the approximation of the N...........................
+!     Nonlinear EARSMko2005 Model with better approximation for 3D Flows !
+      DE = 20.0*(FNC**4)*(FNC - 0.5*C1P)     &
+        - WII*(10.0*FNC + 15.0*C1P)*FNC**2  &
+        + 10.0*C1P*WII**2
+      FII1 = SWWIV**2
+      FII2 = SSWWV - 0.5*SII*WII
+      FN = FNC + 162.0*(FII1 + FII2*FNC**2)/DE
+!........................................................................!
+
+!     The denominator of the betas
+      FNSQ = FN**2
+      Q = 5.0*P6*(FNSQ - 2.0*WII)*(2.0*FNSQ - WII)     !%$ <<< Wallin&Johansson A.Hellsten
+
+      IF (EARSM_M) THEN
+        Q = (1./1.245)*(FNSQ - 2.0*WII)               ! Menter 2009. 4% encrease
+        Q1=Q*P6*(2.0*FNSQ - WII)                      !
+        PQ1=1.0/Q1                                    !
+      ENDIF
+
+      PQ = 1.0/Q
+
+!     Coefficients (betas) (WJ Original)
+      BETA1 = - PQ*FN*(2.0*FNSQ - 7.0*WII)  !%$ <<< Wallin&Johansson A.Hellsten
+      BETA3 = - PQ*12.0*SWWIV/FN            !%$ <<<
+      BETA4 = - PQ*2.0*(FNSQ - 2.0*WII)     !%$ <<<
+      BETA6 = - PQ*6.0*FN                   !%$ <<<
+      BETA9 =   PQ*6.0                      !%$ <<<
+
+!     Coefficients (betas) (Menter 2009)
+      IF (EARSM_M) THEN
+      BETA1 = - PQ*FN
+      BETA3 = - PQ1*2.0*SWWIV/FN
+      BETA4 = - PQ
+      BETA6 = - PQ1*FN  
+      BETA9 =   PQ1  
+      ENDIF
+
+!=====Low Re version===================================================
+      IF (LowRe) THEN
+!.....FIRST VECTOR-DISTANCE FROM GHOST CELL CENTER TO THIS CELL'S CENTER  
+      FAC= -1.                                                 
+      DXF=FAC*(XC(INB)-XC(INP))                                
+      DYF=FAC*(YC(INB)-YC(INP))    
+      DZF=FAC*(ZC(INB)-ZC(INP))
+!.....SECOND X THIRD DEFINE  ALWAYS CF AREA
+      ARE=DSQRT(AR1X(INB)**2+AR1Y(INB)**2+AR1Z(INB)**2)
+!.....COMPONENTS OF THE UNIT NORMAL VECTOR
+      ARER=1./ARE
+      ALF=AR1X(INB)*ARER
+      BET=AR1Y(INB)*ARER
+      GAM=AR1Z(INB)*ARER
+!.....NORMAL DISTANCE FROM SCALAR PRODUCT
+      DELN=(DXF*ALF+DYF*BET+DZF*GAM)
+
+!     Reynolds No. - Rey
+      REYLR = Densit*sqrt(TE(inp))*DELN/Viscos             
+
+!     factor for Low-Re(LR) correction - f1
+      FACLR = 1.-exp(-0.092*sqrt(REYLR) - 1.2e-4*REYLR**2) 
+
+!     405.*1.8**2/(216.*1.8-160.)
+      SIIEQ = 5.735139863                                  
+
+!     Additional term in anisotropy tensor expression 
+      TERMLR = (1.-FACLR**2)*1.4/max(SII,SIIEQ)
+      TERMLR11 = TERMLR * ((S11SQ+S12SQ+S13SQ)     - SII*P3)
+      TERMLR22 = TERMLR * ((S21*S12+S22SQ+S23*S32) - SII*P3)
+      TERMLR12 = TERMLR * (S11*S12+S12*S22+S13*S32)
+      TERMLR13 = TERMLR * (S11*S13+S12*S23+S13*S33)
+      TERMLR23 = TERMLR * (S21*S13+S22*S23+S23*S33)
+
+!     Extra anisotropy components. Note that we use b_ij and Wallin
+!     uses a_ij, which is a_ij = 2*b_ij.
+      BIJ(1,INP) = 0.5*(TERMLR11                                     &           
+           + FACLR**2*BETA3*TERM3C11                                 & 
+           +(FACLR**2*BETA4-(1.-FACLR)*0.9/max(SII,SIIEQ))*TERM4C11  &
+           + FACLR*   BETA6*TERM6C11                                 &
+           + FACLR**2*BETA9*TERM9C11)
+      BIJ(2,INP) = 0.5*(TERMLR12                                     &
+           + FACLR**2*BETA3*TERM3C12                                 &
+           +(FACLR**2*BETA4-(1.-FACLR)*0.9/max(SII,SIIEQ))*TERM4C12  &
+           + FACLR*   BETA6*TERM6C12                                 &
+           + FACLR**2*BETA9*TERM9C12)
+      BIJ(3,INP) = 0.5*(TERMLR13                                     &
+           + FACLR**2*BETA3*TERM3C13                                 &
+           +(FACLR**2*BETA4-(1.-FACLR)*0.9/max(SII,SIIEQ))*TERM4C13  &
+           + FACLR*   BETA6*TERM6C13                                 &
+           + FACLR**2*BETA9*TERM9C13)
+      BIJ(4,INP) = 0.5*(TERMLR22                                     &
+           + FACLR**2*BETA3*TERM3C22                                 &
+           +(FACLR**2*BETA4-(1.-FACLR)*0.9/max(SII,SIIEQ))*TERM4C22  &
+           + FACLR*   BETA6*TERM6C22                                 &
+           + FACLR**2*BETA9*TERM9C22)
+      BIJ(5,INP) = 0.5*(TERMLR23                                     &
+           + FACLR**2*BETA3*TERM3C23                                 &
+           +(FACLR**2*BETA4-(1.-FACLR)*0.9/max(SII,SIIEQ))*TERM4C23  &
+           + FACLR*   BETA6*TERM6C23                                 &
+           + FACLR**2*BETA9*TERM9C23)
+!=====End Of Low Re Version============================================
+      ELSE
+!     High-Re form:
+!     Extra anisotropy components. Note that we use b_ij and Wallin
+!     uses a_ij, which is a_ij = 2*b_ij.
+      BIJ(1,INP) = 0.5*(BETA3*TERM3C11 + BETA4*TERM4C11  &
+                      + BETA6*TERM6C11 + BETA9*TERM9C11)
+      BIJ(2,INP) = 0.5*(BETA3*TERM3C12 + BETA4*TERM4C12  &
+                      + BETA6*TERM6C12 + BETA9*TERM9C12)
+      BIJ(3,INP) = 0.5*(BETA3*TERM3C13 + BETA4*TERM4C13  &
+                      + BETA6*TERM6C13 + BETA9*TERM9C13)
+      BIJ(4,INP) = 0.5*(BETA3*TERM3C22 + BETA4*TERM4C22  &
+                      + BETA6*TERM6C22 + BETA9*TERM9C22)
+      BIJ(5,INP) = 0.5*(BETA3*TERM3C23 + BETA4*TERM4C23  &
+                      + BETA6*TERM6C23 + BETA9*TERM9C23)
+      ENDIF
+
+!.....Effective C_mu:
+      CMUEFF(INP) = -0.5*(BETA1 + WII*BETA6) 
+!.....Low Re correction for Effective Cmu:
+      IF (LowRe) CMUEFF(INP) = CMUEFF(INP) * FACLR
+!.....Use Limiter that Tom Gatski & Chris Rumsey use:
+!      CMUEFF(INP) = max(CMUEFF(INP), 0.0005)
+
+!----
+      END DO ! CELL LOOP
+
+!=====END OF Velocity Gradient Tensor Invariants computation===========
+
+
+
+
+!=====MAIN PART OF THE ROUTINE=======================================
+      DO inp=1,numCells
+
+
+
+!-----wall_dist -------------------------------------------
+      WLDIST=walldistance(inp)
+
+!.....GRADIENT OF TURBULENCE KINETIC ENERGY
+      DTEDX=gradTE(1,INP)
+      DTEDY=gradTE(2,INP)
+      DTEDZ=gradTE(3,INP)
+
+!.....GRADIENT OF TURBULENCE KINETIC ENERGY SPECIFIC DISSIPATION RATE 
+      DEDDX=gradED(1,INP)
+      DEDDY=gradED(2,INP)
+      DEDDZ=gradED(3,INP)
+
+!=====FIND $D_{\omega}^{+}$ Dw+========================================
+      TMP1=WLDIST**2/ED(INP) * (DTEDX*DEDDX+DTEDY*DEDDY+DTEDZ*DEDDZ)
+      TMP2=200.*TEIN   ! 200*k_inf, koje moras definisati  VEZANO ZA INLET
+      DOMEGAPL=DMAX1(TMP1,TMP2)
+
+!=====FIND KSI==========================================================
+      IF (EARSM_WJ) THEN
+      KSI=MIN(MAX(SQRT(TE(INP))/(0.09*WLDIST*ED(INP)),            &     !< EARSM 
+                 (500.*VISOB(INP)/DEN(INP))/(WLDIST**2*ED(INP))), &     !
+               20.*TE(INP)/DOMEGAPL)                                    !%$ WJ
+      ENDIF
+      IF (EARSM_M) THEN
+      KSI=MIN(MAX(SQRT(TE(INP))/(0.09*WLDIST*ED(INP)),            &     !< EARSM 
+                 (500.*VISOB(INP)/DEN(INP))/(WLDIST**2*ED(INP))), &     !
+             2.*TE(INP)/DOMEGAPL)                                       ! Menter 2009
+      ENDIF
+
+!=====FIND F============================================================
+      F=TANH(1.5*KSI**4)               ! A.Hellsten thesis - prolongs Omega region (!!!), usually factor is 1, here it's 1.5
+      IF (EARSM_M) F=TANH(KSI**4)      ! Menter 2009
+
+!=====NOW BLEND COEFFICIENTS WE'LL NEED LATER============================
+!.....High-Re version.....................................................
+      ALPHASST(INP) = F*0.518+(1.-F)*0.44      ! WJ and  A.Hellsten      !
+      IF (EARSM_M) ALPHASST(INP) = F*0.553+(1.-F)*0.44   ! Menter 2009   !<
+!.....Low-Re version of SST k-omega.......................................
+!      alphast=(0.0249+(DENSIT*TE(IJK))/(6.*VISCOS*ED(IJK)))    &         !             
+!             /(1.+(DENSIT*TE(IJK))/(6.*VISCOS*ED(IJK)))                  !
+!      tmp=5./(9.*alphast)*                                     &         !                                     
+!             (1./10.+ (DENSIT*TE(IJK))/(2.7*VISCOS*ED(IJK)))   &         !
+!            /(1.   + (DENSIT*TE(IJK))/(2.7*VISCOS*ED(IJK)))              !
+!      ALPHASST(INP) = F*tmp + (1.-F)*0.44                                !<
+!........................................................................!
+      BETTASST(INP) = F*0.0747+(1.-F)*0.0828  ! WJ and A.Hellsten
+      IF (EARSM_M) BETTASST(INP) = F*0.075+(1.-F)*0.0828  ! Menter 2009
+
+
+!.....EFFECTIVE DIFFUSIVITY (WJ and A.Hellsten original):
+      IF (EARSM_WJ) THEN
+      PRTINV_TE(INP)= F*1.1  + (1.-F)*1.1    ! sigma_k1=sigma_k2=1.1
+      PRTINV_ED(INP)= F*0.53 + (1.-F)*1.0    ! sigma_omega1=0.53 sigma_omega2=1.0
+      SIGMAD        = F*1.0  + (1.-F)*0.4    ! sigma_d
+      ENDIF
+
+!.....EFFECTIVE DIFFUSIVITY (Menter 2009):
+      IF (EARSM_M) THEN
+      PRTINV_TE(INP)= F*0.5 + (1.-F)*1.      ! sigma_k1=sigma_k2=1.1
+      PRTINV_ED(INP)= F*0.5 + (1.-F)*0.856   ! sigma_omega1=0.53 sigma_omega2=1.0
+      SIGMAD        =      2.*(1.-F)*0.856   ! sigma_d
+      ENDIF
+
+!=====FIND $D_{\omega}$ CROSS DIFFUSION MODIFICATION===================
+      DOMEGA(INP)=SIGMAD * DEN(INP)/ED(INP) &
+!                    *(DTEDX*DEDDX+DTEDY*DEDDY+DTEDZ*DEDDZ)
+                  *max(DTEDX*DEDDX+DTEDY*DEDDY+DTEDZ*DEDDZ, 0.)
+
+
+
+      END DO !!CELL LOOP
+
+
+
+
+
+
+
+
+
+
 
   do inp=1,numCells
 
@@ -346,8 +731,8 @@ subroutine calcsc(Fi,dFidxi,ifi)
     deddy=dEDdxi(2,inp)
     deddz=dEDdxi(3,inp)
 
-    ! Find $d_{\omega}^{+}$ d_omega+
-    domegapl=max(2*den(inp)/(SIGMOM2*ed(inp)) * (dtedx*deddx+dtedy*deddy+dtedz*deddz),1e-20)
+    ! Find $d_{\Omega}^{+}$ D_omega+
+    domegapl=max(2*den(inp)/(SIGMOM2*ed(inp)) * (dtedx*deddx+dtedy*deddy+dtedz*deddz),small)
 
     ! Find ksi
     ksi=min(  max(                                                   &
@@ -362,10 +747,10 @@ subroutine calcsc(Fi,dFidxi,ifi)
 
   enddo
 
-  !
-  !=====================================
+
+
+
   ! VOLUME SOURCE TERMS 
-  !=====================================
   do inp=1,numCells
 
     genp=max(gen(inp),zero)
@@ -376,36 +761,24 @@ subroutine calcsc(Fi,dFidxi,ifi)
     vist = (vis(inp)-viscos)/densit
 
     ! Production coefficient alpha_sst
-    !.....High-Re version...............................................
-      alphasst=fsst(inp)*alpha1+(1.0_dp-fsst(inp))*alpha2               !<
-
-      If(LowRe) then
-     ! Low-Re version of SST k-omega......................................
-      alphast=(0.024_dp+(densit*te(inp))/(6.0_dp*viscos*ed(inp)))  &    !             
-            /(1.0_dp+(densit*te(inp))/(6.0_dp*viscos*ed(inp)))          !
-      tmp=alpha1/alphast*                                   &           !                                     
-             (1./9.0_dp+ (densit*te(inp))/(2.95_dp*viscos*ed(inp))) &   !
-            /(1.0_dp  + (densit*te(inp))/(2.95_dp*viscos*ed(inp)))      !
-      alphasst=fsst(inp)*tmp + (1.0_dp-fsst(inp))*alpha2                !<
-      !.................................................................!
-      endif
+    alphasst=fsst(inp)*alpha1+(1.0_dp-fsst(inp))*alpha2               
 
     su(inp)=alphasst*genp*vol(inp)/(vist+small)
 
-    ! FIND D_omega CROSS DIFFUSION MODIFICATION: 
+    ! FIND $D_omega$ CROSS DIFFUSION MODIFICATION: 
 
-      ! Gradient of turbulence kinetic energy
-      dtedx=dTEdxi(1,inp)
-      dtedy=dTEdxi(2,inp)
-      dtedz=dTEdxi(3,inp)
+    ! Gradient of turbulence kinetic energy
+    dtedx=dTEdxi(1,inp)
+    dtedy=dTEdxi(2,inp)
+    dtedz=dTEdxi(3,inp)
 
-      ! Gradient of turbulence kinetic energy specific dissipation rate 
-      deddx=dEDdxi(1,inp)
-      deddy=dEDdxi(2,inp)
-      deddz=dEDdxi(3,inp)
+    ! Gradient of turbulence kinetic energy specific dissipation rate 
+    deddx=dEDdxi(1,inp)
+    deddy=dEDdxi(2,inp)
+    deddz=dEDdxi(3,inp)
 
-      domega = 2*(1.0_dp-fsst(inp))*den(inp)/(SIGMOM2*ed(inp)+small)*(dtedx*deddx+dtedy*deddy+dtedz*deddz)
-      domega = max(domega,0.0_dp)
+    domega = 2*(1.0_dp-fsst(inp))*den(inp)/(SIGMOM2*ed(inp)+small)*(dtedx*deddx+dtedy*deddy+dtedz*deddz)
+    domega = max(domega,0.0_dp)
 
     su(inp)=su(inp)+domega*vol(inp)
 
@@ -416,12 +789,10 @@ subroutine calcsc(Fi,dFidxi,ifi)
     ! Destruction coefficient beta_sst
      bettasst=fsst(inp)*betai1+(1.0_dp-fsst(inp))*betai2
 
-    ! ADD SUSTAIN TERMS
-    ! su(inp)=su(inp)+bettasst*edin*edin*den(inp)*vol(inp)
-
 
     ! Add destruction term (-beta*rho*w**2) to the lhs :   
     ! sp(inp)=bettasst*den(inp)*ed(inp)*vol(inp) 
+    !
     !..or using the destruction term that incorporates Simplified Curvature Correction:
     ! Multiply destruction by F4 Simplified Curvature Correction term b Hellsten
     ! to obtain SST-2003RC-Hellsten model
@@ -433,55 +804,30 @@ subroutine calcsc(Fi,dFidxi,ifi)
     ! Negative value of production moved to lhs.
     sp(inp)=sp(inp)-alphasst*genn*vol(inp)/(vist*ed(inp)+small) 
 
-    !
-    !=====================================
-    ! VOLUME SOURCE TERMS: Buoyancy
-    !=====================================
-      if(lbuoy) then
-        const=c3*den(inp)*ed(inp)*vol(inp)/(te(inp)+small)
 
-        if(boussinesq) then
-           uttbuoy=-gravx*utt(inp)*const*beta
-           vttbuoy=-gravy*vtt(inp)*const*beta
-           wttbuoy=-gravz*wtt(inp)*const*beta
-        else
-           uttbuoy=-gravx*utt(inp)*const/(t(inp)+273.15)
-           vttbuoy=-gravy*vtt(inp)*const/(t(inp)+273.15)
-           wttbuoy=-gravz*wtt(inp)*const/(t(inp)+273.15)
-        end if
 
-        utp=max(uttbuoy,zero)
-        vtp=max(vttbuoy,zero)
-        wtp=max(wttbuoy,zero)
-        utn=min(uttbuoy,zero)
-        vtn=min(vttbuoy,zero)
-        wtn=min(wttbuoy,zero)
-
-        su(inp)=su(inp)+utp+vtp+wtp
-        sp(inp)=sp(inp)-(utn+vtn+wtn)/(ed(inp)+small)
-      end if
-
-      !
-      !=====================================
-      ! UNSTEADY TERM
-      !=====================================
+    ! UNSTEADY TERM
+    if (ltransient) then
+      apotime = den(inp)*vol(inp)/timestep
       if( bdf .or. cn ) then
-        apotime = den(inp)*vol(inp)/timestep
         su(inp) = su(inp) + apotime*edo(inp)
         sp(inp) = sp(inp) + apotime
       elseif( bdf2 ) then
-        apotime=den(inp)*vol(inp)/timestep
         su(inp) = su(inp) + apotime*( 2*edo(inp) - 0.5_dp*edoo(inp) )
         sp(inp) = sp(inp) + 1.5_dp*apotime
       endif
+    endif
 
-  ! End of Epsilon volume source terms
+  ! End of Dissipation volume source terms
   enddo
+
 !--------------------------------------
-  end if
+  end if ! ite or ied conditional
+
+
 
 !
-! CALCULATE TERMS INTEGRATED OVER FACES
+! CALCULATE CONVECTIVE AND DIFFUSIVE FLUXES BY INTEGRATING OVER FACES
 !
 
   ! Inner faces:                                             

@@ -11,7 +11,6 @@ subroutine modify_viscosity_inlet
   use IDDES_k_omega_SST
   use k_eqn_eddy
   use spalart_allmaras
-  ! use smagorinsky
   ! use wale_sgs
   
   implicit none
@@ -49,9 +48,6 @@ subroutine modify_viscosity_inlet
 
     case ('IDDES_k_omega_sst')
       call modify_viscosity_inlet_IDDES_k_omega_sst
-
-    ! case ('Smagorinsky')
-    !   call modify_viscosity_inlet_smagorinsky
 
     ! case ('WALE')
     !   call modify_viscosity_inlet_wale_sgs

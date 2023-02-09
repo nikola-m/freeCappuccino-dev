@@ -50,7 +50,7 @@ module rheology
   real(dp) :: shearmin = 0.01_dp 
 
   ! Minimum viscosity limit [kg/m-s]     
-  real(dp) :: mumin = 0.001_dp 
+  real(dp) :: mumin = 0.01_dp 
 
   ! Maximum viscosity limit [kg/m-s]     
   real(dp) :: mumax = 1000.0_dp  

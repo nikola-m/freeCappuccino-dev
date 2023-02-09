@@ -4,12 +4,13 @@ module vortexID_sgs
 !
 !  Purpose: 
 !
-!    A module containing implementation of the Vortex ID sub-grid scale model
+!    A module containing implementation of the Vortex ID sub-grid scale model.
 !
 !  Discussion:
 !
 !    Reference:
-!    XXXX
+!    X. Fang et al. Using vorted identifiers to build eddy-viscosity subgrid-scale models for large-eddy simulation, 
+!    Phys Rev Fluids 4, 034606 (2019).
 !
 !  Licensing:
 !
@@ -20,13 +21,12 @@ module vortexID_sgs
   use geometry
   use variables, only: u,v,w,den,vis,visw
   use TurbModelData, only: TurbModel
+  use vortexIdentification, only: lambda2,setLambda2
 
   implicit none
 
-  real(dp), parameter :: CmQ_ = 3.4 
-  real(dp), parameter :: Cml2_ = 2.0 
-  ! real(dp), parameter :: CmQ_ = 0.325 
-  ! real(dp), parameter :: CmQ_ = 0.325 
+  real(dp), parameter :: CmQsq = 3.4 
+  real(dp), parameter :: Cml2sq = 2.0 
 
   private 
 
@@ -60,10 +60,10 @@ subroutine modify_viscosity_vortexID_sgs
 !
 !  Reference:
 !
+!    As in the module header.
 !    
-!
-  use tensorFields  ! <--- Let us see these in action!
-  use fvxGradient   ! <--
+  use tensorFields 
+  use fvxGradient   
 
   implicit none
 
@@ -71,15 +71,10 @@ subroutine modify_viscosity_vortexID_sgs
 ! Local variables
 !
   integer :: i, ib, iface, ijp, ijn, ijb, ijbt, iWall, iPer
-
-  real(dp) :: urf
-
+  real(dp) :: urf, rmin, rmax
   real(dp), parameter :: r23 = 2./3._dp
-
-  type(volScalarField) :: Sij_, lambda2
-
+  type(volScalarField) :: Sij_, l2p32
   type(volTensorField) :: D
-
   type(volVectorField) :: U_
 
   U_ = volVectorField("Velocity", u, v, w )
@@ -89,16 +84,20 @@ subroutine modify_viscosity_vortexID_sgs
 
   ! Magnitude of the strain rate tensor (a symmetric part of velocity gradient tensor)
   Sij_ = .mag.(.symm.( D ) )  
-   
+  
+  ! Set value for vortex identification criteria
+  call setLambda2 
+  l2p32= new_volScalarField(numCells)
+  l2p32%mag(1:numCells)  = max(lambda2**1.5, small)
 
   ! v---this should be 'musgs' but we reuse existing field
-  Sij_ = den * Cm_* Vol**r23  * power( lambda2, 3./2._dp ) * Sij_ &
-                           /  ( power( Sij_, 3 ) + power( lambda2, 3./2._dp )  ) 
-
+  Sij_ = den * Cml2sq * Vol**r23  * l2p32 * Sij_ &
+                           /  ( power( Sij_, 3.0_dp ) + l2p32  ) 
 
   urf = TurbModel%urfVis
 
-  ! Update of the effective viscosity and underelaxation
+  ! Update of the effective viscosity
+                          ! v---this should be 'musgs' but we reuse existing field
   vis( 1:numCells ) = urf*( Sij_%mag(1:numCells) + viscos ) + (1.0-urf) * vis( 1:numCells )
 
 
@@ -169,7 +168,12 @@ subroutine modify_viscosity_vortexID_sgs
 
   enddo
 
-  write(*,*) " Updated effective viscosity - Vortex ID SGS model."
+  write(*,*) " Updated effective viscosity - Vortex-ID SGS model."
+
+  rmin = minval(vis/viscos)
+  rmax = maxval(vis/viscos)
+ 
+  write(*,'(2x,es11.4,a,es11.4)') rmin,' <= Viscosity ratio <= ',rmax
 
 end subroutine
 

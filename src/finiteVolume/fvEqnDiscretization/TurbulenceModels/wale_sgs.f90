@@ -73,7 +73,7 @@ subroutine modify_viscosity_wale_sgs
 !
   integer :: i, ib, iface, ijp, ijn, ijb, ijbt, iWall, iPer
 
-  real(dp) :: urf
+  real(dp) :: urf, rmin, rmax
 
   real(dp), parameter :: r13 = 1./3._dp
 
@@ -89,7 +89,7 @@ subroutine modify_viscosity_wale_sgs
   D = Grad( U_ )
 
   ! The traceless symmetric part of the square of the velocity gradient tensor.
-  Sd = .dev.(.symm.(D.o.D))
+  Sd = .dev.(.symm.(D*D))
 
   ! Its magnitude squared 
   magSqrSd = .magSq.Sd
@@ -174,6 +174,11 @@ subroutine modify_viscosity_wale_sgs
   enddo
 
   write(*,*) " Updated effective viscosity - WALE model."
+
+  rmin = minval(vis/viscos)
+  rmax = maxval(vis/viscos)
+ 
+  write(*,'(2x,es11.4,a,es11.4)') rmin,' <= Viscosity ratio <= ',rmax
 
 end subroutine
 

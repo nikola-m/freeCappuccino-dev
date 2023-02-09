@@ -464,7 +464,7 @@ subroutine read_mesh_native
       !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
       ! > Compute cell volumes and cell centers
       !
-      ! We compute cell volumes by aaplying divergence theorem to the position vector,
+      ! We compute cell volumes by aplying divergence theorem to the position vector,
       ! see eq. (5) in [1].
       ! Cell center coordinates of an arbitrary polyhedron are computed using eq.(15) of ref. [1].
       !

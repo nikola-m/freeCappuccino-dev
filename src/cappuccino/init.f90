@@ -5,9 +5,10 @@ subroutine init
 !***********************************************************************
 !   Contents:
 !
-!   Various initialisations
+!   Various initialisations:
 !       Parameter Initialisation
 !       Field Initialisation
+!       Mass flow at faces initialization
 !   Read Restart File And Set Field Values
 !   Initial Gradient Calculation
 !   Calculate distance to the nearest wall.
@@ -28,7 +29,6 @@ subroutine init
   use mhd
   use wall_distance
   use node_interpolation
-  ! use fieldManipulation, only: add_random_noise_to_field
 
   implicit none
 
@@ -105,14 +105,14 @@ subroutine init
     !   endif 
     ! enddo
 
-    ! Create initial disturbances for turbulent channel and pipe (below) flow
-    ! do inp = 1,numCells
-    !   call channel_disturbances(xc(inp),yc(inp),zc(inp),u(inp),v(inp),w(inp))
-    ! enddo
+    ! ! Create initial disturbances for turbulent channel and pipe (below) flow
+    !  do inp = 1,numCells
+    !    call channel_disturbances(xc(inp),yc(inp),zc(inp),u(inp),v(inp),w(inp))
+    !  enddo
     !** 
-    ! do inp = 1,numCells
-    !   call pipe_disturbances(xc(inp),yc(inp),zc(inp),u(inp),v(inp),w(inp))
-    ! enddo
+    !do inp = 1,numCells
+    !  call pipe_disturbances(xc(inp),yc(inp),zc(inp),u(inp),v(inp),w(inp))
+    !enddo
     !\***
 
     ! Curved tube case
@@ -149,31 +149,28 @@ subroutine init
   if (solveEpsilon) call initialize_scalar_field(ed,dEDdxi,6,'epsilon')
 
 
-  ! 
   ! > Temperature
-  !
   if( calcT .or. compressible )   call initialize_scalar_field(t,dTdxi,7,'T')
 
+  ! > Total energy / enthalpy / internal energy
   if( calcEn )   call initialize_scalar_field(En,dEndxi,7,'Energy')
 
-  ! 
   ! > Magnetic field
-  ! 
   if ( calcEpot ) call initialize_vector_field(bmagx,bmagy,bmagz,dEpotdxi,10,'B')
 
-  ! Density
+  ! > Density
   den = densit
 
   ! Effective viscosity
   vis = viscos
 
-  ! Set effective viscosity at inlet for appropriate turbulence model
-  if(lturb) call modify_viscosity_inlet
+    ! > Set effective viscosity at inlet for appropriate turbulence model
+    if(lturb) call modify_viscosity_inlet
 
-  ! Wall effective viscosity
-  visw = viscos  
+    ! > Wall effective viscosity
+    visw = viscos  
   
-!
+!%%%%%%%
 !******* Initialization of mass fluxes at inner and boundary faces ******
 !
 
@@ -276,22 +273,23 @@ subroutine init
 
 !
 !******* END: Initialization of mass fluxes at inner and boundary faces ******
-!
+!%%%%%%%
+
 
 !
-! Read Restart File And Set Field Values
+! > Read Restart File And Set Field Values
 !
   if(lread) call readfiles
 
 
 !
-! Set interpolation weights for cell-to-node interpolation
+! > Set interpolation weights for cell-to-node interpolation
 !
   call set_interpolation_weights
 
   
 !
-! Initial Gradient Calculation
+! > Initial Gradient Calculation
 !
 
   ! Set matrix with geometric coefficients for Least-squares gradient reconstruction.
@@ -306,7 +304,7 @@ subroutine init
 
 
 !
-! Distance to the nearest wall (needed for some turbulence models) for all cells via Poisson equation.
+! > Distance to the nearest wall (needed for some turbulence models) for all cells via Poisson equation.
 !
 
   if (lturb) call wall_distance_poisson

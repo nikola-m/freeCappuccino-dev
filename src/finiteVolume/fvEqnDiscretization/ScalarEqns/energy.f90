@@ -1,6 +1,33 @@
 module energy
 !
-! Implementation of sclar transport equation for mean (in the sense of Reynolds averaging) TOTAL ENTHALPY.
+! Purpose:
+! Implementation of scalar transport equation for mean (in the sense of Reynolds averaging) 
+! 1) Total Enthalpy or
+! 2) Total Energy,
+! 
+! Discussion:
+!   The approach taken is that of Murthy and Mathur as documented in papers [1] and [2].
+!   In this approach the equations for Total Energy or Total Enthalpy are solved for temperature
+!   and on the right hand side, as source terms, we have unsteady and convective terms of difference
+!   between the total energy written in terms of temperature and explicit total energy,
+!   or between the total enthalpy written in terms of temperature and explicit total enthaply.
+!   Look into the papers [1] and [2] for clarification.
+!   As I understand this is how it is implemented in Fluent.
+!   Also we consulted the web page where Total Energy equation is discussed and some of the ideas are 
+!   also present here.
+!
+!
+!  References:
+!    [1] J.Y. Murthy and S.R. Mathur, A Conservative Numerical Scheme for the Energy Equation, 
+!        J. of Heat Transfer (Nov. 1998) Vol. 120, p. 1081.
+!    [2] S.R. Mathur and J.Y. Murthy, Unstructured Finite Volume Methods for Multi-Mode Heat Transfer,
+!        Chapter Two in Advances of Numerical Heat Transfer, Vol.2 pp.37-70.
+!    [3] 'Energy Equation in OpenFOAM', https://doc.cfd.direct/openfoam/energy-equation/
+!
+!
+!  Author: 
+!    Nikola Mirkov (largeddysimulation@gmail.com)
+!
 !
   use types
 
@@ -19,13 +46,13 @@ module energy
   integer  :: maxiterEn = 10                        ! Max number of iterations in linear solver.
   real(dp) :: tolAbsEn = 1e-13                      ! Absolute residual level.
   real(dp) :: tolRelEn = 0.025                      ! Relative drop in residual to exit linear solver.
-  real(dp) :: sigtEn = 0.9_dp                       ! sigma_t
+  real(dp) :: sigtEn = 0.85_dp                       ! sigma_t
   logical :: solveTotalEnergy = .True.              !@ What we solve here - default is total energy, change it 
   logical :: solveInternalEnergy = .False.          !@ in input.nml file.
   logical :: solveEnthalpy = .False.                !@
   logical :: addViscDiss = .False.                  ! Add viscous dissipation term? T/F
 
-  real(dp), parameter :: c_p = 1006.0               ! Heat capacity at constant pressure [J/kgK]
+  real(dp), parameter :: c_p = 1006.0               ! Heat capacity at constant pressure [J/kgK] ! From input?
 
 
   ! type, extends(fieldEqn) :: energyEqn
@@ -78,16 +105,15 @@ subroutine calc_energy
   real(dp) :: coef,dcoef
   real(dp) :: fimax,fimin
   real(dp) :: Ke, Keo, Keoo
-  real(dp) :: DdtRhoK
-  real(dp) :: dpdt
-  real(dp), dimension(:), allocatable :: DivRhoUK,DivUp
-  real(dp), dimension(:), allocatable :: up,vp,wp
-  real(dp), dimension(:), allocatable :: deni
+  ! real(dp) :: dpdt
   real(dp) :: dudx, dudy, dudz, dvdx, dvdy, dvdz, dwdx, dwdy, dwdz
   real(dp) :: Psi, Phi
   real(dp) :: are,nxf,nyf,nzf,dTn
   real(dp) :: urfr,urfm
   real(dp) :: viscDiss
+  real(dp), dimension(:), allocatable :: DivRhoUK,DivUp
+  real(dp), dimension(:), allocatable :: up,vp,wp
+  real(dp), dimension(:), allocatable :: deni
 
 ! Variable specific coefficients:
   gam = gdsEn
@@ -95,6 +121,7 @@ subroutine calc_energy
 
 ! Calculate gradient: 
   call grad(En,dEndxi)
+  call grad(T,dTdxi)
 
   ! Velocity gradients update (is it necessary here?) 
   call grad(U,dUdxi)
@@ -150,6 +177,16 @@ subroutine calc_energy
   endif
 
 
+    ! ! > Convective term correction
+    ! ! NAPOMENA!!:
+    ! !  Za ovaj modul uvek stavljamo da je upwind schema 1st upwind i tako cemo racunati
+    ! !  i konvekciju ispod za Temp, ali eksplicitna konvekcija za En (totalna energija ili totalna entalpija)
+    ! !  mora da bude high order.
+    ! !  Ako ljudi stave drugaciju upwind schemu overridovacemo u 1st Upwind. Da pojednostavimo.
+    ! su = su + explDiv( flmass, (c_p*T - En) ) ! PROVERITI DA LI OVAKO MOZE
+
+
+
 !
 ! > Volume source terms - loop over cells
 !
@@ -182,34 +219,64 @@ subroutine calc_energy
     endif
 
 
+    
+    !
+    ! > Source terms caused by writing the energy variable (total energy or total enthaply) in terms of temperature.
+    !
+
+    ! > Unsteady term correction
+    if (ltransient) then
+
+      apotime = den(inp)*vol(inp)/timestep
+
+      if( bdf .or. cn ) then
+        
+        su(inp) = su(inp) + apotime*( c_p*( T(inp) - To(inp) ) - ( En(inp)-Eno(inp) ) )
+
+      elseif( bdf2 ) then
+
+        su(inp) = su(inp) + apotime*( &
+                                      ( c_p*( 1.5_dp*T(inp) - 2*To(inp) + 0.5_dp*Too(inp) ) ) - &
+                                      ( 1.5_dp*En(inp) - 2*Eno(inp) + 0.5_dp*Enoo(inp) ) &
+                                    )
+      endif
+
+    endif
+
+
+    !
+    ! > Source terms
+    !
+
     if (ltransient) then
 
       if ( solveEnthalpy .or. solveInternalEnergy ) then
-        ! Find using the explicit fv approach the time derivative of the mechanical energy - KE
-        ! We can use BDF2 to accurately approximating it, if we save two previous time levels of velocity
+        ! > ddt(rho*K)
+
         if( bdf .or. cn ) then
           Ke  = 0.5_dp*(u(inp)**2+v(inp)**2+w(inp)**2)        ! 1/2 * |u|^2
           Keo = 0.5_dp*(uo(inp)**2+vo(inp)**2+wo(inp)**2)     ! 1/2 * |uo|^2
 
-          DdtRhoK = den(inp)*vol(inp) * ( Ke - Keo )
+          su(inp) = su(inp) + den(inp)*vol(inp) * ( Ke - Keo )
 
         elseif( bdf2 ) then
           Ke   = 0.5_dp*(u(inp)**2+v(inp)**2+w(inp)**2)       ! 1/2 * |u|^2
           Keo  = 0.5_dp*(uo(inp)**2+vo(inp)**2+wo(inp)**2)    ! 1/2 * |uo|^2
           Keoo = 0.5_dp*(uoo(inp)**2+voo(inp)**2+woo(inp)**2) ! 1/2 * |uoo|^2
 
-          DdtRhoK = den(inp)*vol(inp) * ( 1.5_dp*Ke - 2*Keo + 0.5_dp*Keoo )
+          su(inp) = su(inp) + den(inp)*vol(inp) * ( 1.5_dp*Ke - 2*Keo + 0.5_dp*Keoo )
 
         endif
       endif
 
       if ( solveEnthalpy ) then
-        ! Time derivative of pressure - find explicitly as source
+        ! > dpdt - the time derivative of pressure - find explicitly as source
+
         if( bdf .or. cn ) then
-          dpdt = vol(inp) * ( p(inp) - po(inp) )
+          su(inp) = su(inp) + vol(inp) * ( p(inp) - po(inp) )
 
         elseif( bdf2 ) then
-          dpdt = vol(inp) * ( 1.5_dp*p(inp) - 2*po(inp) + 0.5_dp*poo(inp) )
+          su(inp) = su(inp) + vol(inp) * ( 1.5_dp*p(inp) - 2*po(inp) + 0.5_dp*poo(inp) )
 
         endif
       endif
@@ -217,17 +284,17 @@ subroutine calc_energy
     endif ! Unsteady
 
 
-    ! Unsteady Term for energy
+    ! Unsteady Term for Temperature - we are writting the equation in terms of Temperature
     if (ltransient) then
 
       if( bdf .or. cn ) then
         apotime = den(inp)*vol(inp)/timestep
-        su(inp) = su(inp) + apotime*Eno(inp)
+        su(inp) = su(inp) + apotime*To(inp)
         sp(inp) = sp(inp) + apotime
 
       elseif( bdf2 ) then
         apotime=den(inp)*vol(inp)/timestep
-        su(inp) = su(inp) + apotime*( 2*Eno(inp) - 0.5_dp*Enoo(inp) )
+        su(inp) = su(inp) + apotime*( 2*To(inp) - 0.5_dp*Too(inp) )
         sp(inp) = sp(inp) + 1.5_dp*apotime
 
       endif
@@ -250,7 +317,7 @@ subroutine calc_energy
     call facefluxsc( ijp, ijn, &
                      xf(i), yf(i), zf(i), arx(i), ary(i), arz(i), &
                      flmass(i), facint(i), gam, &
-                     En, dEndxi, prtr, cap, can, suadd )
+                     T, dTdxi, prtr, cap, can, suadd ) ! Promenio u Temp iz En
 
     ! > Off-diagonal elements:
 
@@ -305,11 +372,11 @@ subroutine calc_energy
         call facefluxsc_boundary( ijp, ijb, &
                          xf(iface), yf(iface), zf(iface), arx(iface), ary(iface), arz(iface), &
                          flmass(iface), &
-                         En, dEndxi, prtr, cap, can, suadd)
+                         T, dTdxi, prtr, cap, can, suadd)
 
         Sp(ijp) = Sp(ijp)-can
 
-        Su(ijp) = Su(ijp)-can*En(ijb) + suadd
+        Su(ijp) = Su(ijp)-can*T(ijb) + suadd
 
       end do
 
@@ -330,7 +397,7 @@ subroutine calc_energy
         !# are = sqrt(arx(iface)**2+ary(iface)**2+arz(iface)**2)
         !# coef = dcoef*are/dnw(iWall)
         sp(ijp) = sp(ijp) + coef
-        su(ijp) = su(ijp) + coef*En(ijb)
+        su(ijp) = su(ijp) + coef*T(ijb)
 
       enddo
 
@@ -344,7 +411,7 @@ subroutine calc_energy
         ijp = owner(iface)
         ijb = iBndValueStart(ib) + i
 
-        En(ijb)=En(ijp)
+        T(ijb)=T(ijp)
 
       enddo
 
@@ -375,7 +442,7 @@ subroutine calc_energy
         nzf = arz(iface)/are
 
         ! Gradient in face-normal direction        
-        dTn = dEndxi(1,ijb)*nxf+dEndxi(2,ijb)*nyf+dEndxi(3,ijb)*nzf
+        dTn = dTdxi(1,ijb)*nxf+dTdxi(2,ijb)*nyf+dTdxi(3,ijb)*nzf
 
         ! Explicit source
         su(ijp) = su(ijp) + coef*dTn
@@ -399,7 +466,7 @@ subroutine calc_energy
         ! face flux scalar but for periodic boundaries - it will be recognized by arguments
         call facefluxsc_periodic( ijp, ijn, xf(if), yf(if), zf(if), arx(if), ary(if), arz(if), &
                                   flmass(if), gam, &
-                                  En, dEndxi, prtr, cap, can, suadd )
+                                  T, dTdxi, prtr, cap, can, suadd )
 
 
         ! > Off-diagonal elements:
@@ -452,16 +519,16 @@ subroutine calc_energy
           ijn = neighbour(i)
 
           k = icell_jcell_csr_index(i)
-          su(ijp) = su(ijp) - a(k)*Eno(ijn)
+          su(ijp) = su(ijp) - a(k)*To(ijn)
 
           k = jcell_icell_csr_index(i)
-          su(ijn) = su(ijn) - a(k)*Eno(ijp)
+          su(ijn) = su(ijn) - a(k)*To(ijp)
       enddo
       
       do ijp=1,numCells
           apotime=den(ijp)*vol(ijp)/timestep
           off_diagonal_terms = sum( a( ioffset(ijp) : ioffset(ijp+1)-1 ) ) - a(diag(ijp))
-          su(ijp) = su(ijp) + (apotime + off_diagonal_terms)*Eno(ijp)
+          su(ijp) = su(ijp) + (apotime + off_diagonal_terms)*To(ijp)
           sp(ijp) = sp(ijp)+apotime
       enddo
 
@@ -475,56 +542,39 @@ subroutine calc_energy
   do inp = 1,numCells
 
     ! Main diagonal term assembly:
-    ! Sum all coefs in a row of a sparse matrix, but since we also included diagonal element 
-    ! we substract it from the sum, to eliminate it from the sum.
+    ! Sum all off-diagonal coefs in a row of a sparse matrix.
+    ! we substract the diagonal element from the sum, to eliminate it from the sum.
     off_diagonal_terms  = sum( a(ioffset(inp) : ioffset(inp+1)-1) ) - a(diag(inp))
     a(diag(inp)) = sp(inp) - off_diagonal_terms
 
     ! Underelaxation:
     a(diag(inp)) = a(diag(inp))*urfr
-    su(inp) = su(inp) + urfm*a(diag(inp))*En(inp)
+    su(inp) = su(inp) + urfm*a(diag(inp))*T(inp)
 
   enddo
 
   ! Solve linear system:
-  call csrsolve(lSolverEn, En, su, resor(7), maxiterEn, tolAbsEn, tolRelEn, 'Energy')
+  call csrsolve(lSolverEn, T, su, resor(7), maxiterEn, tolAbsEn, tolRelEn, 'Energy')
 
 
   ! Update field values at boundaries
-  call updateBoundary(En)
+  call updateBoundary(T)
 
-  ! do ib=1,numBoundaries
-
-  !   if ( bctype(ib) == 'outlet' .or. bctype(ib) == 'symmetry' ) then
-
-  !     do i=1,nfaces(ib)
-
-  !       iface = startFace(ib) + i
-  !       ijp = owner(iface)
-  !       ijb = iBndValueStart(ib) + i
-
-  !       En(ijb) = En(ijp)
-
-  !     enddo
-
-  !   endif
-
-  ! enddo
 
 ! Report range of scalar values and clip if negative
-  fimin = minval(En(1:numCells))
-  fimax = maxval(En(1:numCells))
+  fimin = minval( T(1:numCells) )
+  fimax = maxval( T(1:numCells) )
   
-  write(6,'(2x,es11.4,a,es11.4)') fimin,' <= Energy <= ',fimax
+  write(6,'(2x,es11.4,a,es11.4)') fimin,' <= Temperature <= ',fimax
 
   ! These field values cannot be negative
-  if(fimin.lt.0.0_dp) En(1:numCells) = max( En(1:numCells), small )  
+  if(fimin.lt.0.0_dp) T(1:numCells) = max( T(1:numCells), small )  
 
 
   !
-  ! > Recalculate temperature from energy variable (total energy, ethalpy or internal energy)
+  ! > Recalculate energy variable (total energy, ethalpy or internal energy)
   !
-  call correct_temperature
+  call correct_energy
 
 
 end subroutine
@@ -938,10 +988,10 @@ subroutine facefluxsc_boundary(ijp, ijn, xf, yf, zf, arx, ary, arz, fm, FI, dFid
 end subroutine
 
 
-subroutine correct_temperature
+subroutine correct_energy
 !
 ! Purpose:
-!  Recalculate temperature from energy variable (total energy, ethalpy or internal energy).
+!  Recalculate energy variable (total energy, ethalpy or internal energy).
 !
 ! Author:
 !  Nikola Mirkov
@@ -952,9 +1002,15 @@ subroutine correct_temperature
 
   if ( solveEnthalpy ) then
 
+    ! En = 
+
   else if ( solveInternalEnergy ) then
 
+    ! En = 
+
   elseif ( solveTotalEnergy .or. solveInternalEnergy ) then
+
+    ! En = 
 
   else
     write(*,*) "Error: choose one energy variable!"

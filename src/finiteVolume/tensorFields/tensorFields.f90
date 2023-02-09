@@ -68,63 +68,77 @@ end type
 ! > Operations on vector and tensor fields
 !
 
+! Inner product (contraction over single index) 
 interface operator(*)
-   module procedure calc_inner_product
-   module procedure calc_inner_product_surface_vectors
-   module procedure calc_inner_product_rank2_and_rank1_tensors
-   module procedure calc_inner_product_rank1_and_rank2_tensors
+   module procedure inner_product_vectors
+   module procedure inner_product_surface_vectors
+   module procedure inner_product_rank2_and_rank1_tensors
+   module procedure inner_product_rank1_and_rank2_tensors
+   module procedure inner_product_rank2_tensors
 end interface
 
-interface operator(.x.)
-   module procedure calc_cross_product
-end interface
-
-interface operator(.o.)
-   module procedure calc_tensor_product
-   module procedure calc_tensor_product_rank2_tensors
-end interface
-
+! Double inner product (conrtaction over two indices)
 interface operator(**)
-   module procedure calc_inner_product_rank2_tensor
-   module procedure calc_inner_product_rank2_symmetric_tensor
+  module procedure doubleinner_product_rank2_tensor
+  module procedure doubleinner_product_rank2_symmetric_tensor
 end interface
 
+! Cross product of vectors
+interface operator(.x.)
+   module procedure cross_product
+end interface
+
+! Outer product of two vectors = cij = ai*bj
+interface operator(.o.)
+   module procedure tensor_product
+end interface
+
+! Transpose of a rank two tensor
 interface operator(.trans.)
-   module procedure transpose_rank2_tensor
+   module procedure transpose_tensor
 end interface
 
+! Trace of rank two tensors
 interface operator(.tr.)
    module procedure trace_rank2_tensor
    module procedure trace_rank2_symmetric_tensor
 end interface
 
+! Elementwise square
 interface operator(.Sq.)
    module procedure square_scalar_field
    module procedure square_rank2_tensor
    module procedure square_rank2_symmetric_tensor
 end interface
 
+! Determinant of rank two tensor
 interface operator(.det.)
    module procedure determinant_rank2_tensor
    module procedure determinant_rank2_symmetric_tensor
 end interface
 
+! Returns a vector as extracted diagonal of a rank two tensor
 interface operator(.diagonal.)
    module procedure diagonal
 end interface
 
+! A Hodge dual
 interface operator(.hodge.)
    module procedure hodge_dual
 end interface
 
+! Returns curl of vector field but make sure you provide 
+! its gradient tensor as an argument to curl
 interface operator(.curl.)
    module procedure curl
 end interface
 
+! Symmetric part of a rank two tensor
 interface operator(.symm.)
    module procedure symm
 end interface
 
+! Skew symmetric part of a rank two tensor
 interface operator(.skew.)
    module procedure skew
 end interface
@@ -151,6 +165,7 @@ interface operator(.hyd.)
    module procedure hydrostatic_part_rank2_tensor
 end interface
 
+! Elementwise raise to power of any field below
 interface power
    module procedure power_volScalarField
    module procedure power_volVectorField
@@ -176,6 +191,7 @@ end interface
 interface operator(*)
    module procedure scalar_volScalarField_multiply
    module procedure scalarField_volScalarField_multiply
+   module procedure volScalarField_volScalarField_multiply
    module procedure scalar_volVectorField_multiply
    module procedure scalarField_volVectorField_multiply
    module procedure volScalarField_volVectorField_multiply
@@ -187,8 +203,14 @@ interface operator(*)
    module procedure surfaceScalarField_surfaceTensorField_multiply
 end interface
 
+! Elementwise division
 interface operator(/)
    module procedure volScalarField_volScalarField_divide
+end interface
+
+! Elementwise square root
+interface sqrt 
+  module procedure sqrtVolScalarField
 end interface
 
 public
@@ -325,9 +347,10 @@ end function new_surfaceTensorField
 ! > Operations over fields
 !
 
-! The .dot. operator defining scalar product between two vector fields and ...
 
-function calc_inner_product(v1, v2)  result(inner_product)
+! The .dot. operator defining scalar product between two vector fields
+
+function inner_product_vectors(v1, v2)  result(inner_product)
     implicit none
     type(volVectorField), intent(in) :: v1, v2
     type(volScalarField)             :: inner_product
@@ -350,7 +373,7 @@ function calc_inner_product(v1, v2)  result(inner_product)
 end function
 
 
-function calc_inner_product_surface_vectors(v1, v2)  result(inner_product)
+function inner_product_surface_vectors(v1, v2)  result(inner_product)
     implicit none
     type(surfaceVectorField), intent(in) :: v1, v2
     type(surfaceScalarField)             :: inner_product
@@ -372,9 +395,9 @@ function calc_inner_product_surface_vectors(v1, v2)  result(inner_product)
 end function
 
 
-! ... inner product between tensor and vector vi = Tij*vj, and...
+! Inner product between tensor and vector vi = Tij*vj.
 
-function calc_inner_product_rank2_and_rank1_tensors(T, v1)  result(v2)
+function inner_product_rank2_and_rank1_tensors(T, v1)  result(v2)
     implicit none
     type(volTensorField), intent(in) :: T
     type(volVectorField), intent(in) :: v1
@@ -392,9 +415,9 @@ function calc_inner_product_rank2_and_rank1_tensors(T, v1)  result(v2)
     enddo
 end function
 
-! ... inner product between vector and tensor vi = vj*Tij
+! Inner product between vector and tensor vj = vi*Tij.
 
-function calc_inner_product_rank1_and_rank2_tensors(v1,T)  result(v2)
+function inner_product_rank1_and_rank2_tensors(v1,T)  result(v2)
     implicit none
     type(volVectorField), intent(in) :: v1
     type(volTensorField), intent(in) :: T
@@ -408,8 +431,8 @@ function calc_inner_product_rank1_and_rank2_tensors(v1,T)  result(v2)
 !   bi = Tji*aj using derived operators:
 !
 !        transpose tensor Tij
-!        |               inner product bi = Tij*aj
-!        |               |
+!        |         inner product bi = Tij*aj
+!        |        |
     v2 = .trans.T * v1
 
 end function
@@ -417,7 +440,7 @@ end function
 
 ! The cross product of two vector fields
 
-function calc_cross_product(v1, v2)  result(v3)
+function cross_product(v1, v2)  result(v3)
     implicit none
     type(volVectorField), intent(in) :: v1, v2
     type(volVectorField)             :: v3
@@ -435,9 +458,9 @@ function calc_cross_product(v1, v2)  result(v3)
 end function
 
 
-! ! The .o. operator defining tensor, or outer product between two column vectors, or ...
+! The .o. operator defining tensor, or outer product between two vector fields
 
-function calc_tensor_product(v1, v2)  result(T)
+function tensor_product(v1, v2)  result(T)
     implicit none
     type(volVectorField), intent(in) :: v1, v2
     type(volTensorField)             :: T
@@ -462,9 +485,9 @@ function calc_tensor_product(v1, v2)  result(T)
     enddo
 end function
 
-! ... between two tensors
+! Inner product (contraction of single index) of two rank two tensors
 
-function calc_tensor_product_rank2_tensors(T1, T2)  result(T3)
+function inner_product_rank2_tensors(T1, T2)  result(T3)
     implicit none
     type(volTensorField), intent(in) :: T1, T2
     type(volTensorField)             :: T3
@@ -490,42 +513,42 @@ function calc_tensor_product_rank2_tensors(T1, T2)  result(T3)
 end function
 
 
-function calc_inner_product_rank2_tensor(T1, T2) result(inner_product)
+function doubleinner_product_rank2_tensor(T1, T2) result(s)
     implicit none
     type(volTensorField), intent(in) :: T1, T2
-    type(volScalarField) :: inner_product
+    type(volScalarField) :: s
     integer :: i,num
 
     num = size(T1%xx)
 
-    inner_product = new_volScalarField(num)
+    s = new_volScalarField(num)
 
     do i = 1,num
-        inner_product%mag(i) = T1%xx(i) * T2%xx(i) + T1%xy(i) * T2%xy(i) + T1%xz(i) * T2%xz(i)  &
-                             + T1%yx(i) * T2%yx(i) + T1%yy(i) * T2%yy(i) + T1%yz(i) * T2%yz(i)  &
-                             + T1%zx(i) * T2%zx(i) + T1%zy(i) * T2%zy(i) + T1%zz(i) * T2%zz(i)
+        s%mag(i) = T1%xx(i) * T2%xx(i) + T1%xy(i) * T2%xy(i) + T1%xz(i) * T2%xz(i)  &
+                 + T1%yx(i) * T2%yx(i) + T1%yy(i) * T2%yy(i) + T1%yz(i) * T2%yz(i)  &
+                 + T1%zx(i) * T2%zx(i) + T1%zy(i) * T2%zy(i) + T1%zz(i) * T2%zz(i)
     enddo
 end function
 
-function calc_inner_product_rank2_symmetric_tensor(T1, T2) result(inner_product)
+function doubleinner_product_rank2_symmetric_tensor(T1, T2) result(s)
     implicit none
     type(volSymmetricTensorField), intent(in) :: T1, T2
-    type(volScalarField) :: inner_product
+    type(volScalarField) :: s
     integer :: i,num
 
     num = size(T1%xx)
 
-    inner_product = new_volScalarField(num)
+    s = new_volScalarField(num)
 
     do i = 1,num
-        inner_product%mag(i) = T1%xx(i) * T2%xx(i) + T1%yy(i) * T2%yy(i) + T1%zz(i) * T2%zz(i) &
-                       + 2 * ( T1%xy(i) * T2%xy(i) + T1%xz(i) * T2%xz(i) + T1%yz(i) * T2%yz(i) )
+        s%mag(i) = T1%xx(i) * T2%xx(i) + T1%yy(i) * T2%yy(i) + T1%zz(i) * T2%zz(i) &
+                   + 2 * ( T1%xy(i) * T2%xy(i) + T1%xz(i) * T2%xz(i) + T1%yz(i) * T2%yz(i) )
                                                                          
     enddo
 end function
 
 
-function transpose_rank2_tensor(T1)  result(T2)
+function transpose_tensor(T1)  result(T2)
     implicit none
     type(volTensorField), intent(in) :: T1
     type(volTensorField)             :: T2
@@ -662,6 +685,32 @@ function scalarField_volScalarField_multiply(alpha,s1)  result(s2)
         s2%mag(i) = alpha(i) * s1%mag(i)  
     enddo
 end function
+
+
+! Elementwise product of two scalar fields
+
+function volScalarField_volScalarField_multiply(sf1, sf2)  result(sf)
+    implicit none
+    type(volScalarField), intent(in) :: sf1, sf2
+    type(volScalarField)             :: sf
+    integer :: i,num
+
+    num = size( sf1%mag )
+
+    ! Simple check
+    if (num /= size(sf2%mag)) then
+      write(*,*) "The size of two scalar fields are not the same!"
+      stop
+    endif
+
+    sf = volScalarField( trim(sf1%field_name)//'*'//trim(sf2%field_name), sf1%mag )
+
+    do i = 1,num
+        sf%mag(i) = sf1%mag(i) * sf2%mag(i)
+    enddo
+
+end function
+
 
 function scalar_volVectorField_multiply(alpha,v1)  result(v2)
     implicit none
@@ -947,7 +996,7 @@ function square_rank2_tensor(T1)  result(T2)
         T2%zy(i) = T1%zy(i)**2
         T2%zz(i) = T1%zz(i)**2
     enddo
-end function square_rank2_tensor
+end function
 
 
 function square_rank2_symmetric_tensor(T1)  result(T2)
@@ -970,7 +1019,7 @@ function square_rank2_symmetric_tensor(T1)  result(T2)
 
         T2%zz(i) = T1%zz(i)**2
     enddo
-end function square_rank2_symmetric_tensor
+end function
 
 function power_volScalarField(s,p) result(ss)
     implicit none
@@ -1059,7 +1108,7 @@ end function
 function determinant_rank2_symmetric_tensor(T) result(determinant)
     implicit none
     type(volSymmetricTensorField), intent(in) :: T
-    type(volScalarField)                      :: determinant
+    type(volScalarField) :: determinant
     integer :: i,num
 
     num = size(T%xx)
@@ -1077,7 +1126,7 @@ end function
 function determinant_rank2_tensor(T) result(determinant)
     implicit none
     type(volTensorField), intent(in) :: T
-    type(volScalarField)                      :: determinant
+    type(volScalarField) :: determinant
     integer :: i,num
 
     num = size(T%xx)
@@ -1207,7 +1256,7 @@ function deviatoric_part_rank2_tensor(T)  result(devT)
 
 !            overloaded operator - here '-' subtracts two tensor fields
 !            |             overloaded operator - here '*' multiplies tensor field by a constant scalar
-!            |             |         overloaded operator - here '*' multiplies tensor fields by a real scalar array of size[1:numCells]
+!            |             |         overloaded operator - here '*' multiplies scalar field and tensor field.
 !            |             |         |
     devT = T - ( 1./3.0_dp * ( .tr.T * I) )
 
@@ -1227,7 +1276,7 @@ function deviatoric_part_rank2_tensor_23(T)  result(devT)
 
 !            overloaded operator - here '-' subtracts two tensor fields
 !            |             overloaded operator - here '*' multiplies tensor field by a constant scalar
-!            |             |         overloaded operator - here '*' multiplies tensor fields by a real scalar array of size[1:numCells]
+!            |             |         overloaded operator - here '*' multiplies scalar field and tensor field.
 !            |             |         |
     devT = T - ( 2./3.0_dp * ( .tr.T * I) )
                 !^
@@ -1247,7 +1296,7 @@ function hydrostatic_part_rank2_tensor(T)  result(hydT)
 
     I  = eye(num)
 !                     overloaded operator - here '*' multiplies tensor field by a constant scalar
-!                     |         overloaded operator - here '*' multiplies tensor fields by a real scalar array of size[1:numCells]
+!                     |         overloaded operator - here '*' multiplies scalar field and tensor field.
 !                     |         |
     hydT =  1./3.0_dp * ( .tr.T * I ) 
 
@@ -1292,6 +1341,18 @@ function magSymmetricTensorField(S) result(scalar)
 
         scalar = S**S
         scalar%mag = sqrt(scalar%mag)
+
+end function
+
+
+! sqrt
+function sqrtVolScalarField(s) result(s1)
+    implicit none
+    type(volScalarField), intent(in) :: s
+    type(volScalarField) :: s1    
+    
+    s1 = s
+    s1%mag = sqrt(s1%mag)
 
 end function
 

@@ -13,8 +13,10 @@ subroutine modify_viscosity_turbulence
   use IDDES_k_omega_SST
   use k_eqn_eddy
   use spalart_allmaras
-  ! use smagorinsky
   use wale_sgs
+  use vortexID_sgs
+  use sigmaSGS
+  use vremanSGS
 
   implicit none
 
@@ -62,11 +64,17 @@ subroutine modify_viscosity_turbulence
     case ('IDDES_k_omega_sst')
       call modify_viscosity_IDDES_k_omega_sst
 
-    ! case ('Smagorinsky')
-    !   call modify_viscosity_smagorinsky
-
     case ('WALE')
       call modify_viscosity_wale_sgs
+
+    case('vortexIDsgs')
+      call modify_viscosity_vortexID_sgs
+
+    case('sigmaSGS')
+      call modify_viscosity_sigma_sgs
+
+    case('vremanSGS')
+      call modify_viscosity_vreman_sgs
 
     case default ! e.g. laminar flow
       return

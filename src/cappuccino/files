@@ -33,6 +33,10 @@ IDDES_k_omega_SST.f90
 spalart_allmaras.f90
 k_eqn_eddy.f90
 wale_sgs.f90
+vortexIdentification.f90
+vortexID_sgs.f90
+sigmaSGS.f90
+vremanSGS.f90
 modify_viscosity_turbulence.f90
 modify_viscosity_inlet.f90
 mhd.f90

@@ -383,11 +383,11 @@ subroutine channel_disturbances(x,y,z,ux,uy,uz)
   real(dp), intent(inout) :: ux,uy,uz
 
   real(dp), parameter :: channelHalfWidth = 1.0
-  real(dp), parameter :: channelLength = 4.0 ! 6.28 
+  real(dp), parameter :: channelLength = 6.28 ! 4.0
   real(dp) :: yr,rr,th,xo,uxx
   real(dp) :: amp_x,freq_x,freq_t,amp_tht,amp_clip,blt,phase_x,arg_tht,amp_sin,rand,big
 
-  yr = y !yr = (y-1.)/channelHalfWidth ! <- yr = y if [-1,1]; yr = y-1.0 if [0,2] in vertical direction
+  yr = y !yr = (y-1.)/channelHalfWidth ! NOTE: yr = y if y in [-1,1]; yr = y-1.0 if y in [0,2] in vertical direction.
   rr = yr*yr
   if (rr.gt.0) rr=sqrt(rr)
   th = atan2(y,z)

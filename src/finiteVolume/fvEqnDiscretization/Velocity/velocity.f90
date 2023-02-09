@@ -1439,7 +1439,7 @@ subroutine calc_wall_shear
       enddo
 
       ! ! Let's print the skin friction coefficient - Cf
-      ! ! Below we print tau_wall v.s. Rex ( this is hardcoded for turb flat plate case)
+      ! ! Below we print Cf_wall v.s. Rex ( this is hardcoded for turb flat plate case)
       ! write(*,'(a)') ' '  
       ! write(*,'(a)') '  Skin friction coefficient: '//trim( bcname(ib) )  
       ! write(*,'(a)') ' '  
