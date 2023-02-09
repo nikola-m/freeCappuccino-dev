@@ -1,0 +1,24 @@
+internalField
+  uniform
+    0.1335 0.0 0.0
+boundaryField
+in
+  Neumann
+    zeroGradient
+out
+  Neumann
+    zeroGradient
+left
+  Neumann
+    zeroGradient
+right
+  Neumann
+    zeroGradient
+top
+  Dirichlet
+    uniform
+      0.0 0.0 0.0
+bottom
+  Dirichlet
+    uniform
+      0.0 0.0 0.0
