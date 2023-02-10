@@ -19,7 +19,7 @@ make execut=bin/cappuccino makefile_dir=src/cappuccino LDFLAGS=-O2\ -Wall LDLIBS
 make execut=test/testFieldOperations/testFieldOperations makefile_dir=test/testFieldOperations LDFLAGS=-O2\ -Wall LDLIBS=-llapack
 
 # Make Decomposition application:
-make execut=bin/decomposition makefile_dir=applications/Decomposition LDFLAGS=-O2\ -Wall LDLIBS=-llapack
+make execut=bin/decomposition makefile_dir=applications/Decomposition LDFLAGS=-O2\ -Wall LDLIBS=
 #
 # Make Poisson equation solver:
 #make execut=bin/poisson makefile_dir=applications/Poisson LDFLAGS=-O2\ -Wall LDLIBS=-llapack
