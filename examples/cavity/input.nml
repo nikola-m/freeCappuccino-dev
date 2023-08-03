@@ -1,0 +1,64 @@
+&input_parameters
+              title = 'Lid driven cavity'    ! Descriptive name of the case which will be written in monitor file.                      
+        mesh_format = 'nativeMesh'             ! Mesh format 'nativeMesh' for native polyMesh format or 'foamMesh' for OpenFOAM polyMesh.
+              lread = F                      ! Read restart file - continue simulation from saved state?  True/False.
+              ltest = F                      ! Verbosity for linear solver convergence (for troubleshooting) True/False. 
+!
+              calcU = T             ! Activate Velocity field caculation? True/False.
+               urfU = 0.8, 0.8, 0.8 ! Under-relaxation factor for momentum eq
+               gdsU = 1.0           ! gamma-deferred correction parameter for velocity
+           cSchemeU = 'central'         ! Convection scheme for momentun eq
+           dSchemeU = 'uncorrected'    ! Difussion scheme for momentum eq
+            nrelaxU = 0             ! Integer parameter for difussion scheme - advanced
+           lSolverU = 'bicgstab'    ! Linear algebraic solver for momentum eq
+           maxiterU = 5             ! Max no of iterations for linear U-V-W equations
+            tolAbsU = 1e-15         ! Absolute tolerance level for residual for linear U-V-W equations
+            tolRelU = 0.01          ! Relative tolerance level for residual for linear U-V-W equations
+            pscheme = 'linear'      ! pressure interpolation scheme 
+!
+              calcP = T             ! Activate Pressure field caculation? True/False.
+               urfP = 0.3           ! Under-relaxation factor for pressure
+           lSolverP = 'iccg'        ! Linear algebraic solver for pressure/pressure correction (For LIS e.g. '-i cg -p jacobi -maxiter 80')
+           maxiterP = 20            ! Max no of iterations for pressure/pressure correction
+            tolAbsP = 1e-15         ! Absolute tolerance level for residual for pressure/pressure correction
+            tolRelP = 0.025           ! Relative tolerance level for residual for pressure/pressure correction  
+!
+! Material properties
+!
+             densit = 1.0                ! Fluid density [kg/m3]
+             viscos = 0.01              ! Molecular dynamic viscosity [Pa.s]       
+              pranl = 1.0                ! Prandtl coefficient for specific fluid
+               beta = 1e-3               ! Thermal expansion coefficient
+!
+! Unsteady simulation options
+!
+         ltransient = F           !% |Unsteady simulation True/False and chose ONE algorithm  below
+                bdf = F           !% |Backward-Euler; First-Order Implicit, or...
+               bdf2 = F           !% |Second-Order Backward Euler; Second-Order Implicit, or...
+               bdf3 = F           !% |Third-order backard, or...
+                 CN = F           !% |Crank-Nicolson.
+!
+! Gradient computation
+! 
+              lstsq = F           !@ |Gradient approximation, chose ONE: Unweighted Least-Square gradient approximation, or...
+           lstsq_qr = F           !@ |Least square gradients based on thin QR decomposition, or...
+           lstsq_dm = F           !@ |Distance-square weighted version of Least-Square Gradient, or...
+              gauss = T           !@ |Cell based Gauss gradient with simple linear interpolation.       
+            limiter = 'no-limit'     ! Gradient limiter - default for all gradients
+!
+! Solution method: pressure-velocity coupling
+!   
+             SIMPLE = T       !# |Pressure-velocity coupling method - SIMPLE, or...
+               PISO = F       !# |Pressure-velocity coupling method - PISO.
+              ncorr = 1       !# |Number of PISO corrections - only relevant for PISO.
+              npcor = 1       ! Number of iterations for pressure/pressure correction equation - Number of Nonorthogonal corrections.  
+           pRefCell = 1       ! Reference cell for setting pressure level (since we have pure Neumann problem)
+          tolerance = 1e-5    ! Lower tolerance bound for outer (SIMPLE/PISO) iterations
+!
+! Simulation run details
+!
+            NUMSTEP = 500     ! Total number of timesteps.      
+           TIMESTEP = 1.0     ! Timestep size  - also known as dt.
+             NZAPIS = 500     ! Program writes output files every NZAPIS timesteps. 
+              MAXIT = 1       ! Number of iterations in SIMPLE/PISO sequential equation solution loop.
+/

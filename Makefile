@@ -39,12 +39,18 @@ execut = bin/cappuccino
 
 FC = gfortran
 
-# The -cpp flag is here becasue of LIS library, if you compile without it
-# you don't have to use this flag
-LDFLAGS = -O3 -Wall -cpp
+# add -DLIS to define LIS library flag;
+# add -DLAPACK to define Lapack library flag;
+# The -cpp flag is here because of C style preprocessor directives.
+#LDFLAGS = -O3 -cpp -DLAPACK -DLIS -Wall
+LDFLAGS = -O3 -cpp -Wall
 
-# Lapack is used for LSTSQ_QR gradients, LIS may be used for linear systems
-LDLIBS = -llapack -llis -fopenmp
+# Lapack is used for LSTSQ_QR gradients, LIS may be used for linear systems.
+# If you don't use either LAPACK or LIS don't link these libraries below.
+# OpenMP is used within LIS, only in a case you've compiled LIS with OpenMP support.
+#LDLIBS = -llapack -llis -fopenmp
+#LDLIBS = -llapack
+LDLIBS =
 
 # Extend known suffixes:
 # (if the suffixes are not ".f" or ".F")

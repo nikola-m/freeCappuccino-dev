@@ -167,7 +167,6 @@ non_newtonian_model = 'PowerLaw'  ! Self-explanatory
            lstsq_dm = F           !@ |Distance-square weighted version of Least-Square Gradient, or...
          node_gauss = F           !@ |Node based Gauss gradient using pseudolaplacian interpolation, or...
               gauss = T           !@ |Cell based Gauss gradient with simple linear interpolation.
-             nigrad = 1              ! Number of iterations for Gauss gradient approximation.   
             limiter = 'Venkatakishnan' ! Gradient limiter - default for all gradients (no-limit, Barth-Jespersen, Venkatakishnan, multidimensional, R3,...)
         !
         ! Solution method: pressure-velocity coupling

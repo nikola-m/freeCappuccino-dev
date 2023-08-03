@@ -1,15 +1,15 @@
 &input_parameters
               title = 'Delta wing laminar'  ! Descriptive name of the case which will be written in monitor file.                      
-        mesh_format = 'nativeMesh'                       ! Mesh format 'nativeMesh' for native polyMesh format or 'foamMesh' for OpenFOAM polyMesh.
-              lread = F                                ! Read restart file - continue simulation from saved state?  True/False.
-              ltest = F                                ! Verbosity for linear solver convergence (for troubleshooting) True/False. 
+        mesh_format = 'nativeMesh'          ! Mesh format 'nativeMesh' for native polyMesh format or 'foamMesh' for OpenFOAM polyMesh.
+              lread = F                     ! Read restart file - continue simulation from saved state?  True/False.
+              ltest = F                     ! Verbosity for linear solver convergence (for troubleshooting) True/False. 
         !
         ! Approximation details for velocity field.
         !
               calcU = T             ! Activate Velocity field caculation? True/False.
                urfU = 0.4 0.4 0.4   ! Under-relaxation factor for momentum eq
                gdsU = 1.0           ! gamma-deferred correction parameter for velocity
-           cSchemeU = 'linearUpwind'         ! Convection scheme for momentun eq
+           cSchemeU = 'linearUpwind'! Convection scheme for momentun eq
            dSchemeU = 'skewness'    ! Difussion scheme for momentum eq
             nrelaxU = 0             ! Integer parameter for difussion scheme - advanced
            lSolverU = 'bicgstab'    ! Linear algebraic solver for momentum eq
@@ -21,11 +21,11 @@
         ! Approximation details for pressure/pressure correction.
         !
               calcP = T             ! Activate Pressure field caculation? True/False.
-               urfP = 0.1          ! Under-relaxation factor for pressure
-           lSolverP = 'iccg'   !'-i cg -p saamg -tol 0.1 -maxiter 100' !'iccg'        ! Linear algebraic solver for pressure/pressure correction
+               urfP = 0.1           ! Under-relaxation factor for pressure
+           lSolverP = 'iccg'        !'-i cg -p saamg -tol 0.1 -maxiter 100' !'iccg'        ! Linear algebraic solver for pressure/pressure correction
            maxiterP = 100           ! Max no of iterations for pressure/pressure correction
             tolAbsP = 1e-13         ! Absolute tolerance level for residual for pressure/pressure correction
-            tolRelP = 0.01         ! Relative tolerance level for residual for pressure/pressure correction   
+            tolRelP = 0.01          ! Relative tolerance level for residual for pressure/pressure correction   
         !
         ! Physical model: Viscous flows - Laminar/Turbulent, Activation and model details.
         !
@@ -45,10 +45,12 @@
         ! Unsteady simulation
         !    
          ltransient = T           !% |Unsteady simulation True/False and chose ONE algorithm  below
-                bdf = T          !% |Backward-Euler; First-Order Implicit, or...
+                bdf = T           !% |Backward-Euler; First-Order Implicit, or...
                bdf2 = f           !% |Second-Order Backward Euler; Second-Order Implicit, or...
                bdf3 = f           !% |Third-order backard, or...
                  CN = f           !% |Crank-Nicolson.
+           autotime = T           !# Automatic timestep for pseudotransient runs,
+    lenscale_option = 'conservative'    !# length scale option for pseudotransient runs, 'conservative' or 'aggresive'.
         !
         ! Numerical approximation: Gradient approximation and limiting
         !
@@ -57,7 +59,7 @@
            lstsq_dm = F           !@ |Distance-square weighted version of Least-Square Gradient, or...
          node_gauss = T           !@ |Node based Gauss gradient using pseudolaplacian interpolation, or...
               gauss = F           !@ |Cell based Gauss gradient with simple linear interpolation.
-            limiter = 'Venkatakrishnan'     ! Gradient limiter - default for all gradients
+            limiter = 'Barth-Jespersen'     ! Gradient limiter - default for all gradients
         !
         ! Solution method: pressure-velocity coupling
         !    
@@ -71,10 +73,8 @@
         !
         ! Simulation run details
         !
-            numstep = 1000     ! Total number of timesteps.                   
+            numstep = 600     ! Total number of timesteps.                   
            timestep = 0.0025      ! Timestep size  - also known as dt.
              nzapis = 500      ! Program writes output files every NZAPIS timesteps.
               maxit = 1        ! Number of iterations in SIMPLE/PISO sequential equation solution loop. 
-           CoNumFix = F        !Co  |Adaptive timestep size based on target Courant number, True/False.
-      CoNumFixValue = 50.0      !Co  |If CoNumFix=True then set target maximum Courant number here.
 /

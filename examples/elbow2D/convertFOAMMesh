@@ -1,0 +1,6 @@
+mkdir 0
+readBoundaryFile 
+mv polyMesh/ polyMesh-OF/
+mkdir polyMesh
+foamToCappuccino 
+cp polyMesh-OF/boundary polyMesh/

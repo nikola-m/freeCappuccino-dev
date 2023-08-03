@@ -1,19 +1,18 @@
 ### Laminar flow in a 2D elbow with mixing of two streams
 
-This is one more well known case, used for demonstrations of e.g. ANSYS Fluent or OpenFOAM in their training examples. In the OpenFOAM code they use this case to show how to convert Fluent mesh files to their polyMesh format. This case uses their mesh, and we will use this to demonstrate mesh conversion from polyMesh format of OpenFoam to our native polyMesh format. We can convert it to native freeCappuccino format using `readBoundaryFile` tool (reqires editing boundary file afterwards to set bc types) and by using `foamToCappuccino` tool.
+This is one more well known case, used for demonstrations of e.g. ANSYS Fluent or OpenFOAM in their training examples. In the OpenFOAM code they use this case to show how to convert Fluent mesh files to their polyMesh format. Here we will demonstrate mesh conversion from polyMesh format of OpenFoam to our native polyMesh format.
 
-NOTE: In the input file we specify mesh format either by _nativeMesh_ of _foamMesh_. See input-simple.nml file.
+You can also unpack _zip_ folders with mesh, initial conditions and vtk templates files and run without mesh conversion.
+
+NOTE: In the input file we specify mesh format either by _nativeMesh_ of _foamMesh_. See e.g. 'input-simple.nml' file.
 
 ### Mesh conversion to native freeCappuccino format
 
 Perform following steps:
+
+Run script:
 ```
-> mkdir 0
-> readBoundaryFile 
-> mv polyMesh polyMesh-OF
-> mkdir polyMesh
-> mv polyMesh-OF/boundary polyMesh/
-> foamToCappuccino
+./convertFOAMMesh
 ```
 
 Edit the `polyMesh/boundary` file to look like this:
