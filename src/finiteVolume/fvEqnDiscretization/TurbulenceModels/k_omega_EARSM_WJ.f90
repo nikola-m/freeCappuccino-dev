@@ -3,11 +3,15 @@ module k_omega_earsm_wj
 ! Implementation of k-omega Shear Stress Transport (SST) two equation turbulence model.
 !
 ! REFERENCES:
-!     * ANSYS FLUENT Theory Guide
-!     * Menter, F. R., "Two-Equation Eddy-Viscosity Turbulence Models for Engineering Applications",
-!       AIAA Journal, Vol. 32, No. 8, August 1994, pp. 1598-1605. 
-!     * Menter, F. R., Kuntz, M., and Langtry, R., "Ten Years of Industrial Experience with the SST Turbulence Model",
-!       Turbulence, Heat and Mass Transfer 4, ed: K. Hanjalic, Y. Nagano, and M. Tummers, Begell House, Inc., 2003, pp. 625 - 632. 
+!     * https://turbmodels.larc.nasa.gov/easmko.html
+!     * Hellsten, A., "New Advanced k-omega Turbulence Model for High-Lift Aerodynamics," 
+!       AIAA Journal, Vol. 43, No. 9, 2005, pp. 1857-1869, https://doi.org/10.2514/1.13754.
+!     * Wallin, S. and Johansson, A. V., "An Explicit Algebraic Reynolds Stress Model for 
+!       Incompressible and Compressible Turbulent Flows," J. Fluid Mechanics, Vol. 403, 2000, pp. 89-132, 
+!       https://doi.org/10.1017/S0022112099007004.
+!     * V. Hamalainen, Implementing an Explicit Algebraic Reynolds Stress Model 
+!       Into The Three-Dimensional FINFLO Flow Solver, Report B-52, Espoo, 2001, Finland.
+!    
 !
 !======================================================================
 !     Adopting:
@@ -24,57 +28,50 @@ module k_omega_earsm_wj
   use parameters
   use geometry
   use variables
+  use gradients
+  use TurbModelData, only: TurbModel
   use scalar_fluxes, only: facefluxsc
 
   implicit none
 
   logical :: LowRe = .false. ! Has to be set in calling routine or in main program.
+  logical :: EARSM_WJ = .true.
+  logical :: EARSM_M = .false.
 
-  ! Turbulence model constants 
 
-      IF (EARSM_WJ) THEN
-      SIGMK1=1.1_dp
-      SIGMK2=1.1_dp
-      SIGMOM1=0.53_dp
-      SIGMOM2=1.0
-      BETAI1=0.0747
-      BETAI2=0.0828
-      A1=0.31_dp
-      ALPHA1=0.518_dp
-      ALPHA2=0.44
-      BETTAST=0.09
-      END IF
+! Often used numbers
+  real(dp), parameter :: P3= 1./3.   ! One third
+  real(dp), parameter :: P6= 0.5*P3  ! One sixth
+  real(dp), parameter :: TT= 2.0*P3  ! Two thirds
 
-      IF (EARSM_M) THEN
-      SIGMK1=0.856_dp
-      SIGMK2=1.1_dp
-      SIGMOM1=0.5_dp
-      SIGMOM2=0.856_dp
-      BETAI1=0.075
-      BETAI2=0.0828
-      A1=0.31_dp
-      BETTAST=0.09
-      ALPHA1=(BETAI1/BETTAST)-CAPPA**2/(SQRT(BETTAST)*SIGMOM1)
-      ALPHA2=(BETAI2/BETTAST)-CAPPA**2/(SQRT(BETTAST)*SIGMOM2)
-      END IF
+! Model coefficient and its variants
+  real(dp), parameter :: C1E = 1.8_dp
+  real(dp), parameter :: C1P = 1.8_dp  ! 9.0*(C1E - 1.0)/4.0 ! C1_prime
+  real(dp), parameter :: C1P3 = 0.6_dp ! C1P*P3
+  real(dp), parameter :: C1PSQ = 3.24_dp ! C1P**2
+  real(dp), parameter :: CT = 6.0_dp
 
   real(dp), parameter :: BETTAST=0.09_dp   
-  real(dp), parameter :: SIGMK1=1.176_dp
-  real(dp), parameter :: SIGMK2=1.0_dp
-  real(dp), parameter :: SIGMOM1=2.0_dp
-  real(dp), parameter :: SIGMOM2=1.168_dp
-  real(dp), parameter :: BETAI1=0.075_dp
-  real(dp), parameter :: BETAI2=0.0828_dp
   real(dp), parameter :: A1=0.31_dp
 
-! SST-1994 coefficients
+  ! Turbulence coeffficients (a bit different for EARSM_M and EARSM_WJ)
+  real(dp) :: SIGMK1
+  real(dp) :: SIGMK2
+  real(dp) :: SIGMOM1
+  real(dp) :: SIGMOM2
+  real(dp) :: BETAI1
+  real(dp) :: BETAI2
+  real(dp) :: ALPHA1
+  real(dp) :: ALPHA2
+
+!  SST-1994 coefficients:
 !  ALPHA1=(BETAI1/BETTAST)-CAPPA**2/(SQRT(BETTAST)*SIGMAOM1)
 !  ALPHA2=(BETAI2/BETTAST)-CAPPA**2/(SQRT(BETTAST)*SIGMAOM2)
-
-! SST-2003 coefficients. The first is higher than the original constant
-! definition by approximately 0.43%, and the second is lower by less than 0.08%. 
-  real(dp), parameter :: ALPHA1=5./9.0_dp
-  real(dp), parameter :: ALPHA2=0.44_dp
+!
+!  SST-2003 coefficients: The first is higher than the original constant
+!  definition by approximately 0.43%, and the second is lower by less than 0.08%. 
+!  ALPHA1=5./9.0_dp; ALPHA2=0.44_dp
+!
 
   real(dp), parameter :: C3 = 1.44_dp
 
@@ -82,11 +79,13 @@ module k_omega_earsm_wj
   real(dp), parameter :: CMU25 = sqrt(sqrt(BETTAST))
   real(dp), parameter :: CMU75 = cmu25**3
 
-  real(dp), dimension(:), allocatable :: fsst
+  ! real(dp) :: TEIN ! Used on We would neeed to define it from the inlet boundary data for TKE.
+
+  real(dp), dimension(:), allocatable :: fsst,cmueff ! Blending function and effecive Cmu coefficient
 
   private 
 
-  public :: LowRe
+  public :: EARSM_M, EARSM_WJ, LowRe
   public :: modify_viscosity_k_omega_earsm_wj
   public :: modify_viscosity_inlet_k_omega_earsm_wj
 
@@ -94,37 +93,48 @@ contains
 
 
 
-subroutine modify_viscosity_k_omega_earsm_wj()
+subroutine modify_viscosity_k_omega_earsm_wj
 !
 ! Main module routine to solve turbulence model equations and update effective viscosity.
 !
-  use types
-  use parameters
-  use variables
-  use gradients
 
   implicit none
 
   if(.not.allocated(fsst)) then
-    allocate(fsst(numTotal))
-    write(*,'(a)') "  **Allocated SST blending function."
+    allocate( fsst(numTotal) )
+    write(*,'(a)') "  **Allocated fsst blending function for k-omega-EARSM."
   endif
 
-  call calcsc(TE,dTEdxi,ite) ! Assemble and solve turbulence kinetic energy eq.
-  call calcsc(ED,dEDdxi,ied) ! Assemble and solve specific dissipation rate (omega [1/s]) of tke eq.
-  call modify_mu_eff()
+  if(.not.allocated(cmueff)) then
+    allocate( cmueff(numCells) )
+    write(*,'(a)') "  **Allocated cmueff for k-omega-EARSM."
+  endif
 
-end subroutine
+  ! Turbulence model constants 
 
+  IF (EARSM_M) THEN
+      SIGMK1=0.856_dp
+      SIGMK2=1.1_dp
+      SIGMOM1=0.5_dp
+      SIGMOM2=0.856_dp
+      BETAI1=0.075
+      BETAI2=0.0828
+      ALPHA1=(BETAI1/BETTAST)-CAPPA**2/(SQRT(BETTAST)*SIGMOM1)
+      ALPHA2=(BETAI2/BETTAST)-CAPPA**2/(SQRT(BETTAST)*SIGMOM2)
+  ELSE ! EARSM_WJ
+      SIGMK1=1.1_dp
+      SIGMK2=1.1_dp
+      SIGMOM1=0.53_dp
+      SIGMOM2=1.0
+      BETAI1=0.0747
+      BETAI2=0.0828
+      ALPHA1=0.518_dp
+      ALPHA2=0.44
+  END IF
 
-
-subroutine modify_viscosity_inlet_k_omega_earsm_wj()
-!
-! Update effective viscosity at inlet
-!
-  implicit none
-
-  call modify_mu_eff_inlet()
+  call calcsc(TE,dTEdxi,1) ! Assemble and solve turbulence kinetic energy eq.
+  call calcsc(ED,dEDdxi,2) ! Assemble and solve specific dissipation rate (omega [1/s]) of tke eq.
+  call modify_mu_eff
 
 end subroutine
 
@@ -134,13 +144,8 @@ subroutine calcsc(Fi,dFidxi,ifi)
 !
 !  Discretization and solution of scalar equation.
 !
-  use types
-  use parameters
-  use geometry
-  use variables
   use sparse_matrix
-  use gradients
-  use title_mod
+  use linear_solvers
 
   implicit none
 
@@ -151,60 +156,40 @@ subroutine calcsc(Fi,dFidxi,ifi)
 !
 ! Local variables
 !
-  integer ::  i, k, inp, ijp, ijn, ijb, ib, iface, iwall
-  real(dp) :: gam, prtr, prtr_ijp, prtr_ijn, apotime, const, urfrs, urfms
+  integer :: i, k, inp, ijp, ijn, ijb, ib, iface, iwall
+  integer :: iper, l, if, iftwin
+  real(dp) :: prtr, prtr_ijp, prtr_ijn, apotime, urfrs, urfms
   real(dp) :: utp, vtp, wtp, utn, vtn, wtn
   real(dp) :: genp, genn
   real(dp) :: uttbuoy, vttbuoy, wttbuoy
   real(dp) :: cap, can, suadd
-  real(dp) :: magStrainSq
   real(dp) :: off_diagonal_terms
   real(dp) :: are,nxf,nyf,nzf,vnp,xtp,ytp,ztp,ut2
-  ! real(dp) :: dudx,dudy,dudz,dvdx,dvdy,dvdz,dwdx,dwdy,dwdz
-  real(dp) :: viss
+  real(dp) :: viss,viste,dcoef
   real(dp) :: fimax,fimin
-  real(dp) :: wldist,domegapl,ksi,tmp                            
+  real(dp) :: wldist,domegapl,ksi                           
   real(dp) :: dtedx,dtedy,dtedz,deddx,deddy,deddz
-  real(dp) :: alphast,alphasst,bettasst,domega,vist
+  real(dp) :: alphasst,bettasst,domega,vist
   real(dp) :: wlog,wvis
-  real(dp) :: W_S,Ri,F4
-
-  REAL(PREC) :: P3,P6,TT,C1E,C1P,C1P3,C1PSQ,PRS,EPS2UP,EPS4UP
-  REAL(PREC) :: CT,TSTUR,TSVIS,TTS,HTTS                     ! Turbulence timescale related
-  REAL(PREC) :: S11,S12,S13,S22,S23,S33,S21,S32,W12,W13,W23 ! Components of strain and vorticity tensors
-  REAL(PREC) :: S11SQ,S22SQ,S33SQ,S12SQ,S13SQ,S23SQ         ! Strain rate tensor components squared
-  REAL(PREC) :: W12SQ,W13SQ,W23SQ                           ! Vorticity tensor components squared
-  REAL(PREC) :: SII,WII,WIIP3,SWWIV,SWWIVTT,SSWWV
-  REAL(PREC) :: TERM3C11,TERM3C12,TERM3C13,TERM3C22,TERM3C23
-  REAL(PREC) :: TERM4C11,TERM4C12,TERM4C13,TERM4C22,TERM4C23
-  REAL(PREC) :: TERM6C11,TERM6C12,TERM6C13,TERM6C22,TERM6C23
-  REAL(PREC) :: TERM9C11,TERM9C12,TERM9C13,TERM9C22,TERM9C23
-  REAL(PREC) :: P1,P2,SQP2,PM,PMP,SQPM,FACOS,FNC,DE,FII1,FII2,FN,FNSQ,Q,PQ,PQ1,Q1
-  REAL(PREC) :: BETA1,BETA3,BETA4,BETA6,BETA9,PVIS,EPS2LO,EPS4LO
-  REAL(PREC) :: TERMLR,TERMLR11,TERMLR12,TERMLR13,TERMLR22,TERMLR23
-  REAL(PREC) :: beta1eq 
+  ! real(dp) :: W_S,Ri,F4
+  real(dp) :: gam,urf,tolAbs,tolRel
+  integer :: maxiter
+  character( len=12 ) :: lSolver 
 
 
-
-! Variable specific coefficients:
-  gam=gds(ifi)
-
-!     Often used numbers
-      P3= 1./3.   ! One third
-      P6= 0.5*P3  ! One sixth
-      TT= 2.0*P3  ! Two thirds
-
-!     Model coefficient and its variants
-      C1E = 1.8
-      C1P = 9.0*(C1E - 1.0)/4.0 ! C1_prime
-      C1P3 = C1P*P3
-      C1PSQ = C1P**2
+  ! Variable specific coefficients:
+  urf = TurbModel%Scalar(ifi)%urf
+  gam = TurbModel%Scalar(ifi)%gds
+  lSolver = TurbModel%Scalar(ifi)%lSolver 
+  maxiter = TurbModel%Scalar(ifi)%maxiter
+  tolAbs = TurbModel%Scalar(ifi)%tolAbs
+  tolRel = TurbModel%Scalar(ifi)%tolRel
 
 
-! Calculate gradient: 
+  ! Calculate gradient: 
   call grad(fi,dfidxi)
 
-! Initialize coef and source arrays
+  ! Initialize coef and source arrays
   a = 0.0_dp
   su = 0.0_dp
   sp = 0.0_dp
@@ -214,7 +199,7 @@ subroutine calcsc(Fi,dFidxi,ifi)
 !
 
   ! TKE volume source terms
-  if(ifi.eq.ite) then
+  if(ifi.eq.1) then
 
 
   !=========================================================
@@ -244,9 +229,9 @@ subroutine calcsc(Fi,dFidxi,ifi)
     !                        vw(inp)*(dvdz+dwdy)+ww(inp)*dwdz )
 
 
-    magStrainSq=magStrain(inp)*magStrain(inp)
-    gen(inp)=abs(vis(inp)-viscos)*magStrainSq
+    gen(inp)=abs(vis(inp)-viscos)*magStrain(inp)*magStrain(inp)
 
+    ! Production limiter
     gen(inp)=min(gen(inp),0.9_dp*den(inp)*te(inp)*ed(inp))        
 
   enddo
@@ -280,9 +265,9 @@ subroutine calcsc(Fi,dFidxi,ifi)
          vttbuoy=-gravy*den(inp)*vtt(inp)*vol(inp)*beta
          wttbuoy=-gravz*den(inp)*wtt(inp)*vol(inp)*beta
       else
-         uttbuoy=-gravx*den(inp)*utt(inp)*vol(inp)/(t(inp)+273.15_dp)
-         vttbuoy=-gravy*den(inp)*vtt(inp)*vol(inp)/(t(inp)+273.15_dp)
-         wttbuoy=-gravz*den(inp)*wtt(inp)*vol(inp)/(t(inp)+273.15_dp)
+         uttbuoy=-gravx*den(inp)*utt(inp)*vol(inp)/(t(inp)+small)
+         vttbuoy=-gravy*den(inp)*vtt(inp)*vol(inp)/(t(inp)+small)
+         wttbuoy=-gravz*den(inp)*wtt(inp)*vol(inp)/(t(inp)+small)
       end if
 
       utp=max(uttbuoy,zero)
@@ -300,90 +285,596 @@ subroutine calcsc(Fi,dFidxi,ifi)
 
     ! UNSTEADY TERM
     if (ltransient) then
+
       apotime = den(inp)*vol(inp)/timestep
+
       if( bdf .or. cn ) then
+
         su(inp) = su(inp) + apotime*teo(inp)
         sp(inp) = sp(inp) + apotime
+
       elseif( bdf2 ) then
+
         su(inp) = su(inp) + apotime*( 2*teo(inp) - 0.5_dp*teoo(inp) )
         sp(inp) = sp(inp) + 1.5_dp*apotime
+
       endif
+
     endif
 
   ! End of TKE volume source terms
   enddo
 
 
-
-
 !****************************************
-  elseif(ifi.eq.ied) then
+  elseif(ifi.eq.2) then
 !****************************************
 
-  ! Omega volume source terms
+
+! Omega volume source terms
+
+
+  do inp=1,numCells
+
+    ! Wall distance
+    wldist = walldistance(inp)
+
+    ! Gradient of turbulence kinetic energy
+    dtedx=dTEdxi(1,inp)
+    dtedy=dTEdxi(2,inp)
+    dtedz=dTEdxi(3,inp)
+
+    ! Gradient of turbulence kinetic energy specific dissipation rate 
+    deddx=dEDdxi(1,inp)
+    deddy=dEDdxi(2,inp)
+    deddz=dEDdxi(3,inp)
+
+    ! Find $d_{\Omega}^{+}$ D_omega+
+    domegapl=max( wldist*wldist/(ed(inp)+small) * (dtedx*deddx+dtedy*deddy+dtedz*deddz), 1e-20) ! ORIGINAL: 200*TEIN)
+
+    ! Find ksi
+    if (EARSM_M) then
+      ksi=min(  max(                                                   &
+                    sqrt(te(inp))/(BETTAST*wldist*ed(inp)+small),      &
+                    500*viscos/den(inp)/(wldist**2*ed(inp)+small)      &
+                   ),                                                  &
+                2*te(inp)/domegapl                                     &   
+              )
+    else ! EARSM_WJ
+      ksi=min(  max(                                                   &
+                    sqrt(te(inp))/(BETTAST*wldist*ed(inp)+small),      &
+                    500*viscos/den(inp)/(wldist**2*ed(inp)+small)      &
+                   ),                                                  &
+                20*te(inp)/domegapl                                    &
+              )
+    endif
+
+    ! Find the blending function f_sst:
+    if (EARSM_M) then
+      fsst(inp) = tanh(ksi**4)
+    else ! EARSM_WJ
+      fsst(inp) = tanh(1.5_dp*ksi**4)
+    endif
+
+  enddo
 
 
 
+  ! VOLUME SOURCE TERMS 
+  do inp=1,numCells
+
+    genp=max(gen(inp),zero)
+    genn=min(gen(inp),zero)
+
+
+    ! Production of dissipation
+    vist = (vis(inp)-viscos)/densit
+
+    ! Production coefficient alpha_sst
+    alphasst=fsst(inp)*alpha1+(1.0_dp-fsst(inp))*alpha2               
+
+    su(inp)=alphasst*genp*vol(inp)/(vist+small)
+
+    ! FIND $D_omega$ CROSS DIFFUSION MODIFICATION: 
+
+    ! Gradient of turbulence kinetic energy
+    dtedx=dTEdxi(1,inp)
+    dtedy=dTEdxi(2,inp)
+    dtedz=dTEdxi(3,inp)
+
+    ! Gradient of turbulence kinetic energy specific dissipation rate 
+    deddx=dEDdxi(1,inp)
+    deddy=dEDdxi(2,inp)
+    deddz=dEDdxi(3,inp)
 
 
 
+    if (EARSM_M) then  
+      domega = 2*(1.0_dp-fsst(inp))*den(inp)*SIGMOM2/(ed(inp)+small)*(dtedx*deddx+dtedy*deddy+dtedz*deddz)
+    else ! EARSM_WJ
+      ! (fsst(inp)+0.4_dp*(1.0_dp-fsst(inp))) = 0.4_dp+0.6_dp*fsst(inp)
+      domega = (0.4_dp+0.6_dp*fsst(inp))*den(inp)/(ed(inp)+small)*(dtedx*deddx+dtedy*deddy+dtedz*deddz)
+    endif
+
+    domega = max(domega,0.0_dp)
+
+    su(inp)=su(inp)+domega*vol(inp)
 
 
 
-!     Often used numbers
-      P3= 1./3.   ! One third
-      P6= 0.5*P3  ! One sixth
-      TT= 2.0*P3  ! Two thirds
+    ! Destruction of dissipation. 
 
-!     Model coefficient and its variants
-      C1E = 1.8
-      C1P = 9.0*(C1E - 1.0)/4.0 ! C1_prime
-      C1P3 = C1P*P3
-      C1PSQ = C1P**2
+    ! Destruction coefficient beta_sst
+     bettasst=fsst(inp)*betai1+(1.0_dp-fsst(inp))*betai2
 
-!=====Velocity Gradient Tensor computation=============================
 
-!.....FIND GRADIENTS OF VELOCITIES U,V, AND W
+    ! Add destruction term (-beta*rho*w**2) to the lhs :   
+    sp(inp)=bettasst*den(inp)*ed(inp)*vol(inp) 
+    !
+    !..or using the destruction term that incorporates Simplified Curvature Correction:
+    ! Multiply destruction by F4 Simplified Curvature Correction term b Hellsten
+    ! to obtain SST-2003RC-Hellsten model
+    ! W_S = Vorticity(inp)/magStrain(inp)
+    ! Ri = W_S*(W_S-one)
+    ! F4 = one/(one + 1.4_dp*Ri)    
+    ! sp(inp)=F4*bettasst*den(inp)*ed(inp)*vol(inp)
 
-      DO K=2,NKM
-      DO I=2,NIM
-      DO J=2,NJM
+    ! Negative value of production moved to lhs.
+    sp(inp)=sp(inp)-alphasst*genn*vol(inp)/(vist*ed(inp)+small) 
 
-      INP=LK(K)+LI(I)+J
-      INB=(I-1)*NJ+J
 
-!.....Turbulence Timescale
-      CT = 6.0                                          ! Model coefficient
-      TSTUR = 1./(CMU*ED(INP))                          ! BETTAST=0.09
-      TSVIS = CT*SQRT(          VISCOS                  &
-                    /( DENSIT*CMU*ED(INP)*TE(INP) )  )
-      TTS = MAX(TSTUR,TSVIS)                            ! Limiter for turbulence time-scale
 
-!.....Half of the time scale
-      HTTS = 0.5*TTS
+    ! UNSTEADY TERM
+    if (ltransient) then
+
+      apotime = den(inp)*vol(inp)/timestep
+
+      if( bdf .or. cn ) then
+
+        su(inp) = su(inp) + apotime*edo(inp)
+        sp(inp) = sp(inp) + apotime
+
+      elseif( bdf2 ) then
+
+        su(inp) = su(inp) + apotime*( 2*edo(inp) - 0.5_dp*edoo(inp) )
+        sp(inp) = sp(inp) + 1.5_dp*apotime
+
+      endif
+
+    endif
+
+  ! End of Dissipation volume source terms
+  enddo
+
+!--------------------------------------
+  end if ! ite or ied conditional
+
+
 
 !
-!--------------------------------
-!      [VELOCITY GRADIENTS: ]
-!--------------------------------
-      DUDX = gradU(1,INP)
-      DUDY = gradU(2,INP)
-      DUDZ = gradU(3,INP)
-      
-      DVDX = gradV(1,INP)
-      DVDY = gradV(2,INP)
-      DVDZ = gradV(3,INP)
+! CALCULATE CONVECTIVE AND DIFFUSIVE FLUXES BY INTEGRATING OVER FACES
+!
 
-      DWDX = gradW(1,INP)
-      DWDY = gradW(2,INP)
-      DWDZ = gradW(3,INP)
+  ! Inner faces:                                             
+  do i=1,numInnerFaces                                                       
+    ijp = owner(i)
+    ijn = neighbour(i)
 
+    ! In SST model the Effective diffusivity is a field variable:
+    if(ifi.eq.1) then
+      prtr_ijp = fsst(ijp)*sigmk1  + (1.0_dp-fsst(ijp))*sigmk2
+      prtr_ijn = fsst(ijn)*sigmk1  + (1.0_dp-fsst(ijn))*sigmk2
+    else
+      prtr_ijp = fsst(ijp)*sigmom1 + (1.0_dp-fsst(ijp))*sigmom2
+      prtr_ijn = fsst(ijn)*sigmom1 + (1.0_dp-fsst(ijn))*sigmom2
+    endif
+
+    prtr = half*(prtr_ijp+prtr_ijn)
+
+    ! Diffusion coefficient
+    viste = ( vis(ijp) + (vis(ijn)-vis(ijp))*facint(i) )-viscos
+    dcoef = viscos+viste*prtr
+
+    call facefluxsc(  i, ijp, ijn, &
+                      xf(i), yf(i), zf(i), &
+                      arx(i), ary(i), arz(i), &
+                      flmass(i), facint(i), gam, &
+                      TurbModel%Scalar(ifi)%cScheme, &
+                      fi, dfidxi, dcoef, cap, can, suadd )                      
+
+    ! > Off-diagonal elements:
+
+    ! (icell,jcell) matrix element:
+    k = icell_jcell_csr_index(i)
+    a(k) = can
+
+    ! (jcell,icell) matrix element:
+    k = jcell_icell_csr_index(i)
+    a(k) = cap
+
+    ! > Elements on main diagonal:
+
+    ! ! (icell,icell) main diagonal element
+    k = diag(ijp)
+    a(k) = a(k) - can
+
+    ! ! (jcell,jcell) main diagonal element
+    k = diag(ijn)
+    a(k) = a(k) - cap
+
+    ! > Sources:
+
+    su(ijp) = su(ijp) + suadd
+    su(ijn) = su(ijn) - suadd 
+
+  enddo
+
+  !
+  ! Boundary conditions
+  !
+
+  iWall = 0
+  iPer = 0
+  l = numInnerFaces
+
+  do ib=1,numBoundaries
+
+    if ( bctype(ib) == 'inlet' .or. &
+         bctype(ib) == 'outlet' .or. &
+         bctype(ib) == 'pressure'  ) then
+
+      do i=1,nfaces(ib)
+
+        iface = startFace(ib) + i
+        ijp = owner(iface)
+        ijb = iBndValueStart(ib) + i
+
+        ! In SST model the Effective diffusivity is a field variable:
+        if(ifi.eq.1) then
+          prtr=fsst(ijp)*sigmk1 + (1.0_dp-fsst(ijp))*sigmk2
+        else
+          prtr=fsst(ijp)*sigmom1 + (1.0_dp-fsst(ijp))*sigmom2
+        endif
+
+        ! Diffusion coefficient
+        viste = vis(ijb)-viscos
+        dcoef = viscos + viste*prtr 
+
+        call facefluxsc( ijp, &
+                         xf(iface), yf(iface), zf(iface), &
+                         arx(iface), ary(iface), arz(iface), &
+                         flmass(iface), &
+                         dfidxi, prtr, cap, can, suadd )
+
+        Sp(ijp) = Sp(ijp)-can
+
+        Su(ijp) = Su(ijp) - can*fi(ijb) + suadd
+
+      end do
+
+
+
+    elseif (  bctype(ib) == 'periodic' ) then
+
+      iPer = iPer + 1 ! count periodic boundary pairs
+
+      ! Faces trough periodic boundaries
+      do i=1,nfaces(ib)
+
+        if = startFace(ib) + i
+        ijp = owner(if)
+
+        iftwin = startFaceTwin(iPer) + i ! Where does the face data for twin start, looking at periodic boundary pair with index iPer.
+        ijn = owner(iftwin)              ! Owner cell of the twin periodic face
+
+
+
+        ! In SST model the Effective diffusivity is a field variable:
+        if(ifi.eq.1) then
+          prtr_ijp = fsst(ijp)*SIGMK1  + (1.0_dp-fsst(ijp))*SIGMK2
+          prtr_ijn = fsst(ijn)*SIGMK1  + (1.0_dp-fsst(ijn))*SIGMK2
+        else
+          prtr_ijp = fsst(ijp)*SIGMOM1 + (1.0_dp-fsst(ijp))*SIGMOM2
+          prtr_ijn = fsst(ijn)*SIGMOM1 + (1.0_dp-fsst(ijn))*SIGMOM2
+        endif
+
+        prtr = half*(prtr_ijp+prtr_ijn )
+
+        ! Diffusion coefficient
+        viste = half*(vis(ijp)+vis(ijn))-viscos
+        dcoef = viscos+viste*prtr
+
+        ! face flux scalar but for periodic boundaries - it will be recognized by arguments
+        call facefluxsc(  i, ijp, ijn, &
+                          xf(if), yf(if), zf(if), &
+                          arx(if), ary(if), arz(if), &
+                          flmass(if), gam, &
+                          fi, dfidxi, dcoef, cap, can, suadd )
+
+
+        ! > Off-diagonal elements:
+
+        ! l is in interval [numInnerFaces+1, numInnerFaces+numPeriodic]
+        l = l + 1
+
+        ! (icell,jcell) matrix element:
+        k = icell_jcell_csr_index(l)
+        a(k) = can
+
+        ! (jcell,icell) matrix element:
+        k = jcell_icell_csr_index(l)
+        a(k) = cap
+
+        ! > Elements on main diagonal:
+
+        ! ! (icell,icell) main diagonal element
+        k = diag(ijp)
+        a(k) = a(k) - can
+
+        ! ! (jcell,jcell) main diagonal element
+        k = diag(ijn)
+        a(k) = a(k) - cap
+
+        ! > Sources:
+
+        su(ijp) = su(ijp) + suadd
+        su(ijn) = su(ijn) - suadd 
+
+
+      end do 
+
+
+    elseif ( bctype(ib) == 'wall') then
+
+      do i=1,nfaces(ib)
+
+        iface = startFace(ib) + i
+        ijp = owner(iface)
+        ijb = iBndValueStart(ib) + i
+        iWall = iWall + 1
+
+        if (ifi .eq. 1) then
+
+        !
+        ! > Wall boundary conditions for turbulence kinetic energy eq.
+        !
+
+          su(ijp )= su(ijp)-gen(ijp)*vol(ijp) ! take out standard production from wall ajdecent cell.
+
+          viss=viscos
+          if(ypl(i).gt.ctrans) viss=visw(iwall)
+          ! viss = max(viscos,visw(iWall))
+
+          ! Face area 
+          are = sqrt(arx(iface)**2+ary(iface)**2+arz(iface)**2)
+
+          ! Face normals
+          nxf = arx(iface)/are
+          nyf = ary(iface)/are
+          nzf = arz(iface)/are
+
+          ! Magnitude of a cell center velocity projected on boundary face normal
+          Vnp = U(ijp)*nxf+V(ijp)*nyf+W(ijp)*nzf
+
+          ! Tangential velocity components 
+          xtp = U(ijp)-Vnp*nxf
+          ytp = V(ijp)-Vnp*nyf
+          ztp = W(ijp)-Vnp*nzf
+
+          ! Its magnitude
+          Vtp = sqrt(xtp*xtp+ytp*ytp+ztp*ztp)
+
+          ! Tangent direction - unit vector
+          xtp = xtp/vtp
+          ytp = ytp/vtp
+          ztp = ztp/vtp
+
+          ! projektovanje razlike brzina na pravac tangencijalne brzine u cell centru ijp
+          Ut2 = abs( (U(ijb)-U(ijp))*xtp + (V(ijb)-V(ijp))*ytp + (W(ijb)-W(ijp))*ztp )
+
+          Tau(iWall) = viss*Ut2/dnw(iwall)
+
+          gen(ijp)=abs(tau(iWall))*cmu25*sqrt(te(ijp))/(dnw(iwall)*cappa)
+
+          su(ijp)=su(ijp)+gen(ijp)*vol(ijp)
+
+        else
+
+          ! Wall boundaries approximated with wall functions
+          ! for correct values of dissipation all coefficients have
+          ! to be zero, su equal the dissipation, and ap = 1
+
+          ! Automatic wall treatment - quadratic blend of log-layer and vis sublayer value:
+          wlog=sqrt(te(ijp))/(cmu25*cappa*dnw(iWall))
+
+          wvis=6.0_dp*(viscos/den(ijp))/(betai1*dnw(iWall)**2) 
+
+          ed(ijp) = sqrt(wvis**2+wlog**2)
+          su(ijp)=ed(ijp)
+
+          a( ia(ijp):ia(ijp+1)-1 ) = 0.0_dp
+          sp(ijp) = 1.0_dp
+
+        endif
+
+      enddo
+
+    endif
+
+  enddo
+
+  ! Modify coefficients for Crank-Nicolson
+  if (cn) then
+
+      a = 0.5_dp*a ! Doesn't affect the main diagonal because it's still zero.
+
+      if(ifi.eq.1) then
+
+        do i = 1,numInnerFaces
+            ijp = owner(i)
+            ijn = neighbour(i)
+
+            k = icell_jcell_csr_index(i)
+            su(ijp) = su(ijp) - a(k)*teo(ijn)
+
+            k = jcell_icell_csr_index(i)
+            su(ijn) = su(ijn) - a(k)*teo(ijp)
+        enddo
+
+        do ijp=1,numCells
+            apotime=den(ijp)*vol(ijp)/timestep
+            off_diagonal_terms = sum( a( ia(ijp) : ia(ijp+1)-1 ) ) - a(diag(ijp))
+            su(ijp) = su(ijp) + (apotime + off_diagonal_terms)*teo(ijp)
+            sp(ijp) = sp(ijp)+apotime
+        enddo
+
+      else ! dissipation
+
+        do i = 1,numInnerFaces
+            ijp = owner(i)
+            ijn = neighbour(i)
+
+            k = icell_jcell_csr_index(i)
+            su(ijp) = su(ijp) - a(k)*edo(ijn)
+
+            k = jcell_icell_csr_index(i)
+            su(ijn) = su(ijn) - a(k)*edo(ijp)
+        enddo
+
+        do ijp=1,numCells
+            apotime=den(ijp)*vol(ijp)/timestep
+            off_diagonal_terms = sum( a( ia(ijp) : ia(ijp+1)-1 ) ) - a(diag(ijp))
+            su(ijp) = su(ijp) + (apotime + off_diagonal_terms)*edo(ijp)
+            sp(ijp) = sp(ijp)+apotime
+        enddo
+
+      endif
+
+  endif
+
+  ! Underrelaxation factors
+  urfrs=1.0_dp/urf
+  urfms=1.0_dp-urf
+
+  ! Main diagonal term assembly:
+  do inp = 1,numCells
+
+    ! Main diagonal term assembly:
+    a(diag(inp)) = sp(inp) 
+    do k = ia(inp),ia(inp+1)-1
+      if (k.eq.diag(inp)) cycle
+      a(diag(inp)) = a(diag(inp)) -  a(k)
+    enddo
+
+    ! Underelaxation:
+    a(diag(inp)) = a(diag(inp))*urfrs
+    su(inp) = su(inp) + urfms*a(diag(inp))*fi(inp)
+                    
+  enddo
+
+  
+
+  ! Solve linear system:
+  if (ifi.eq.1) then
+    call csrsolve(lSolver, te, su, resor(5), maxiter, tolAbs, tolRel, 'k' )
+  else
+    call csrsolve(lSolver, ed, su, resor(6), maxiter, tolAbs, tolRel, 'Omega' )
+  endif
+
+  ! Update field values at boundaries
+  call updateBoundary( fi )
+
+
+  ! Report range of scalar values and clip if negative
+  fimin = minval(fi)
+  fimax = maxval(fi)
+
+  if ( ifi == 1 ) then 
+    write(*,'(2x,es11.4,a,es11.4)') fimin,' <= k <= ',fimax
+  else
+    write(*,'(2x,es11.4,a,es11.4)') fimin,' <= Omega <= ',fimax
+  endif
+
+  ! These field values cannot be negative
+  if(fimin.lt.0.0_dp) fi = max(fi,small)
+
+end subroutine calcsc
+
+
+!***********************************************************************
+!
+subroutine modify_mu_eff
+!
+!***********************************************************************
+!
+! Update turbulent and effective viscosity.
+!
+!***********************************************************************
+  use types
+  use parameters
+  use geometry
+  use variables
+  implicit none
+
+  integer :: i,inp
+  integer :: ib,iface,ijp,ijb,iwall
+  real(dp) :: visold,urf
+  real(dp) :: nxf,nyf,nzf,are
+  real(dp) :: Vnp,Vtp,xtp,ytp,ztp
+  real(dp) :: Utau,viscw
+  real(dp) :: Utauvis,Utaulog,Upl
+  ! real(dp) :: fimax,fimin
+
+  REAL(DP) :: DUDX,DUDY,DUDZ,DVDX,DVDY,DVDZ,DWDX,DWDY,DWDZ
+  REAL(DP) :: TSTUR,TSVIS,TTS,HTTS                     ! Turbulence timescale related
+  REAL(DP) :: S11,S12,S13,S22,S23,S33,S21,S32,W12,W13,W23 ! Components of strain and vorticity tensors
+  REAL(DP) :: S11SQ,S22SQ,S33SQ,S12SQ,S13SQ,S23SQ         ! Strain rate tensor components squared
+  REAL(DP) :: W12SQ,W13SQ,W23SQ                           ! Vorticity tensor components squared
+  REAL(DP) :: SII,WII,WIIP3,SWWIV,SWWIVTT,SSWWV
+  REAL(DP) :: TERM3C11,TERM3C12,TERM3C13,TERM3C22,TERM3C23
+  REAL(DP) :: TERM4C11,TERM4C12,TERM4C13,TERM4C22,TERM4C23
+  REAL(DP) :: TERM6C11,TERM6C12,TERM6C13,TERM6C22,TERM6C23
+  REAL(DP) :: TERM9C11,TERM9C12,TERM9C13,TERM9C22,TERM9C23
+  REAL(DP) :: P1,P2,SQP2,PM,PMP,SQPM,FACOS,FNC,DE,FII1,FII2,FN,FNSQ,Q,PQ,PQ1,Q1
+  REAL(DP) :: BETA1,BETA3,BETA4,BETA6,BETA9
+  ! REAL(DP) :: TERMLR,TERMLR11,TERMLR12,TERMLR13,TERMLR22,TERMLR23
+  ! REAL(DP) :: beta1eq
+
+
+!%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+!%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+!%%% Start of legacy code for Explicit Algebraic Reynolds Stress model %%%%%
+!%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+!%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+!%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+      DO INP=1,numCells
+
+!=====Velocity Gradient Tensor Invariants Computation=============================
+
+!     Turbulence Timescale
+      TSTUR = 1./(BETTAST*ED(INP))                         
+      TSVIS = CT*SQRT( VISCOS /( DENSIT*BETTAST*ED(INP)*TE(INP) )  )
+      TTS = MAX(TSTUR,TSVIS) ! Limiter for turbulence time-scale
+
+!     Half of the time scale
+      HTTS = 0.5*TTS
+
+!     Velocity Gradients:
+      dudx = dudxi(1,inp)
+      dudy = dudxi(2,inp)
+      dudz = dudxi(3,inp)
+
+      dvdx = dvdxi(1,inp)
+      dvdy = dvdxi(2,inp)
+      dvdz = dvdxi(3,inp)
+
+      dwdx = dwdxi(1,inp)
+      dwdy = dwdxi(2,inp)
+      dwdz = dwdxi(3,inp)
 
 
 !.....FIND SCALAR INVARIANT OF THE STRAIN RATE AND VORTICITY TENSOR
-!     Found it in find_strain_rate subroutine
-!      SIJMOD(INP) >>>       STRAIN(INP)
-!      OMIJMOD(INP) = DSQRT(W12**2 + W13**2 + W23**2)
 
 !     Strain-rate and vorticity tensor components
       S11=TTS*dUdx
@@ -512,638 +1003,131 @@ subroutine calcsc(Fi,dFidxi,ifi)
       Q = 5.0*P6*(FNSQ - 2.0*WII)*(2.0*FNSQ - WII)     !%$ <<< Wallin&Johansson A.Hellsten
 
       IF (EARSM_M) THEN
-        Q = (1./1.245)*(FNSQ - 2.0*WII)               ! Menter 2009. 4% encrease
+        Q = (1./1.245)*(FNSQ - 2.0*WII)               !%$ <<< Menter 2009. 4% increase
         Q1=Q*P6*(2.0*FNSQ - WII)                      !
         PQ1=1.0/Q1                                    !
       ENDIF
 
       PQ = 1.0/Q
 
-!     Coefficients (betas) (WJ Original)
-      BETA1 = - PQ*FN*(2.0*FNSQ - 7.0*WII)  !%$ <<< Wallin&Johansson A.Hellsten
-      BETA3 = - PQ*12.0*SWWIV/FN            !%$ <<<
-      BETA4 = - PQ*2.0*(FNSQ - 2.0*WII)     !%$ <<<
-      BETA6 = - PQ*6.0*FN                   !%$ <<<
-      BETA9 =   PQ*6.0                      !%$ <<<
 
 !     Coefficients (betas) (Menter 2009)
       IF (EARSM_M) THEN
-      BETA1 = - PQ*FN
-      BETA3 = - PQ1*2.0*SWWIV/FN
-      BETA4 = - PQ
-      BETA6 = - PQ1*FN  
-      BETA9 =   PQ1  
-      ENDIF
-
-!=====Low Re version===================================================
-      IF (LowRe) THEN
-!.....FIRST VECTOR-DISTANCE FROM GHOST CELL CENTER TO THIS CELL'S CENTER  
-      FAC= -1.                                                 
-      DXF=FAC*(XC(INB)-XC(INP))                                
-      DYF=FAC*(YC(INB)-YC(INP))    
-      DZF=FAC*(ZC(INB)-ZC(INP))
-!.....SECOND X THIRD DEFINE  ALWAYS CF AREA
-      ARE=DSQRT(AR1X(INB)**2+AR1Y(INB)**2+AR1Z(INB)**2)
-!.....COMPONENTS OF THE UNIT NORMAL VECTOR
-      ARER=1./ARE
-      ALF=AR1X(INB)*ARER
-      BET=AR1Y(INB)*ARER
-      GAM=AR1Z(INB)*ARER
-!.....NORMAL DISTANCE FROM SCALAR PRODUCT
-      DELN=(DXF*ALF+DYF*BET+DZF*GAM)
-
-!     Reynolds No. - Rey
-      REYLR = Densit*sqrt(TE(inp))*DELN/Viscos             
-
-!     factor for Low-Re(LR) correction - f1
-      FACLR = 1.-exp(-0.092*sqrt(REYLR) - 1.2e-4*REYLR**2) 
-
-!     405.*1.8**2/(216.*1.8-160.)
-      SIIEQ = 5.735139863                                  
-
-!     Additional term in anisotropy tensor expression 
-      TERMLR = (1.-FACLR**2)*1.4/max(SII,SIIEQ)
-      TERMLR11 = TERMLR * ((S11SQ+S12SQ+S13SQ)     - SII*P3)
-      TERMLR22 = TERMLR * ((S21*S12+S22SQ+S23*S32) - SII*P3)
-      TERMLR12 = TERMLR * (S11*S12+S12*S22+S13*S32)
-      TERMLR13 = TERMLR * (S11*S13+S12*S23+S13*S33)
-      TERMLR23 = TERMLR * (S21*S13+S22*S23+S23*S33)
-
-!     Extra anisotropy components. Note that we use b_ij and Wallin
-!     uses a_ij, which is a_ij = 2*b_ij.
-      BIJ(1,INP) = 0.5*(TERMLR11                                     &           
-           + FACLR**2*BETA3*TERM3C11                                 & 
-           +(FACLR**2*BETA4-(1.-FACLR)*0.9/max(SII,SIIEQ))*TERM4C11  &
-           + FACLR*   BETA6*TERM6C11                                 &
-           + FACLR**2*BETA9*TERM9C11)
-      BIJ(2,INP) = 0.5*(TERMLR12                                     &
-           + FACLR**2*BETA3*TERM3C12                                 &
-           +(FACLR**2*BETA4-(1.-FACLR)*0.9/max(SII,SIIEQ))*TERM4C12  &
-           + FACLR*   BETA6*TERM6C12                                 &
-           + FACLR**2*BETA9*TERM9C12)
-      BIJ(3,INP) = 0.5*(TERMLR13                                     &
-           + FACLR**2*BETA3*TERM3C13                                 &
-           +(FACLR**2*BETA4-(1.-FACLR)*0.9/max(SII,SIIEQ))*TERM4C13  &
-           + FACLR*   BETA6*TERM6C13                                 &
-           + FACLR**2*BETA9*TERM9C13)
-      BIJ(4,INP) = 0.5*(TERMLR22                                     &
-           + FACLR**2*BETA3*TERM3C22                                 &
-           +(FACLR**2*BETA4-(1.-FACLR)*0.9/max(SII,SIIEQ))*TERM4C22  &
-           + FACLR*   BETA6*TERM6C22                                 &
-           + FACLR**2*BETA9*TERM9C22)
-      BIJ(5,INP) = 0.5*(TERMLR23                                     &
-           + FACLR**2*BETA3*TERM3C23                                 &
-           +(FACLR**2*BETA4-(1.-FACLR)*0.9/max(SII,SIIEQ))*TERM4C23  &
-           + FACLR*   BETA6*TERM6C23                                 &
-           + FACLR**2*BETA9*TERM9C23)
-!=====End Of Low Re Version============================================
+        BETA1 = - PQ*FN
+        BETA3 = - PQ1*2.0*SWWIV/FN
+        BETA4 = - PQ
+        BETA6 = - PQ1*FN  
+        BETA9 =   PQ1  
       ELSE
-!     High-Re form:
-!     Extra anisotropy components. Note that we use b_ij and Wallin
-!     uses a_ij, which is a_ij = 2*b_ij.
-      BIJ(1,INP) = 0.5*(BETA3*TERM3C11 + BETA4*TERM4C11  &
-                      + BETA6*TERM6C11 + BETA9*TERM9C11)
-      BIJ(2,INP) = 0.5*(BETA3*TERM3C12 + BETA4*TERM4C12  &
-                      + BETA6*TERM6C12 + BETA9*TERM9C12)
-      BIJ(3,INP) = 0.5*(BETA3*TERM3C13 + BETA4*TERM4C13  &
-                      + BETA6*TERM6C13 + BETA9*TERM9C13)
-      BIJ(4,INP) = 0.5*(BETA3*TERM3C22 + BETA4*TERM4C22  &
-                      + BETA6*TERM6C22 + BETA9*TERM9C22)
-      BIJ(5,INP) = 0.5*(BETA3*TERM3C23 + BETA4*TERM4C23  &
-                      + BETA6*TERM6C23 + BETA9*TERM9C23)
+!     Coefficients (betas) (WJ Original)
+        BETA1 = - PQ*FN*(2.0*FNSQ - 7.0*WII)  !%$ <<< Wallin&Johansson A.Hellsten
+        BETA3 = - PQ*12.0*SWWIV/FN            !%$ <<<
+        BETA4 = - PQ*2.0*(FNSQ - 2.0*WII)     !%$ <<<
+        BETA6 = - PQ*6.0*FN                   !%$ <<<
+        BETA9 =   PQ*6.0                      !%$ <<<
       ENDIF
 
-!.....Effective C_mu:
+! !=====Low Re version===================================================
+!       IF (LowRe) THEN
+! !.....FIRST VECTOR-DISTANCE FROM GHOST CELL CENTER TO THIS CELL'S CENTER  
+!       FAC= -1.                                                 
+!       DXF=FAC*(XC(INB)-XC(INP))                                
+!       DYF=FAC*(YC(INB)-YC(INP))    
+!       DZF=FAC*(ZC(INB)-ZC(INP))
+! !.....SECOND X THIRD DEFINE  ALWAYS CF AREA
+!       ARE=DSQRT(AR1X(INB)**2+AR1Y(INB)**2+AR1Z(INB)**2)
+! !.....COMPONENTS OF THE UNIT NORMAL VECTOR
+!       ARER=1./ARE
+!       ALF=AR1X(INB)*ARER
+!       BET=AR1Y(INB)*ARER
+!       GAM=AR1Z(INB)*ARER
+! !.....NORMAL DISTANCE FROM SCALAR PRODUCT
+!       DELN=(DXF*ALF+DYF*BET+DZF*GAM)
+
+! !     Reynolds No. - Rey
+!       REYLR = Densit*sqrt(TE(inp))*DELN/Viscos             
+
+! !     factor for Low-Re(LR) correction - f1
+!       FACLR = 1.-exp(-0.092*sqrt(REYLR) - 1.2e-4*REYLR**2) 
+
+! !     405.*1.8**2/(216.*1.8-160.)
+!       SIIEQ = 5.735139863                                  
+
+! !     Additional term in anisotropy tensor expression 
+!       TERMLR = (1.-FACLR**2)*1.4/max(SII,SIIEQ)
+!       TERMLR11 = TERMLR * ((S11SQ+S12SQ+S13SQ)     - SII*P3)
+!       TERMLR22 = TERMLR * ((S21*S12+S22SQ+S23*S32) - SII*P3)
+!       TERMLR12 = TERMLR * (S11*S12+S12*S22+S13*S32)
+!       TERMLR13 = TERMLR * (S11*S13+S12*S23+S13*S33)
+!       TERMLR23 = TERMLR * (S21*S13+S22*S23+S23*S33)
+
+! !     Extra anisotropy components.
+!       AIJ(1,INP) = (TERMLR11                                         &           
+!            + FACLR**2*BETA3*TERM3C11                                 & 
+!            +(FACLR**2*BETA4-(1.-FACLR)*0.9/max(SII,SIIEQ))*TERM4C11  &
+!            + FACLR*   BETA6*TERM6C11                                 &
+!            + FACLR**2*BETA9*TERM9C11)
+!       AIJ(2,INP) = (TERMLR12                                         &
+!            + FACLR**2*BETA3*TERM3C12                                 &
+!            +(FACLR**2*BETA4-(1.-FACLR)*0.9/max(SII,SIIEQ))*TERM4C12  &
+!            + FACLR*   BETA6*TERM6C12                                 &
+!            + FACLR**2*BETA9*TERM9C12)
+!       AIJ(3,INP) = (TERMLR13                                         &
+!            + FACLR**2*BETA3*TERM3C13                                 &
+!            +(FACLR**2*BETA4-(1.-FACLR)*0.9/max(SII,SIIEQ))*TERM4C13  &
+!            + FACLR*   BETA6*TERM6C13                                 &
+!            + FACLR**2*BETA9*TERM9C13)
+!       AIJ(4,INP) = (TERMLR22                                         &
+!            + FACLR**2*BETA3*TERM3C22                                 &
+!            +(FACLR**2*BETA4-(1.-FACLR)*0.9/max(SII,SIIEQ))*TERM4C22  &
+!            + FACLR*   BETA6*TERM6C22                                 &
+!            + FACLR**2*BETA9*TERM9C22)
+!       AIJ(5,INP) = (TERMLR23                                         &
+!            + FACLR**2*BETA3*TERM3C23                                 &
+!            +(FACLR**2*BETA4-(1.-FACLR)*0.9/max(SII,SIIEQ))*TERM4C23  &
+!            + FACLR*   BETA6*TERM6C23                                 &
+!            + FACLR**2*BETA9*TERM9C23)
+! !=====End Of Low Re Version============================================
+!       ELSE
+
+      ! High-Re form:
+      ! Extra anisotropy components.
+      AIJ(1,INP) = BETA3*TERM3C11 + BETA4*TERM4C11 + BETA6*TERM6C11 + BETA9*TERM9C11
+      AIJ(2,INP) = BETA3*TERM3C12 + BETA4*TERM4C12 + BETA6*TERM6C12 + BETA9*TERM9C12
+      AIJ(3,INP) = BETA3*TERM3C13 + BETA4*TERM4C13 + BETA6*TERM6C13 + BETA9*TERM9C13
+      AIJ(4,INP) = BETA3*TERM3C22 + BETA4*TERM4C22 + BETA6*TERM6C22 + BETA9*TERM9C22
+      AIJ(5,INP) = BETA3*TERM3C23 + BETA4*TERM4C23 + BETA6*TERM6C23 + BETA9*TERM9C23
+      ! It seems that aij(3,3)= -aij(1,1)-aij(2,2), 
+      ! see p. 41 in V.Hamalainen's report (see references in module header):
+      AIJ(6,INP) = -aij(1,inp)-aij(4,inp)
+
+!       ENDIF ! LowRe
+
+!     Effective C_mu:
       CMUEFF(INP) = -0.5*(BETA1 + WII*BETA6) 
-!.....Low Re correction for Effective Cmu:
-      IF (LowRe) CMUEFF(INP) = CMUEFF(INP) * FACLR
-!.....Use Limiter that Tom Gatski & Chris Rumsey use:
+
+!     Low Re correction for Effective Cmu:
+!       IF (LowRe) CMUEFF(INP) = CMUEFF(INP) * FACLR
+
+!     Use Limiter that Tom Gatski & Chris Rumsey use:
 !      CMUEFF(INP) = max(CMUEFF(INP), 0.0005)
 
-!----
+
       END DO ! CELL LOOP
 
 !=====END OF Velocity Gradient Tensor Invariants computation===========
 
 
 
-
-!=====MAIN PART OF THE ROUTINE=======================================
-      DO inp=1,numCells
-
-
-
-!-----wall_dist -------------------------------------------
-      WLDIST=walldistance(inp)
-
-!.....GRADIENT OF TURBULENCE KINETIC ENERGY
-      DTEDX=gradTE(1,INP)
-      DTEDY=gradTE(2,INP)
-      DTEDZ=gradTE(3,INP)
-
-!.....GRADIENT OF TURBULENCE KINETIC ENERGY SPECIFIC DISSIPATION RATE 
-      DEDDX=gradED(1,INP)
-      DEDDY=gradED(2,INP)
-      DEDDZ=gradED(3,INP)
-
-!=====FIND $D_{\omega}^{+}$ Dw+========================================
-      TMP1=WLDIST**2/ED(INP) * (DTEDX*DEDDX+DTEDY*DEDDY+DTEDZ*DEDDZ)
-      TMP2=200.*TEIN   ! 200*k_inf, koje moras definisati  VEZANO ZA INLET
-      DOMEGAPL=DMAX1(TMP1,TMP2)
-
-!=====FIND KSI==========================================================
-      IF (EARSM_WJ) THEN
-      KSI=MIN(MAX(SQRT(TE(INP))/(0.09*WLDIST*ED(INP)),            &     !< EARSM 
-                 (500.*VISOB(INP)/DEN(INP))/(WLDIST**2*ED(INP))), &     !
-               20.*TE(INP)/DOMEGAPL)                                    !%$ WJ
-      ENDIF
-      IF (EARSM_M) THEN
-      KSI=MIN(MAX(SQRT(TE(INP))/(0.09*WLDIST*ED(INP)),            &     !< EARSM 
-                 (500.*VISOB(INP)/DEN(INP))/(WLDIST**2*ED(INP))), &     !
-             2.*TE(INP)/DOMEGAPL)                                       ! Menter 2009
-      ENDIF
-
-!=====FIND F============================================================
-      F=TANH(1.5*KSI**4)               ! A.Hellsten thesis - prolongs Omega region (!!!), usually factor is 1, here it's 1.5
-      IF (EARSM_M) F=TANH(KSI**4)      ! Menter 2009
-
-!=====NOW BLEND COEFFICIENTS WE'LL NEED LATER============================
-!.....High-Re version.....................................................
-      ALPHASST(INP) = F*0.518+(1.-F)*0.44      ! WJ and  A.Hellsten      !
-      IF (EARSM_M) ALPHASST(INP) = F*0.553+(1.-F)*0.44   ! Menter 2009   !<
-!.....Low-Re version of SST k-omega.......................................
-!      alphast=(0.0249+(DENSIT*TE(IJK))/(6.*VISCOS*ED(IJK)))    &         !             
-!             /(1.+(DENSIT*TE(IJK))/(6.*VISCOS*ED(IJK)))                  !
-!      tmp=5./(9.*alphast)*                                     &         !                                     
-!             (1./10.+ (DENSIT*TE(IJK))/(2.7*VISCOS*ED(IJK)))   &         !
-!            /(1.   + (DENSIT*TE(IJK))/(2.7*VISCOS*ED(IJK)))              !
-!      ALPHASST(INP) = F*tmp + (1.-F)*0.44                                !<
-!........................................................................!
-      BETTASST(INP) = F*0.0747+(1.-F)*0.0828  ! WJ and A.Hellsten
-      IF (EARSM_M) BETTASST(INP) = F*0.075+(1.-F)*0.0828  ! Menter 2009
-
-
-!.....EFFECTIVE DIFFUSIVITY (WJ and A.Hellsten original):
-      IF (EARSM_WJ) THEN
-      PRTINV_TE(INP)= F*1.1  + (1.-F)*1.1    ! sigma_k1=sigma_k2=1.1
-      PRTINV_ED(INP)= F*0.53 + (1.-F)*1.0    ! sigma_omega1=0.53 sigma_omega2=1.0
-      SIGMAD        = F*1.0  + (1.-F)*0.4    ! sigma_d
-      ENDIF
-
-!.....EFFECTIVE DIFFUSIVITY (Menter 2009):
-      IF (EARSM_M) THEN
-      PRTINV_TE(INP)= F*0.5 + (1.-F)*1.      ! sigma_k1=sigma_k2=1.1
-      PRTINV_ED(INP)= F*0.5 + (1.-F)*0.856   ! sigma_omega1=0.53 sigma_omega2=1.0
-      SIGMAD        =      2.*(1.-F)*0.856   ! sigma_d
-      ENDIF
-
-!=====FIND $D_{\omega}$ CROSS DIFFUSION MODIFICATION===================
-      DOMEGA(INP)=SIGMAD * DEN(INP)/ED(INP) &
-!                    *(DTEDX*DEDDX+DTEDY*DEDDY+DTEDZ*DEDDZ)
-                  *max(DTEDX*DEDDX+DTEDY*DEDDY+DTEDZ*DEDDZ, 0.)
-
-
-
-      END DO !!CELL LOOP
-
-
-
-
-
-
-
-
-
-
-
-  do inp=1,numCells
-
-    ! Wall distance
-    wldist = walldistance(inp)
-
-    ! Gradient of turbulence kinetic energy
-    dtedx=dTEdxi(1,inp)
-    dtedy=dTEdxi(2,inp)
-    dtedz=dTEdxi(3,inp)
-
-    ! Gradient of turbulence kinetic energy specific dissipation rate 
-    deddx=dEDdxi(1,inp)
-    deddy=dEDdxi(2,inp)
-    deddz=dEDdxi(3,inp)
-
-    ! Find $d_{\Omega}^{+}$ D_omega+
-    domegapl=max(2*den(inp)/(SIGMOM2*ed(inp)) * (dtedx*deddx+dtedy*deddy+dtedz*deddz),small)
-
-    ! Find ksi
-    ksi=min(  max(                                                   &
-                  sqrt(te(inp))/(BETTAST*wldist*ed(inp)+small),      &
-                  500.0_dp*viscos/den(inp)/(wldist**2*ed(inp)+small) &
-                 ),                                                  &
-              4.0_dp*den(inp)*te(inp)/(SIGMOM2*domegapl*wldist**2)   &
-            )
-
-    ! Find the SST model blending function f_sst:
-    fsst(inp) = tanh(ksi**4)
-
-  enddo
-
-
-
-
-  ! VOLUME SOURCE TERMS 
-  do inp=1,numCells
-
-    genp=max(gen(inp),zero)
-    genn=min(gen(inp),zero)
-
-
-    ! Production of dissipation
-    vist = (vis(inp)-viscos)/densit
-
-    ! Production coefficient alpha_sst
-    alphasst=fsst(inp)*alpha1+(1.0_dp-fsst(inp))*alpha2               
-
-    su(inp)=alphasst*genp*vol(inp)/(vist+small)
-
-    ! FIND $D_omega$ CROSS DIFFUSION MODIFICATION: 
-
-    ! Gradient of turbulence kinetic energy
-    dtedx=dTEdxi(1,inp)
-    dtedy=dTEdxi(2,inp)
-    dtedz=dTEdxi(3,inp)
-
-    ! Gradient of turbulence kinetic energy specific dissipation rate 
-    deddx=dEDdxi(1,inp)
-    deddy=dEDdxi(2,inp)
-    deddz=dEDdxi(3,inp)
-
-    domega = 2*(1.0_dp-fsst(inp))*den(inp)/(SIGMOM2*ed(inp)+small)*(dtedx*deddx+dtedy*deddy+dtedz*deddz)
-    domega = max(domega,0.0_dp)
-
-    su(inp)=su(inp)+domega*vol(inp)
-
-
-
-    ! Destruction of dissipation. 
-
-    ! Destruction coefficient beta_sst
-     bettasst=fsst(inp)*betai1+(1.0_dp-fsst(inp))*betai2
-
-
-    ! Add destruction term (-beta*rho*w**2) to the lhs :   
-    ! sp(inp)=bettasst*den(inp)*ed(inp)*vol(inp) 
-    !
-    !..or using the destruction term that incorporates Simplified Curvature Correction:
-    ! Multiply destruction by F4 Simplified Curvature Correction term b Hellsten
-    ! to obtain SST-2003RC-Hellsten model
-    W_S = Vorticity(inp)/magStrain(inp)
-    Ri = W_S*(W_S-one)
-    F4 = one/(one + 1.4_dp*Ri)    
-    sp(inp)=F4*bettasst*den(inp)*ed(inp)*vol(inp)
-
-    ! Negative value of production moved to lhs.
-    sp(inp)=sp(inp)-alphasst*genn*vol(inp)/(vist*ed(inp)+small) 
-
-
-
-    ! UNSTEADY TERM
-    if (ltransient) then
-      apotime = den(inp)*vol(inp)/timestep
-      if( bdf .or. cn ) then
-        su(inp) = su(inp) + apotime*edo(inp)
-        sp(inp) = sp(inp) + apotime
-      elseif( bdf2 ) then
-        su(inp) = su(inp) + apotime*( 2*edo(inp) - 0.5_dp*edoo(inp) )
-        sp(inp) = sp(inp) + 1.5_dp*apotime
-      endif
-    endif
-
-  ! End of Dissipation volume source terms
-  enddo
-
-!--------------------------------------
-  end if ! ite or ied conditional
-
-
-
-!
-! CALCULATE CONVECTIVE AND DIFFUSIVE FLUXES BY INTEGRATING OVER FACES
-!
-
-  ! Inner faces:                                             
-  do i=1,numInnerFaces                                                       
-    ijp = owner(i)
-    ijn = neighbour(i)
-
-    ! In SST model the Effective diffusivity is a field variable:
-    if(ifi.eq.ite) then
-      prtr_ijp = fsst(ijp)*(1./sigmk1)  + (1.0_dp-fsst(ijp))*(1./sigmk2)
-      prtr_ijn = fsst(ijn)*(1./sigmk1)  + (1.0_dp-fsst(ijn))*(1./sigmk2)
-    else
-      prtr_ijp = fsst(ijp)*(1./sigmom1) + (1.0_dp-fsst(ijp))*(1./sigmom2)
-      prtr_ijn = fsst(ijn)*(1./sigmom1) + (1.0_dp-fsst(ijn))*(1./sigmom2)
-    endif
-
-    call facefluxsc(  ijp, ijn, &
-                      xf(i), yf(i), zf(i), arx(i), ary(i), arz(i), &
-                      flmass(i), facint(i), gam, &
-                      fi, dFidxi, prtr_ijp, cap, can, suadd )                      
-                      ! fi, dFidxi, prtr_ijp, prtr_ijn, cap, can, suadd )
-
-    ! > Off-diagonal elements:
-
-    ! (icell,jcell) matrix element:
-    k = icell_jcell_csr_index(i)
-    a(k) = can
-
-    ! (jcell,icell) matrix element:
-    k = jcell_icell_csr_index(i)
-    a(k) = cap
-
-    ! > Elements on main diagonal:
-
-    ! ! (icell,icell) main diagonal element
-    k = diag(ijp)
-    a(k) = a(k) - can
-
-    ! ! (jcell,jcell) main diagonal element
-    k = diag(ijn)
-    a(k) = a(k) - cap
-
-    ! > Sources:
-
-    su(ijp) = su(ijp) + suadd
-    su(ijn) = su(ijn) - suadd 
-
-  enddo
-
-  !
-  ! Boundary conditions
-  !
-
-  iWall = 0
-
-  do ib=1,numBoundaries
-
-    if ( bctype(ib) == 'inlet' ) then
-
-      do i=1,nfaces(ib)
-
-        iface = startFace(ib) + i
-        ijp = owner(iface)
-        ijb = iBndValueStart(ib) + i
-
-        ! In SST model the Effective diffusivity is a field variable:
-        if(ifi.eq.ite) then
-          prtr=fsst(ijp)*(1./sigmk1)  + (1.0_dp-fsst(ijp))*(1./sigmk2)
-        else
-          prtr=fsst(ijp)*(1./sigmom1) + (1.0_dp-fsst(ijp))*(1./sigmom2)
-        endif
-
-        call facefluxsc( ijp, ijb, &
-                         xf(iface), yf(iface), zf(iface), arx(iface), ary(iface), arz(iface), &
-                         flmass(iface), &
-                         Fi, dFidxi, prtr, cap, can, suadd )
-
-        Sp(ijp) = Sp(ijp)-can
-
-        Su(ijp) = Su(ijp) - can*fi(ijb) + suadd
-
-      end do
-
-
-    elseif ( bctype(ib) == 'outlet' ) then
-
-      do i=1,nfaces(ib)
-
-        iface = startFace(ib) + i
-        ijp = owner(iface)
-        ijb = iBndValueStart(ib) + i
-
-        ! In SST model the Effective diffusivity is a field variable:
-        if(ifi.eq.ite) then
-          prtr=fsst(ijp)*(1./sigmk1)  + (1.0_dp-fsst(ijp))*(1./sigmk2)
-        else
-          prtr=fsst(ijp)*(1./sigmom1) + (1.0_dp-fsst(ijp))*(1./sigmom2)
-        endif
-
-        call facefluxsc( ijp, ijb, &
-                         xf(iface), yf(iface), zf(iface), arx(iface), ary(iface), arz(iface), &
-                         flmass(iface), &
-                         FI, dFidxi, prtr, cap, can, suadd )
-
-        Sp(ijp) = Sp(ijp)-can
-
-        Su(ijp) = Su(ijp) - can*fi(ijb) + suadd
-
-      end do
-
-    elseif ( bctype(ib) == 'wall') then
-
-      do i=1,nfaces(ib)
-
-        iface = startFace(ib) + i
-        ijp = owner(iface)
-        ijb = iBndValueStart(ib) + i
-        iWall = iWall + 1
-
-        if (ifi .eq. ite) then
-
-        !
-        ! > Wall boundary conditions for turbulence kinetic energy eq.
-        !
-
-          su(ijp )= su(ijp)-gen(ijp)*vol(ijp) ! take out standard production from wall ajdecent cell.
-
-          viss=viscos
-          if(ypl(i).gt.ctrans) viss=visw(iwall)
-          ! viss = max(viscos,visw(iWall))
-
-          ! Face area 
-          are = sqrt(arx(iface)**2+ary(iface)**2+arz(iface)**2)
-
-          ! Face normals
-          nxf = arx(iface)/are
-          nyf = ary(iface)/are
-          nzf = arz(iface)/are
-
-          ! Magnitude of a cell center velocity projected on boundary face normal
-          Vnp = U(ijp)*nxf+V(ijp)*nyf+W(ijp)*nzf
-
-          ! Tangential velocity components 
-          xtp = U(ijp)-Vnp*nxf
-          ytp = V(ijp)-Vnp*nyf
-          ztp = W(ijp)-Vnp*nzf
-
-          ! Its magnitude
-          Vtp = sqrt(xtp*xtp+ytp*ytp+ztp*ztp)
-
-          ! Tangent direction - unit vector
-          xtp = xtp/vtp
-          ytp = ytp/vtp
-          ztp = ztp/vtp
-
-          ! projektovanje razlike brzina na pravac tangencijalne brzine u cell centru ijp
-          Ut2 = abs( (U(ijb)-U(ijp))*xtp + (V(ijb)-V(ijp))*ytp + (W(ijb)-W(ijp))*ztp )
-
-          Tau(iWall) = viss*Ut2/dnw(iwall)
-
-          gen(ijp)=abs(tau(iWall))*cmu25*sqrt(te(ijp))/(dnw(iwall)*cappa)
-
-          su(ijp)=su(ijp)+gen(ijp)*vol(ijp)
-
-        else
-
-          ! Wall boundaries approximated with wall functions
-          ! for correct values of dissipation all coefficients have
-          ! to be zero, su equal the dissipation, and ap = 1
-
-          ! Automatic wall treatment - quadratic blend of log-layer and vis sublayer value:
-          wlog=sqrt(te(ijp))/(cmu25*cappa*dnw(iWall))
-
-          wvis=6.0_dp*(viscos/den(ijp))/(betai1*dnw(iWall)**2) 
-
-          ed(ijp) = sqrt(wvis**2+wlog**2)
-          su(ijp)=ed(ijp)
-
-          a( ioffset(ijp):ioffset(ijp+1)-1 ) = 0.0_dp
-          sp(ijp) = 1.0_dp
-
-        endif
-
-      enddo
-
-    endif
-
-  enddo
-
-  ! Modify coefficients for Crank-Nicolson
-  if (cn) then
-
-      a = 0.5_dp*a ! Doesn't affect the main diagonal because it's still zero.
-
-      if(ifi.eq.ite) then
-
-        do i = 1,numInnerFaces
-            ijp = owner(i)
-            ijn = neighbour(i)
-
-            k = icell_jcell_csr_index(i)
-            su(ijp) = su(ijp) - a(k)*teo(ijn)
-
-            k = jcell_icell_csr_index(i)
-            su(ijn) = su(ijn) - a(k)*teo(ijp)
-        enddo
-        do ijp=1,numCells
-            apotime=den(ijp)*vol(ijp)/timestep
-            off_diagonal_terms = sum( a( ioffset(ijp) : ioffset(ijp+1)-1 ) ) - a(diag(ijp))
-            su(ijp) = su(ijp) + (apotime + off_diagonal_terms)*teo(ijp)
-            sp(ijp) = sp(ijp)+apotime
-        enddo
-
-      else ! ifi.eq.ied
-
-        do i = 1,numInnerFaces
-            ijp = owner(i)
-            ijn = neighbour(i)
-
-            k = icell_jcell_csr_index(i)
-            su(ijp) = su(ijp) - a(k)*edo(ijn)
-
-            k = jcell_icell_csr_index(i)
-            su(ijn) = su(ijn) - a(k)*edo(ijp)
-        enddo
-        do ijp=1,numCells
-            apotime=den(ijp)*vol(ijp)/timestep
-            off_diagonal_terms = sum( a( ioffset(ijp) : ioffset(ijp+1)-1 ) ) - a(diag(ijp))
-            su(ijp) = su(ijp) + (apotime + off_diagonal_terms)*edo(ijp)
-            sp(ijp) = sp(ijp)+apotime
-        enddo
-
-      endif
-
-  endif
-
-  ! Underrelaxation factors
-  urfrs=urfr(ifi)
-  urfms=urfm(ifi)
-
-  ! Main diagonal term assembly:
-  do inp = 1,numCells
-
-        ! Main diagonal term assembly:
-        a(diag(inp)) = sp(inp) 
-        do k = ioffset(inp),ioffset(inp+1)-1
-          if (k.eq.diag(inp)) cycle
-          a(diag(inp)) = a(diag(inp)) -  a(k)
-        enddo
-
-        ! Underelaxation:
-        a(diag(inp)) = a(diag(inp))*urfrs
-        su(inp) = su(inp) + urfms*a(diag(inp))*fi(inp)
-                    
-  enddo
-
-  ! Solve linear system:
-  call bicgstab(fi,ifi)
-
-  !
-  ! Update symmetry and outlet boundaries
-  !
-  do ib=1,numBoundaries
-
-    if ( bctype(ib) == 'outlet' .or. bctype(ib) == 'symmetry' ) then
-
-      do i=1,nfaces(ib)
-
-        iface = startFace(ib) + i
-        ijp = owner(iface)
-        ijb = iBndValueStart(ib) + i
-
-        fi(ijb)=fi(ijp)
-
-      enddo
-
-    endif
-
-  enddo
-
-! Report range of scalar values and clip if negative
-  fimin = minval(fi)
-  fimax = maxval(fi)
-
-  write(6,'(2x,es11.4,3a,es11.4)') fimin,' <= ',chvar(ifi),' <= ',fimax
-
-! These field values cannot be negative
-  if(fimin.lt.0.0_dp) fi = max(fi,small)
-
-end subroutine calcsc
-
-
-!***********************************************************************
-!
-subroutine modify_mu_eff()
-!
-!***********************************************************************
-!
-! Update turbulent and effective viscosity.
-!
-!***********************************************************************
-  use types
-  use parameters
-  use geometry
-  use variables
-  implicit none
-
-  integer :: i,inp
-  integer :: ib,iface,ijp,ijb,iwall
-  real(dp) :: visold
-  real(dp) :: nxf,nyf,nzf,are
-  real(dp) :: Vnp,Vtp,xtp,ytp,ztp
-  real(dp) :: Utau,viscw
-  real(dp) :: wldist,etha,f2_sst,alphast
-  real(dp) :: Utauvis,Utaulog,Upl
-  ! real(dp) :: fimax,fimin
+!%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+!%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+!%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+!%%%%% End of legacy code for Explicit Algebraic Reynolds Stress model %%%%%
+!%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+!%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+  urf = TurbModel%urfVis
 
 
   ! Loop trough cells 
@@ -1153,15 +1137,14 @@ subroutine modify_mu_eff()
     visold=vis(inp)
 
     ! Update effective viscosity:
-    vis(inp)=viscos+den(inp)*(cmueff(inp)/cmu)*te(inp)/(ed(inp)+small)
-
-    !====================================================
-    !.....FOR EARSM WJ model by Menter et.al. (2009)
-    !====================================================
-    IF(EARSM_M) vis(inp)=viscos+den(inp)*te(inp)/(ed(inp)+small)
+    if(EARSM_M) then
+      vis(inp)=viscos+den(inp)*te(inp)/(ed(inp)+small)
+    else ! EARSM_WJ
+      vis(inp)=viscos+den(inp)*(cmueff(inp)/BETTAST)*te(inp)/(ed(inp)+small)
+    endif
 
     ! Underelaxation
-    vis(inp)=urf(ivis)*vis(inp)+(1.0_dp-urf(ivis))*visold
+    vis(inp)=visold + urf*(vis(inp)-visold)
 
   enddo
 
@@ -1169,47 +1152,14 @@ subroutine modify_mu_eff()
   ! Boundary faces 
   !
 
+  ! Update value at every bounary face type except 'wall', which is treated below.
+  call updateBoundary( vis )
+
   iWall = 0
 
   do ib=1,numBoundaries
 
-    if ( bctype(ib) == 'inlet' ) then
-
-      do i=1,nfaces(ib)
-
-        iface = startFace(ib) + i
-        ijp = owner(iface)
-        ijb = iBndValueStart(ib) + i
-
-        Vis(ijb) = Vis(ijp)
-
-      end do
-
-    elseif ( bctype(ib) == 'outlet' ) then
-
-      do i=1,nfaces(ib)
-
-        iface = startFace(ib) + i
-        ijp = owner(iface)
-        ijb = iBndValueStart(ib) + i
-
-        Vis(ijb) = Vis(ijp)
-
-      enddo
-
-    elseif ( bctype(ib) == 'symmetry') then
-
-      do i=1,nfaces(ib)
-
-        iface = startFace(ib) + i
-        ijp = owner(iface)
-        ijb = iBndValueStart(ib) + i
-
-        Vis(ijb) = Vis(ijp)
-
-      end do
-
-    elseif ( bctype(ib) == 'wall') then
+    if ( bctype(ib) == 'wall') then
 
       do i=1,nfaces(ib)
 
@@ -1271,7 +1221,7 @@ subroutine modify_mu_eff()
         viscw = den(ijp)*utau*dnw(iWall)/Upl 
 
         ! Blended version of shear stress - probati ovo(!?)
-        ! tau(iWall) = den(ijp) * (Vtp/Uplblend)**2
+        ! tau(iWall) = den(ijp) * (Vtp/Upl)**2
 
         ! Varijanta 2, u originalnoj referenci...
         tau(iWall) = den(ijp) * Vtp*Utau/Upl
@@ -1324,10 +1274,10 @@ subroutine modify_mu_eff()
   ! write(6,'(2x,es11.4,3a,es11.4)') fimin,' <= Viscosity ratio <= ',fimax
 
 
-end subroutine modify_mu_eff
+end subroutine
 
 
-subroutine modify_mu_eff_inlet()
+subroutine modify_viscosity_inlet_k_omega_earsm_wj
 !
 ! Update turbulent and effective viscosity at inlet.
 !
@@ -1359,7 +1309,7 @@ subroutine modify_mu_eff_inlet()
 
   enddo 
 
-end subroutine modify_mu_eff_inlet
+end subroutine
 
 
-end module k_omega_sst
+end module

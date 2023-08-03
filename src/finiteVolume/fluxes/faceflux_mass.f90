@@ -7,7 +7,7 @@ module faceflux_mass
 !   In corrector phase of SIMPLE/PISO we assemble and solve Poisson equation for 
 !   pressure correction, in PISO we assemble and solve Poisson equation for pressure.
 !   Same thing basically.
-!   What we do here is within an inner faces loop in subroutine where we solve pressure-correction
+!   What we do here is within the inner faces loop in subroutine where we solve pressure-correction
 !   or pressure equation we call a function to compute mass fluxes,
 !   where Rhie-Chow correction is incorporated (which is very important, i.e. crucial for collocated solvers).
 !   Along the way we compute elements of matrix which represents linear system of equations obtained
@@ -20,8 +20,8 @@ module faceflux_mass
 !
   use types
   use parameters
-  use geometry, only: xc,yc,zc,vol
-  use variables !, only: den,U,V,W,dUdxi,dVdxi,dWdxi,p,dpdxi
+  use geometry, only: xc,yc,zc,vol,Df
+  use variables, only: den,U,V,W,dUdxi,dVdxi,dWdxi,p,pp,dpdxi
   use sparse_matrix, only: apu,apv,apw
   use interpolation
 
@@ -35,13 +35,13 @@ contains
 
 !***********************************************************************
 !
-subroutine facefluxmass(ijp, ijn, xf, yf, zf, arx, ary, arz, lambda, cap, can, fluxmass)
+subroutine facefluxmass(i, ijp, ijn, xf, yf, zf, arx, ary, arz, lambda, cap, can, fluxmass)
 !
 !***********************************************************************
 !
   implicit none
 
-  integer, intent(in) :: ijp, ijn
+  integer, intent(in) :: i, ijp, ijn
   real(dp), intent(in) :: xf,yf,zf
   real(dp), intent(in) :: arx, ary, arz
   real(dp), intent(in) :: lambda
@@ -55,8 +55,6 @@ subroutine facefluxmass(ijp, ijn, xf, yf, zf, arx, ary, arz, lambda, cap, can, f
   real(dp) :: xpn,ypn,zpn,dene
   real(dp) :: nxx,nyy,nzz
   real(dp) :: ui,vi,wi
-  ! real(dp) :: ue,ve,we
-  real(dp) :: smdpn
   ! real(dp) :: sfdpnr
   real(dp) :: xpp,ypp,zpp,xep,yep,zep
   real(dp) :: dpe
@@ -89,23 +87,15 @@ subroutine facefluxmass(ijp, ijn, xf, yf, zf, arx, ary, arz, lambda, cap, can, f
 
   !  ______
   ! (Vol/Ap)_f
-  Dpu = (fxn*Vol(ijn)*Apu(ijn)+fxp*Vol(ijp)*Apu(ijp))
-  ! Dpv = (fxn*Vol(ijn)*Apv(ijn)+fxp*Vol(ijp)*Apv(ijp))
-  ! Dpw = (fxn*Vol(ijn)*Apw(ijn)+fxp*Vol(ijp)*Apw(ijp))
+  Dpu = fxn*Vol(ijn)*Apu(ijn)+fxp*Vol(ijp)*Apu(ijp)
+  ! Dpv = fxn*Vol(ijn)*Apv(ijn)+fxp*Vol(ijp)*Apv(ijp)
+  ! Dpw = fxn*Vol(ijn)*Apw(ijn)+fxp*Vol(ijp)*Apw(ijp)
 
   ! Density at the cell face
   dene = den(ijp)*fxp+den(ijn)*fxn
 
   ! COEFFICIENTS OF PRESSURE-CORRECTION EQUATION
-
-  ! (Sf.Sf) / (dpn.Sf)  
-  !# smdpn = (arx*arx+ary*ary+arz*arz)/(arx*xpn*nxx+ary*ypn*nyy+arz*zpn*nzz+small)
-  smdpn = (arx*arx+ary*ary+arz*arz)/(arx*xpn+ary*ypn+arz*zpn)
-
-  ! |Sf| / (dpn.nf)
-  !smdpn = are/(xpn*nxx+ypn*nyy+zpn*nzz)
-
-  cap = -dene*Dpu*smdpn
+  cap = -dene*Dpu*Df(i)
   can = cap
 
 
@@ -130,9 +120,9 @@ subroutine facefluxmass(ijp, ijn, xf, yf, zf, arx, ary, arz, lambda, cap, can, f
   ! vi = face_value_cds_corrected( ijp, ijn, xf, yf, zf, lambda, v, dVdxi )
   ! wi = face_value_cds_corrected( ijp, ijn, xf, yf, zf, lambda, w, dWdxi )
 
-  ! ui = face_value_central( ijp,ijn, xf, yf, zf, u, dUdxi )
-  ! vi = face_value_central( ijp,ijn, xf, yf, zf, v, dVdxi )
-  ! wi = face_value_central( ijp,ijn, xf, yf, zf, w, dWdxi )
+  ! ui = face_value_central( ijp, ijn, xf, yf, zf, u, dUdxi )
+  ! vi = face_value_central( ijp, ijn, xf, yf, zf, v, dVdxi )
+  ! wi = face_value_central( ijp, ijn, xf, yf, zf, w, dWdxi )
 
 
   !+Interpolate pressure gradients to cell face center
@@ -161,41 +151,34 @@ subroutine facefluxmass(ijp, ijn, xf, yf, zf, arx, ary, arz, lambda, cap, can, f
   dpe = p(ijn) + dPdxi(1,ijn)*xep+dPdxi(2,ijn)*yep+dPdxi(3,ijn)*zep - &
         p(ijp) + dPdxi(1,ijp)*xpp+dPdxi(2,ijp)*ypp+dPdxi(3,ijp)*zpp 
 
+  ! 1)
+  ! MASS FLUX via Rhie-Chow Interpolation
+  fluxmass = dene*(ui*arx+vi*ary+wi*arz) + cap*(dpe-dpxi-dpyi-dpzi)  
+
+  ! 2)
   ! Pressure gradient along normal between N' and P' point which are on face normal direction.
-  ! dpn = dpe/(xpn*nxx+ypn*nyy+zpn*nzz+small)
+  ! dpn = dpe/(xpn*nxx+ypn*nyy+zpn*nzz)
 
   ! Rhie-Chow Interpolation 
-  ! ue = ui - Dpu * (dpn - dpxi)
-  ! ve = vi - Dpv * (dpn - dpyi)
-  ! we = wi - Dpw * (dpn - dpzi)
+  ! ui = ui - Dpu * (dpn - dpxi)
+  ! vi = vi - Dpv * (dpn - dpyi)
+  ! wi = wi - Dpw * (dpn - dpzi)
 
   ! MASS FLUX via Rhie-Chow Interpolation
-  ! fluxmass = dene*(ue*arx+ve*ary+we*arz)
-  fluxmass = dene*(ui*arx+vi*ary+wi*arz) + cap*(dpe-dpxi-dpyi-dpzi)  
+  ! fluxmass = dene*(ui*arx+vi*ary+wi*arz)
 
 end subroutine
 
 
 !***********************************************************************
 !
-subroutine facefluxmass2(ijp, ijn, arx, ary, arz, lambda, cap, can, fluxmass)
+subroutine facefluxmass2(i, ijp, ijn, arx, ary, arz, lambda, cap, can, fluxmass)
 !
 !***********************************************************************
 !
-! You will have to call it like this:
-! subroutine facefluxmass2(ijp, ijn, xf, yf, zf, arx, ary, arz, lambda, cap, can, fluxmass)
-! with additional arguments xf, yf, zf, compare to the case above,
-! if you are using
-! ui = face_value_central( ijp,ijn, xf, yf, zf, u, dUdxi )
-! ...
-! to find velocity interpolation value at face.
-! Now we use weighted interpolation as described in Fluent Theory Guide
-! for testing purposes.
-!
-!***********************************************************************
   implicit none
 
-  integer, intent(in) :: ijp, ijn
+  integer, intent(in) :: i, ijp, ijn
   ! real(dp), intent(in) :: xf,yf,zf
   real(dp), intent(in) :: arx, ary, arz
   real(dp), intent(in) :: lambda
@@ -204,7 +187,6 @@ subroutine facefluxmass2(ijp, ijn, arx, ary, arz, lambda, cap, can, fluxmass)
 
   ! Local variables
   real(dp) :: fxn, fxp
-  real(dp) :: are,dpn
   real(dp) :: xpn,ypn,zpn,dene
   real(dp) :: ui,vi,wi
   real(dp) :: dpxi,dpyi,dpzi
@@ -222,24 +204,14 @@ subroutine facefluxmass2(ijp, ijn, arx, ary, arz, lambda, cap, can, fluxmass)
   ypn = yc(ijn)-yc(ijp)
   zpn = zc(ijn)-zc(ijp)
 
-  ! Distance between cell centers
-  dpn = sqrt(xpn**2+ypn**2+zpn**2)
-
-  ! cell face area
-  are = sqrt(arx**2+ary**2+arz**2)
-
   ! density at the cell face
   dene = den(ijp)*fxp+den(ijn)*fxn
 
   ! COEFFICIENTS OF PRESSURE-CORRECTION EQUATION
   Kj = vol(ijp)*apu(ijp)*fxp + vol(ijn)*apu(ijn)*fxn
-  ! cap = -dene*Kj*are/dpn
-  !...or..(maybe better)
-  cap = -dene*Kj*(arx*arx+ary*ary+arz*arz)/(arx*xpn+ary*ypn+arz*zpn) 
-  can = cap
 
-  ! For periodic flows with constant mass flow along x-axis direction
-  ! can = -dene*Kj*arx
+  cap = -dene*Kj*Df(i)
+  can = cap
 
   !////////////////////////////////////////////////////////
   !     RHIE-CHOW velocity interpolation at face
@@ -248,9 +220,9 @@ subroutine facefluxmass2(ijp, ijn, arx, ary, arz, lambda, cap, can, fluxmass)
 
   ! UI-> (U)f -> second order interpolation at face
 
-  ! ui = face_value_cds( ijp, ijn, lambda, u )
-  ! vi = face_value_cds( ijp, ijn, lambda, v )
-  ! wi = face_value_cds( ijp, ijn, lambda, w )
+  ui = face_value_cds( ijp, ijn, lambda, u )
+  vi = face_value_cds( ijp, ijn, lambda, v )
+  wi = face_value_cds( ijp, ijn, lambda, w )
 
   ! ui = face_value_cds_corrected( ijp, ijn, xf, yf, zf, lambda, u, dUdxi )
   ! vi = face_value_cds_corrected( ijp, ijn, xf, yf, zf, lambda, v, dVdxi )
@@ -260,7 +232,142 @@ subroutine facefluxmass2(ijp, ijn, arx, ary, arz, lambda, cap, can, fluxmass)
   ! vi = face_value_central( ijp,ijn, xf, yf, zf, v, dVdxi )
   ! wi = face_value_central( ijp,ijn, xf, yf, zf, w, dWdxi )
 
+  ! ! Try this - like in Fluent Theory Guide - mass flow weighted interpolation
+  ! Kj = ( Apu(ijp) + Apu(ijn) + small )
+  ! ui = ( u(ijp)*Apu(ijn)+u(ijn)*Apu(ijp) ) / Kj
+  ! vi = ( v(ijp)*Apv(ijn)+v(ijn)*Apv(ijp) ) / Kj
+  ! wi = ( w(ijp)*Apw(ijn)+w(ijn)*Apw(ijp) ) / Kj
+
+  dpxi = ( dPdxi(1,ijn)*fxp + dPdxi(1,ijp)*fxn ) * xpn
+  dpyi = ( dPdxi(2,ijn)*fxp + dPdxi(2,ijp)*fxn ) * ypn
+  dpzi = ( dPdxi(3,ijn)*fxp + dPdxi(3,ijp)*fxn ) * zpn
+
+  ! MASS FLUX via Rhie-Chow Interpolation
+  fluxmass = dene*(ui*arx+vi*ary+wi*arz) + cap*(p(ijn)-p(ijp)-dpxi-dpyi-dpzi)
+
+
+end subroutine
+
+
+
+!***********************************************************************
+!
+subroutine facefluxmass3(i, ijp, ijn, xf, yf, zf, arx, ary, arz, lambda, cap, can, fluxmass)
+!
+!***********************************************************************
+!
+  implicit none
+
+  integer, intent(in) :: i, ijp, ijn
+  real(dp), intent(in) :: xf,yf,zf
+  real(dp), intent(in) :: arx, ary, arz
+  real(dp), intent(in) :: lambda
+  real(dp), intent(inout) :: cap, can
+  real(dp), intent(inout) :: fluxmass
+
+  ! Local variables
+  real(dp) :: fxn, fxp
+  real(dp) :: dpe
+  real(dp) :: dene
+  real(dp) :: ui,vi,wi
+  real(dp) :: Kj
+
+
+  ! > Geometry:
+
+  ! Face interpolation factor
+  fxn = lambda 
+  fxp = 1.0_dp-lambda
+
+  ! density at the cell face
+  dene = den(ijp)*fxp+den(ijn)*fxn
+
+  ! COEFFICIENTS OF PRESSURE-CORRECTION EQUATION
+  Kj = vol(ijp)*apu(ijp)*fxp + vol(ijn)*apu(ijn)*fxn
+  cap = -dene*Kj*Df(i)
+  can = cap
+
+
+  !////////////////////////////////////////////////////////
+  !     RHIE-CHOW velocity interpolation at face
+  !////////////////////////////////////////////////////////
+
+  ! UI-> (U)f -> second order interpolation at face
   ! Try this - like in Fluent Theory Guide - mass flow weighted interpolation
+  Kj = ( Apu(ijp) + Apu(ijn) + small )
+  ui = ( u(ijp)*Apu(ijn)+u(ijn)*Apu(ijp) ) / Kj
+  vi = ( v(ijp)*Apv(ijn)+v(ijn)*Apv(ijp) ) / Kj
+  wi = ( w(ijp)*Apw(ijn)+w(ijn)*Apw(ijp) ) / Kj
+
+  dpe = p(ijn) + dPdxi(1,ijn)*(xf-xc(ijn))+dPdxi(2,ijn)*(yf-yc(ijn))+dPdxi(3,ijn)*(zf-zc(ijn)) - &
+        p(ijp) + dPdxi(1,ijp)*(xf-xc(ijp))+dPdxi(2,ijp)*(yf-yc(ijp))+dPdxi(3,ijp)*(zf-zc(ijp))
+
+  ! MASS FLUX via Rhie-Chow Interpolation
+  fluxmass = dene*(ui*arx+vi*ary+wi*arz) + cap*dpe
+
+
+end subroutine
+
+!***********************************************************************
+!
+subroutine facefluxmass2_periodic(i, ijp, ijn, xf, yf, zf, arx, ary, arz, lambda, cap, can, fluxmass)
+!
+!***********************************************************************
+
+  implicit none
+
+  integer, intent(in) :: i, ijp, ijn
+  real(dp), intent(in) :: xf,yf,zf
+  real(dp), intent(in) :: arx, ary, arz
+  real(dp), intent(in) :: lambda
+  real(dp), intent(inout) :: cap, can
+  real(dp), intent(inout) :: fluxmass
+
+  ! Local variables
+  real(dp) :: fxn, fxp
+  real(dp) :: xpn,ypn,zpn,dene
+  real(dp) :: ui,vi,wi
+  real(dp) :: dpxi,dpyi,dpzi
+  real(dp) :: Kj
+
+
+  ! > Geometry:
+
+  ! Face interpolation factor
+  fxn = lambda 
+  fxp = 1.0_dp-lambda
+
+  ! Distance vector between cell centers
+  xpn = 2*( xf-xc(ijp) )
+  ypn = 2*( yf-yc(ijp) )
+  zpn = 2*( zf-zc(ijp) )
+
+  ! density at the cell face
+  dene = den(ijp)*fxp+den(ijn)*fxn
+
+  ! COEFFICIENTS OF PRESSURE-CORRECTION EQUATION
+  Kj = vol(ijp)*apu(ijp)*fxp + vol(ijn)*apu(ijn)*fxn
+
+  cap = -dene*Kj*Df(i)
+  can = cap
+
+
+
+  !////////////////////////////////////////////////////////
+  !     RHIE-CHOW velocity interpolation at face
+  !////////////////////////////////////////////////////////
+
+  ! UI-> (U)f -> second order interpolation at face
+
+  ! ui = face_value_cds( ijp, ijn, half, u )
+  ! vi = face_value_cds( ijp, ijn, half, v )
+  ! wi = face_value_cds( ijp, ijn, half, w )
+
+  ! ui = face_value_central( ijp, ijn, xf, yf, zf, u, dUdxi )
+  ! vi = face_value_central( ijp, ijn, xf, yf, zf, v, dVdxi )
+  ! wi = face_value_central( ijp, ijn, xf, yf, zf, w, dWdxi )
+
+  ! ! Try this - like in Fluent Theory Guide - mass flow weighted interpolation
   Kj = ( Apu(ijp) + Apu(ijn) + small )
   ui = ( u(ijp)*Apu(ijn)+u(ijn)*Apu(ijp) ) / Kj
   vi = ( v(ijp)*Apv(ijn)+v(ijn)*Apv(ijp) ) / Kj
@@ -277,95 +384,9 @@ subroutine facefluxmass2(ijp, ijn, arx, ary, arz, lambda, cap, can, fluxmass)
 end subroutine
 
 
-
 !***********************************************************************
 !
-subroutine facefluxmass2_periodic(ijp, ijn, xf, yf, zf, arx, ary, arz, lambda, cap, can, fluxmass)
-!
-!***********************************************************************
-
-  implicit none
-
-  integer, intent(in) :: ijp, ijn
-  real(dp), intent(in) :: xf,yf,zf
-  real(dp), intent(in) :: arx, ary, arz
-  real(dp), intent(in) :: lambda
-  real(dp), intent(inout) :: cap, can
-  real(dp), intent(inout) :: fluxmass
-
-  ! Local variables
-  real(dp) :: fxn, fxp
-  real(dp) :: are,dpn
-  real(dp) :: xpn,ypn,zpn,dene
-  real(dp) :: ui,vi,wi
-  real(dp) :: dpxi,dpyi,dpzi
-  real(dp) :: Kj ! notation from Muzaferija&Gosman JCP paper
-
-
-  ! > Geometry:
-
-  ! Face interpolation factor
-  fxn = lambda 
-  fxp = 1.0_dp-lambda
-
-  ! Distance vector between cell centers
-  xpn = 2*( xf-xc(ijp) )
-  ypn = 2*( yf-yc(ijp) )
-  zpn = 2*( zf-zc(ijp) )
-
-  ! Distance between cell centers
-  dpn = sqrt(xpn**2+ypn**2+zpn**2)
-
-  ! cell face area
-  are = sqrt(arx**2+ary**2+arz**2)
-
-  ! density at the cell face
-  dene = den(ijp)*fxp+den(ijn)*fxn
-
-  ! COEFFICIENTS OF PRESSURE-CORRECTION EQUATION
-  Kj = vol(ijp)*apu(ijp)*fxp + vol(ijn)*apu(ijn)*fxn
-  ! cap = -dene*Kj*are/dpn
-  !...or..(maybe better)
-  cap = -dene*Kj*(arx*arx+ary*ary+arz*arz)/(arx*xpn+ary*ypn+arz*zpn) 
-  can = cap
-
-  ! For periodic flows with constant mass flow along x-axis direction
-  ! can = -dene*Kj*arx
-
-
-  !////////////////////////////////////////////////////////
-  !     RHIE-CHOW velocity interpolation at face
-  !////////////////////////////////////////////////////////
-
-  ! UI-> (U)f -> second order interpolation at face
-
-  ! ui = face_value_cds( ijp, ijn, half, u )
-  ! vi = face_value_cds( ijp, ijn, half, v )
-  ! wi = face_value_cds( ijp, ijn, half, w )
-
-  ! ui = face_value_central( ijp,ijn, xf, yf, zf, u, dUdxi )
-  ! vi = face_value_central( ijp,ijn, xf, yf, zf, v, dVdxi )
-  ! wi = face_value_central( ijp,ijn, xf, yf, zf, w, dWdxi )
-
-  ! ! Try this - like in Fluent Theory Guide
-  ui = ( u(ijp)/Apu(ijp)+u(ijn)/Apu(ijn) ) / ( 1./Apu(ijp) + 1./Apu(ijn) )
-  vi = ( v(ijp)/Apv(ijp)+v(ijn)/Apv(ijn) ) / ( 1./Apv(ijp) + 1./Apv(ijn) )
-  wi = ( w(ijp)/Apw(ijp)+w(ijn)/Apw(ijn) ) / ( 1./Apw(ijp) + 1./Apw(ijn) )
-
-  dpxi = ( dPdxi(1,ijn)*fxp + dPdxi(1,ijp)*fxn ) * xpn
-  dpyi = ( dPdxi(2,ijn)*fxp + dPdxi(2,ijp)*fxn ) * ypn
-  dpzi = ( dPdxi(3,ijn)*fxp + dPdxi(3,ijp)*fxn ) * zpn
-
-  ! MASS FLUX via Rhie-Chow Interpolation
-  fluxmass = dene*(ui*arx+vi*ary+wi*arz) + cap*(p(ijn)-p(ijp)-dpxi-dpyi-dpzi)
-
-
-end subroutine
-
-
-!***********************************************************************
-!
-subroutine facefluxmass_piso(ijp, ijn, xf, yf, zf, arx, ary, arz, lambda, cap, can, flmass)!, fmo, fmoo,fmooo)
+subroutine facefluxmass_piso(i, ijp, ijn, arx, ary, arz, lambda, cap, can, flmass)!, fmo, fmoo,fmooo)
 !
 !***********************************************************************
 !
@@ -373,14 +394,14 @@ subroutine facefluxmass_piso(ijp, ijn, xf, yf, zf, arx, ary, arz, lambda, cap, c
   use parameters
   use geometry, only: xc,yc,zc,vol
   use sparse_matrix, only: apu
-  use variables, only: den,U,V,W,dUdxi,dVdxi,dWdxi
+  use variables, only: den,U,V,W !,dUdxi,dVdxi,dWdxi
   use gradients
   use interpolation
 
   implicit none
 
-  integer, intent(in) :: ijp, ijn
-  real(dp), intent(in) :: xf,yf,zf
+  integer, intent(in) :: i, ijp, ijn
+  ! real(dp), intent(in) :: xf,yf,zf
   real(dp), intent(in) :: arx, ary, arz
   real(dp), intent(in) :: lambda
   real(dp), intent(inout) :: cap, can
@@ -389,12 +410,12 @@ subroutine facefluxmass_piso(ijp, ijn, xf, yf, zf, arx, ary, arz, lambda, cap, c
 
   ! Local variables
   real(dp) :: fxn, fxp
-  real(dp) :: are,dpn
-  real(dp) :: nx,ny,nz
   real(dp) :: xpn,ypn,zpn,dene
   real(dp) :: ui,vi,wi
-  ! real(dp) :: ufo, vfo, wfo
   real(dp) :: Kj
+  ! real(dp) :: ufo, vfo, wfo
+  ! real(dp) :: are
+  ! real(dp) :: nx,ny,nz
 
 
   ! > Geometry:
@@ -408,40 +429,30 @@ subroutine facefluxmass_piso(ijp, ijn, xf, yf, zf, arx, ary, arz, lambda, cap, c
   ypn=yc(ijn)-yc(ijp)
   zpn=zc(ijn)-zc(ijp)
 
-  ! Distance from P to neighbor N
-  dpn=sqrt(xpn**2+ypn**2+zpn**2) 
-
-  ! cell face area
-  are=sqrt(arx**2+ary**2+arz**2)
-
-  ! Face unit normal
-  nx = arx/are
-  ny = ary/are
-  nz = arz/are
-
   ! density at the cell face
   dene=den(ijp)*fxp+den(ijn)*fxn
 
   ! COEFFICIENTS OF PRESSURE EQUATION
   Kj = vol(ijp)*apu(ijp)*fxp + vol(ijn)*apu(ijn)*fxn
-  ! cap = - dene*Kj*are/dpn
-  cap = -dene*Kj*(arx*arx+ary*ary+arz*arz)/(xpn*arx+ypn*ary+zpn*arz)
+
+  cap = -dene*Kj*Df(i)
   can = cap
 
   ! Interpolate velocities (H/Ap) to face center:
 
-  ! ui = face_value_cds( ijp, ijn, lambda, u )
-  ! vi = face_value_cds( ijp, ijn, lambda, v )
-  ! wi = face_value_cds( ijp, ijn, lambda, w )
+  ui = face_value_cds( ijp, ijn, lambda, u )
+  vi = face_value_cds( ijp, ijn, lambda, v )
+  wi = face_value_cds( ijp, ijn, lambda, w )
 
-  ui = face_value_central( ijp,ijn, xf, yf, zf, u, dUdxi )
-  vi = face_value_central( ijp,ijn, xf, yf, zf, v, dVdxi )
-  wi = face_value_central( ijp,ijn, xf, yf, zf, w, dWdxi )
+  ! ui = face_value_central( ijp, ijn, xf, yf, zf, u, dUdxi )
+  ! vi = face_value_central( ijp, ijn, xf, yf, zf, v, dVdxi )
+  ! wi = face_value_central( ijp, ijn, xf, yf, zf, w, dWdxi )
 
-  ! Try this - like in Fluent Theory Guide
-  ! ui = ( u(ijp)/Apu(ijp)+u(ijn)/Apu(ijn) ) / ( 1./Apu(ijp) + 1./Apu(ijn) )
-  ! vi = ( v(ijp)/Apv(ijp)+v(ijn)/Apv(ijn) ) / ( 1./Apv(ijp) + 1./Apv(ijn) )
-  ! wi = ( w(ijp)/Apw(ijp)+w(ijn)/Apw(ijn) ) / ( 1./Apw(ijp) + 1./Apw(ijn) )
+  ! ! Try this - like in Fluent Theory Guide - mass flow weighted interpolation
+  ! Kj = ( Apu(ijp) + Apu(ijn) + small )
+  ! ui = ( u(ijp)*Apu(ijn)+u(ijn)*Apu(ijp) ) / Kj
+  ! vi = ( v(ijp)*Apv(ijn)+v(ijn)*Apv(ijp) ) / Kj
+  ! wi = ( w(ijp)*Apw(ijn)+w(ijn)*Apw(ijp) ) / Kj
 
   ! MASS FLUX
   ! Calculate the fluxes by dotting the interpolated velocity (to cell faces) with face normals
@@ -455,7 +466,15 @@ subroutine facefluxmass_piso(ijp, ijn, xf, yf, zf, arx, ary, arz, lambda, cap, c
   !
 
   ! den*Vol/(ap*dt)
-  Kj = dene*Kj/timestep
+  ! Kj = dene*Kj/timestep
+
+  ! ! cell face area
+  ! are=sqrt(arx**2+ary**2+arz**2)
+
+  ! ! Face unit normal
+  ! nx = arx/are
+  ! ny = ary/are
+  ! nz = arz/are
 
   ! if (bdf) then
     
@@ -607,7 +626,7 @@ subroutine fluxmc(ijp, ijn, xf, yf, zf, arx, ary, arz, lambda, fmcor)
   yep=yf-(yf-yc(ijn))*nyy
   zep=zf-(zf-zc(ijn))*nzz
 
-  ! Distances |P'P| and |E'E| projected ionto x,y,z-axis
+  ! Distances |P'P| and |E'E| projected onto x,y,z-axis
   xpp=xpp-xc(ijp)
   ypp=ypp-yc(ijp)
   zpp=zpp-zc(ijp)
@@ -616,8 +635,8 @@ subroutine fluxmc(ijp, ijn, xf, yf, zf, arx, ary, arz, lambda, fmcor)
   yep=yep-yc(ijn)
   zep=zep-zc(ijn)
 
-  ! (den*Vol/ap)f x Sf/(dpn.nf)         
-  rapr = (apu(ijp)*den(ijp)*vol(ijp)*fxp+apu(ijn)*den(ijn)*vol(ijn)*fxn) * are/(xpn*nxx+ypn*nyy+zpn*nzz)
+  ! -(den*Vol/ap)f x Sf/(dpn.nf)         
+  rapr = -(apu(ijp)*den(ijp)*vol(ijp)*fxp+apu(ijn)*den(ijn)*vol(ijn)*fxn) * are/(xpn*nxx+ypn*nyy+zpn*nzz)
 
 
   ! Mass flux correction for the second p'-equation (source term)
@@ -626,6 +645,55 @@ subroutine fluxmc(ijp, ijn, xf, yf, zf, arx, ary, arz, lambda, fmcor)
                 (dPdxi(3,ijn)*zep-dPdxi(3,ijp)*zpp))
 
 end subroutine
+
+
+SUBROUTINE FLUXMC2(IJP,IJN,SX,SY,SZ,FMC)
+!
+!  Purpose:
+!   This routine calculates mass flux correction in the
+!   second pressure-correction step which accounts for the
+!   effects of non-orthogonality.
+!
+!  Reference: 
+!   Ferziger&Peric (Eq. (8.61), 2nd printing).
+!   This subroutine is adapted from code that was provided with the book.
+!   The code differs slightly from the referenced equation in the book
+!   since it is writen for the situation where the grid is skewed, but
+!   the line connecting cell centers still passed through the cell face centroid.
+! 
+  use types
+  use parameters
+  use geometry, only: xc,yc,zc
+  use variables, only: dPdxi
+  use sparse_matrix, only: apu
+
+  implicit none
+!
+!***********************************************************************
+!
+  integer, intent(in) :: ijp, ijn
+  real(dp), intent(in) :: sx, sy, sz
+  real(dp), intent(out) :: fmc
+  !
+  ! Local variables
+  !
+  real(dp) :: XPN,YPN,ZPN
+  real(dp) :: S2,DN,DPX,DPY,DPZ,RAPR
+!
+!.....MASS FLUX CORRECTION FOR THE SECOND P'-EQUATION (SOURCE TERM)
+!
+  XPN=XC(IJN)-XC(IJP)
+  YPN=YC(IJN)-YC(IJP)
+  ZPN=ZC(IJN)-ZC(IJP)
+  S2=SX**2+SY**2+SZ**2
+  DN=XPN*SX+YPN*SY+ZPN*SZ
+  RAPR=-0.5*(APU(IJP)*DEN(IJP)+APU(IJN)*DEN(IJN))
+  DPX=0.5*(DPDXI(1,IJN)+DPDXI(1,IJP))
+  DPY=0.5*(DPDXI(2,IJN)+DPDXI(2,IJP))
+  DPZ=0.5*(DPDXI(3,IJN)+DPDXI(3,IJP))
+  FMC=RAPR*((DN*SX-XPN*S2)*DPX+(DN*SY-YPN*S2)*DPY+(DN*SZ-ZPN*S2)*DPZ)
+
+END SUBROUTINE
 
 
 subroutine facefluxmassCorrPressBnd(ijp, ijb, xf, yf, zf, arx, ary, arz, fluxmass)

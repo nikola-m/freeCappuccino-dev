@@ -30,6 +30,11 @@ subroutine init
   use wall_distance
   use node_interpolation
 
+#ifdef LIS
+  use LIS_linear_solvers, only: lis_create_solver
+  use pressure, only: lSolverP ! we need lSolverP as an argument in lis_create_solver
+#endif
+
   implicit none
 
   ! 
@@ -51,11 +56,9 @@ subroutine init
 ! Various initialisations
 !
 
-  ! Initial time iz zero.
-  if(.not.lread) time = 0.0_dp
-
-  ! Set to zero cumulative error in continuity
-  cumulativeContErr = 0.0_dp
+  ! Initial time iz zero, unless we restart simulation.
+  itime = 0
+  time = 0.0_dp
 
 
 ! 1.2)  Field Initialisation
@@ -289,20 +292,17 @@ subroutine init
 
   
 !
-! > Initial Gradient Calculation
+! > Set matrix with geometric coefficients for Least-squares gradient reconstruction.
 !
-
-  ! Set matrix with geometric coefficients for Least-squares gradient reconstruction.
-  if (lstsq .or. lstsq_qr .or. lstsq_dm) then
-    call create_lsq_grad_matrix(U,dUdxi)
-  endif
-
-  ! Initial velocity gradient calculation with given velocity field.
-  call grad(U,dUdxi)
-  call grad(V,dVdxi)
-  call grad(W,dWdxi)
-
-
+  if (lstsq .or. lstsq_qr .or. lstsq_dm) call create_lsq_grad_matrix
+  
+!
+! > Create data structures for LIS solver (for pressure/pressure-correction).
+!
+#ifdef LIS
+  call lis_create_solver( lSolverP )
+#endif
+ 
 !
 ! > Distance to the nearest wall (needed for some turbulence models) for all cells via Poisson equation.
 !

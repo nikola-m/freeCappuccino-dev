@@ -32,17 +32,23 @@ subroutine bpres(p,istage)
 
   ! Locals:
   integer :: i, ijp, ijb, iface
+  ! integer :: ijn, iftwin, iper
   integer :: ib
   real(dp) :: xpb, ypb, zpb
 
+
+  ! iPer = 0
+
   if ( istage.eq.1 ) then
 
-    ! Loop Boundary faces:
+    ! Get boundary pressure by extrapolation everywhere but not at pressure boundary.
+    ! The same goes if we work here with pressure correction pp, we have pp=0 there so there is no update.
 
+    ! Loop Boundary faces:
     do ib=1,numBoundaries
       
+
       if ( bctype(ib) /= 'pressure' ) then 
-        ! Get boundary pressure by extrapolation everywhere but not at pressure boundary.
 
         do i=1,nfaces(ib)
 
@@ -53,6 +59,35 @@ subroutine bpres(p,istage)
           p(ijb) = p(ijp) 
 
         end do
+
+
+
+      ! elseif (  bctype(ib) == 'periodic' ) then
+
+      !   iPer = iPer + 1
+
+      !   ! Faces trough periodic boundaries
+      !   do i=1,nfaces(ib)
+
+      !     iface = startFace(ib) + i
+      !     ijp = owner(iface)
+
+      !     iftwin = startFaceTwin(iPer) + i
+      !     ijn = owner(iftwin)
+
+      !     ! Index for the face value storage location for the periodic boundary face
+      !     ijb = iBndValueStart(ib) + i
+
+      !     p(ijb) = 0.5*(p(ijp)+p(ijn))
+
+      !     ! place where the value of the twin periodic face is stored...
+      !     ijb = numCells + ( startFaceTwin(iPer) - numInnerFaces ) + i
+
+      !     p(ijb) = 0.5*(p(ijp)+p(ijn))
+
+      !   end do 
+
+
 
       endif 
 

@@ -6,7 +6,7 @@ subroutine CourantNo
   use types
   use parameters, only: CoNum,meanCoNum, CoNumFixValue, CoNumFix, timestep, ltransient, itime, time
   use geometry, only: numCells, numInnerFaces, owner, neighbour, numBoundaries, bctype, nfaces, startFace, Vol
-  use sparse_matrix, only: res
+  use sparse_matrix, only: su
   use variables, only: flmass,den
 
   implicit none
@@ -18,7 +18,7 @@ subroutine CourantNo
   CoNum = 0.0_dp
   meanCoNum = 0.0_dp
 
-  res = 0.0_dp
+  su = 0.0_dp
 
   !
   ! Suface sum of magnitude (i.e. absolute value) of mass flux phi, over inner faces only
@@ -28,8 +28,8 @@ subroutine CourantNo
   do i=1,numInnerFaces                                                                                                               
     ijp = owner(i)
     ijn = neighbour(i)
-    res(ijp) = res(ijp)+abs(flmass(i))
-    res(ijn) = res(ijn)+abs(flmass(i))                                                                                                               
+    su(ijp) = su(ijp)+abs(flmass(i))
+    su(ijn) = su(ijn)+abs(flmass(i))                                                                                                               
   enddo     
 
   ! Boundary faces
@@ -40,14 +40,14 @@ subroutine CourantNo
       do i=1,nfaces(ib)
         iface = startFace(ib) + i
         ijp = owner(iface)
-        res(ijp)=res(ijp)+ abs(flmass(iface))
+        su(ijp)=su(ijp)+ abs(flmass(iface))
       enddo
 
     elseif ( bctype(ib) == 'outlet' ) then
       do i=1,nfaces(ib)
         iface = startFace(ib) + i
         ijp = owner(iface)
-        res(ijp)=res(ijp)+abs(flmass(iface))
+        su(ijp)=su(ijp)+abs(flmass(iface))
       enddo
     endif
 
@@ -59,15 +59,15 @@ subroutine CourantNo
  
   do inp=1,numCells
 
-    CoNum = max( CoNum , res(inp)/(den(inp)*Vol(inp)) )
+    CoNum = max( CoNum , su(inp)/(den(inp)*Vol(inp)) )
 
-    meanCoNum = meanCoNum + res(inp)/den(inp)
+    meanCoNum = meanCoNum + su(inp)/den(inp)
     
     TotalVol = TotalVol + Vol(inp)
 
   enddo
 
-  res = 0.0_dp
+  su = 0.0_dp
 
   CoNum = 0.5*CoNum*timestep
   meanCoNum = 0.5*meanCoNum/TotalVol*timestep

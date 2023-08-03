@@ -3,7 +3,7 @@ module concentration
 ! Implementation of sclar transport equation for concentration.
 !
   use types
-  use scalar_fluxes
+  use scalar_fluxes, only: facefluxsc
 
   implicit none
 
@@ -13,7 +13,7 @@ module concentration
   logical  :: calcCon = .False.                               ! To activate the solution of this field in the main function. 
   real(dp) :: urfCon  = 0.9                                   ! Under-relaxation factors.
   real(dp) :: gdsCon = 1.0                                    ! Deferred correction factor.
-  character ( len=30 ) :: cSchemeCon = 'boundedLinearUpwind'  ! Convection scheme - default is second order upwind.
+  character ( len=30 ) :: cSchemeCon = 'linearUpwind'         ! Convection scheme - default is second order upwind.
   character ( len=12 ) :: dSchemeCon = 'skewness' ! Difussion scheme, i.e. the method for normal gradient at face skewness/offset.
   integer :: nrelaxCon = 0 ! Type of non-orthogonal correction for face gradient minimal/orthogonal/over-relaxed. 1/0/-1.
   character ( len=12 ) :: lSolverCon = 'bicgstab'             ! Linear algebraic solver.
@@ -49,7 +49,7 @@ subroutine calculate_concentration_field
 !
   integer ::  i, k, inp, ijp, ijn, ijb, ib, iface, iWall
   integer :: iPer, l, if, iftwin
-  real(dp) :: gam, prtr, apotime
+  real(dp) :: gam, prtr, prl, apotime
   real(dp) :: cap, can, suadd
   real(dp) :: off_diagonal_terms
   real(dp) :: fimax,fimin
@@ -59,7 +59,8 @@ subroutine calculate_concentration_field
 
   ! Variable specific coefficients:
   gam = gdsCon          !< first to higher order convection scheme blending parameter gamma.
-  prtr = 1.0d0/sigCon   !< reciprocal value of Prandtl-Schmidt number
+  prtr = 1./sigCon   !< reciprocal value of Prandtl-Schmidt number
+  prl = 1./pranl
 
 ! Calculate gradient: 
   call grad(Con,dCondxi)
@@ -76,14 +77,19 @@ subroutine calculate_concentration_field
   do inp=1,numCells
 
     ! UNSTEADY TERM
-    if( bdf .or. cn ) then
+    if (ltransient) then
+
       apotime = den(inp)*vol(inp)/timestep
-      su(inp) = su(inp) + apotime*Cono(inp)
-      sp(inp) = sp(inp) + apotime
-    elseif( bdf2 ) then
-      apotime=den(inp)*vol(inp)/timestep
-      su(inp) = su(inp) + apotime*( 2*Cono(inp) - 0.5_dp*Conoo(inp) )
-      sp(inp) = sp(inp) + 1.5_dp*apotime
+
+      if( bdf .or. cn ) then
+        su(inp) = su(inp) + apotime*Cono(inp)
+        sp(inp) = sp(inp) + apotime
+
+      elseif( bdf2 ) then
+        su(inp) = su(inp) + apotime*( 2*Cono(inp) - 0.5_dp*Conoo(inp) )
+        sp(inp) = sp(inp) + 1.5_dp*apotime
+
+      endif
     endif
 
   enddo
@@ -98,10 +104,13 @@ subroutine calculate_concentration_field
     ijp = owner(i)
     ijn = neighbour(i)
 
-    call facefluxsc( ijp, ijn, &
+    ! Diffusion coefficient
+    dcoef = viscos*prl+( ( vis(ijp) + (vis(ijn)-vis(ijp))*facint(i) ) - viscos )*prtr
+
+    call facefluxsc( i, ijp, ijn, &
                      xf(i), yf(i), zf(i), arx(i), ary(i), arz(i), &
-                     flmass(i), facint(i), gam, cSchemeCon, dSchemeCon, nrelaxCon,  &
-                     Con, dCondxi, prtr, cap, can, suadd )
+                     flmass(i), facint(i), gam, cSchemeCon,  &
+                     Con, dCondxi, dcoef, cap, can, suadd )
 
     ! > Off-diagonal elements:
 
@@ -151,11 +160,14 @@ subroutine calculate_concentration_field
         ijp = owner(iface)
         ijb = iBndValueStart(ib) + i
 
-        call facefluxsc( ijp, ijb, &
+        ! Diffusion coefficient
+        dcoef = viscos*prl + (vis(ijb)-viscos)*prtr  
+
+        call facefluxsc( ijp, &
                          xf(iface), yf(iface), zf(iface), &
                          arx(iface), ary(iface), arz(iface), &
                          flmass(iface), &
-                         Con, dCondxi, prtr, cap, can, suadd)
+                         dCondxi, dcoef, cap, can, suadd)
 
         Sp(ijp) = Sp(ijp)-can
 
@@ -188,7 +200,7 @@ subroutine calculate_concentration_field
         ijb = iBndValueStart(ib) + i
         iWall = iWall + 1
 
-        dcoef = viscos/pranl+(vis(ijp)-viscos)/sigCon
+        dcoef = viscos*prl+(vis(ijp)-viscos)*prtr
         dcoef = dcoef*srdw(iWall)
 
         ! Value of the concentration gradient in normal direction is set trough 
@@ -224,13 +236,15 @@ subroutine calculate_concentration_field
         iftwin = startFaceTwin(iPer) + i ! Where does the face data for twin start, looking at periodic boundary pair with index iPer.
         ijn = owner(iftwin)              ! Owner cell of the twin periodic face
 
+        ! Diffusion coefficient 
+        dcoef = viscos*prl+( half*(vis(ijp)+vis(ijn))-viscos )*prtr
 
         ! face flux scalar but for periodic boundaries - it will be recognized by arguments
-        call facefluxsc_periodic( ijp, ijn, &
-                                  xf(if), yf(if), zf(if), &
-                                  arx(if), ary(if), arz(if), &
-                                  flmass(if), gam, &
-                                  Con, dCondxi, prtr, cap, can, suadd )
+        call facefluxsc( i, ijp, ijn, &
+                         xf(if), yf(if), zf(if), &
+                         arx(if), ary(if), arz(if), &
+                         flmass(if), gam, &
+                         Con, dCondxi, dcoef, cap, can, suadd )
 
 
         ! > Off-diagonal elements:
@@ -290,7 +304,7 @@ subroutine calculate_concentration_field
 
     do ijp=1,numCells
       apotime=den(ijp)*vol(ijp)/timestep
-      off_diagonal_terms = sum( a( ioffset(ijp) : ioffset(ijp+1)-1 ) ) - a(diag(ijp))
+      off_diagonal_terms = sum( a( ia(ijp) : ia(ijp+1)-1 ) ) - a(diag(ijp))
       su(ijp) = su(ijp) + (apotime + off_diagonal_terms)*Cono(ijp)
       sp(ijp) = sp(ijp)+apotime
 
@@ -307,7 +321,7 @@ subroutine calculate_concentration_field
     ! Main diagonal term assembly:
     ! Sum all coefs in a row of a sparse matrix, but since we also included diagonal element 
     ! we substract it from the sum, to eliminate it from the sum.
-    off_diagonal_terms  = sum( a(ioffset(inp) : ioffset(inp+1)-1) ) - a(diag(ijp))
+    off_diagonal_terms  = sum( a(ia(inp) : ia(inp+1)-1) ) - a(diag(ijp))
     a(diag(inp)) = sp(inp) - off_diagonal_terms
 
     ! Underelaxation:

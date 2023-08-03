@@ -93,14 +93,13 @@ subroutine print_log(line)
 
 end subroutine
 
-function csr_to_k(icell,jcell,ioffset,ja) result(k)
+function csr_to_k(icell,jcell,ia,ja) result(k)
 !
-!! Given i, and j indices gives location k in sparse matrix values array: a[1:nnz]
+!! Given cell indices icell and jcell gives location k in sparse matrix values array: a[1:nnz]
 !
 !  Discussion:
 !
-!    Matrix sparsity pattern given in CSR format,
-!    (i.e. ia-ioffset, ja-column number)
+!    Matrix sparsity pattern given in CSR format.
 !
 !  Licensing:
 !
@@ -122,7 +121,7 @@ function csr_to_k(icell,jcell,ioffset,ja) result(k)
 !
   implicit none
   integer, intent(in) :: icell,jcell
-  integer, dimension(:), intent(in) :: ioffset ! size[numCells+1]
+  integer, dimension(:), intent(in) :: ia ! size[numCells+1]
   integer, dimension(:), intent(in) :: ja ! size[nzz]
 !
 ! > Result
@@ -135,7 +134,7 @@ function csr_to_k(icell,jcell,ioffset,ja) result(k)
 
   k = 0
 
-  do l = ioffset(icell), ioffset(icell+1)-1 ! ovo su svi elementi a, ciji je ia==icell!
+  do l = ia(icell), ia(icell+1)-1 ! ovo su svi elementi a, ciji je ia==icell!
     if(ja(l) .eq. jcell) then
         k = l
         exit

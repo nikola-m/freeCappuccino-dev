@@ -81,14 +81,14 @@ subroutine modify_viscosity_k_omega_sst()
 
   call calcsc(TE,dTEdxi,1) ! Assemble and solve turbulence kinetic energy eq.
   call calcsc(ED,dEDdxi,2) ! Assemble and solve specific dissipation rate (omega [1/s]) of tke eq.
-  call modify_mu_eff()
+  call modify_mu_eff
 
 end subroutine
 
 
 !***********************************************************************
 !
-subroutine calcsc(Fi,dFidxi,ifi)
+subroutine calcsc(fi,dfidxi,ifi)
 !
 !***********************************************************************
 !
@@ -108,29 +108,28 @@ subroutine calcsc(Fi,dFidxi,ifi)
 !
 ! Local variables
 !
-  integer ::  i, k, inp, ijp, ijn, ijb, iwall
+  integer :: i, k, inp, ijp, ijn, ijb, iwall
   integer :: iper, l, ib, iface, if, iftwin
   real(dp) :: prtr, prtr_ijp, prtr_ijn, apotime, const, urfrs, urfms
   real(dp) :: utp, vtp, wtp, utn, vtn, wtn
   real(dp) :: genp, genn
   real(dp) :: uttbuoy, vttbuoy, wttbuoy
   real(dp) :: cap, can, suadd
-  real(dp) :: magStrainSq
   real(dp) :: off_diagonal_terms
   real(dp) :: are,nxf,nyf,nzf,vnp,xtp,ytp,ztp,ut2
-  ! real(dp) :: dudx,dudy,dudz,dvdx,dvdy,dvdz,dwdx,dwdy,dwdz
-  real(dp) :: viss
+  real(dp) :: viss,viste,dcoef
   real(dp) :: fimax,fimin
   real(dp) :: wldist,domegapl,ksi,tmp                            
   real(dp) :: dtedx,dtedy,dtedz,deddx,deddy,deddz
   real(dp) :: alphast,alphasst,bettasst,domega,vist
   real(dp) :: wlog,wvis
   ! real(dp) :: W_S,Ri,F4
-  real(dp) :: urf, tolAbs, tolRel
+  real(dp) :: gam, urf, tolAbs, tolRel
   integer :: maxiter
   character( len=12 ) :: lSolver 
 
 ! Variable specific coefficients:
+  gam = TurbModel%Scalar(ifi)%gds
   urf = TurbModel%Scalar(ifi)%urf
   lSolver = TurbModel%Scalar(ifi)%lSolver 
   maxiter = TurbModel%Scalar(ifi)%maxiter
@@ -162,39 +161,19 @@ subroutine calcsc(Fi,dFidxi,ifi)
 
   do inp=1,numCells
 
-    ! dudx = dudxi(1,inp)
-    ! dudy = dudxi(2,inp)
-    ! dudz = dudxi(3,inp)
-
-    ! dvdx = dvdxi(1,inp)
-    ! dvdy = dvdxi(2,inp)
-    ! dvdz = dvdxi(3,inp)
-
-    ! dwdx = dwdxi(1,inp)
-    ! dwdy = dwdxi(2,inp)
-    ! dwdz = dwdxi(3,inp)
-
-    ! ! So the exact production is calculated as tau_ij*dui/dxj
-    ! gen(inp) = den(inp)*( uu(inp)*dudx+uv(inp)*(dudy+dvdx)+ &
-    !                       uw(inp)*(dudz+dwdx)+vv(inp)*dvdy+ &
-    !                       vw(inp)*(dvdz+dwdy)+ww(inp)*dwdz )
-
-
-    magStrainSq=magStrain(inp)*magStrain(inp)
-    gen(inp)=abs(vis(inp)-viscos)*magStrainSq
+    gen(inp)=abs(vis(inp)-viscos)*magStrain(inp)*magStrain(inp)
 
     ! PRODUCTION LIMITER FOR SST AND SAS MODELS:
     ! 10*bettainf=10*0.09=0.9
-
     ! High-Re version...............................................................
       gen(inp)=min(gen(inp),0.9_dp*den(inp)*te(inp)*ed(inp))        
 
       if (LowRe) then
-    ! Low-Re version of Wilcox and SST k-omega......................................
+      ! Low-Re version of Wilcox and SST k-omega......................................
         tmp=10*bettast*(4./15.0_dp+(den(inp)*te(inp)/(8.0_dp*viscos*ed(inp)))**4) & !
                       /(1.0_dp    +(den(inp)*te(inp)/(8.0_dp*viscos*ed(inp)))**4)   !  
         gen(inp)=min(gen(inp),tmp*den(inp)*te(inp)*ed(inp))                         !
-    !...............................................................................!
+      !...............................................................................!
       end if 
 
   enddo
@@ -253,9 +232,9 @@ subroutine calcsc(Fi,dFidxi,ifi)
          vttbuoy=-gravy*den(inp)*vtt(inp)*vol(inp)*beta
          wttbuoy=-gravz*den(inp)*wtt(inp)*vol(inp)*beta
       else
-         uttbuoy=-gravx*den(inp)*utt(inp)*vol(inp)/(t(inp)+273.15_dp)
-         vttbuoy=-gravy*den(inp)*vtt(inp)*vol(inp)/(t(inp)+273.15_dp)
-         wttbuoy=-gravz*den(inp)*wtt(inp)*vol(inp)/(t(inp)+273.15_dp)
+         uttbuoy=-gravx*den(inp)*utt(inp)*vol(inp)/(t(inp)+small)
+         vttbuoy=-gravy*den(inp)*vtt(inp)*vol(inp)/(t(inp)+small)
+         wttbuoy=-gravz*den(inp)*wtt(inp)*vol(inp)/(t(inp)+small)
       end if
 
       utp=max(uttbuoy,zero)
@@ -275,15 +254,21 @@ subroutine calcsc(Fi,dFidxi,ifi)
     ! UNSTEADY TERM
     !=====================================
     if (ltransient) then
+
+      apotime = den(inp)*vol(inp)/timestep
+
       if( bdf .or. cn ) then
-        apotime = den(inp)*vol(inp)/timestep
+
         su(inp) = su(inp) + apotime*teo(inp)
         sp(inp) = sp(inp) + apotime
+
       elseif( bdf2 ) then
-        apotime=den(inp)*vol(inp)/timestep
+
         su(inp) = su(inp) + apotime*( 2*teo(inp) - 0.5_dp*teoo(inp) )
         sp(inp) = sp(inp) + 1.5_dp*apotime
+
       endif
+
     endif
 
   ! End of TKE volume source terms
@@ -401,45 +386,51 @@ subroutine calcsc(Fi,dFidxi,ifi)
     !=====================================
     ! VOLUME SOURCE TERMS: Buoyancy
     !=====================================
-      if(lbuoy) then
-        const=c3*den(inp)*ed(inp)*vol(inp)/(te(inp)+small)
+    if(lbuoy) then
+      const=c3*den(inp)*ed(inp)*vol(inp)/(te(inp)+small)
 
-        if(boussinesq) then
-           uttbuoy=-gravx*utt(inp)*const*beta
-           vttbuoy=-gravy*vtt(inp)*const*beta
-           wttbuoy=-gravz*wtt(inp)*const*beta
-        else
-           uttbuoy=-gravx*utt(inp)*const/(t(inp)+273.15)
-           vttbuoy=-gravy*vtt(inp)*const/(t(inp)+273.15)
-           wttbuoy=-gravz*wtt(inp)*const/(t(inp)+273.15)
-        end if
-
-        utp=max(uttbuoy,zero)
-        vtp=max(vttbuoy,zero)
-        wtp=max(wttbuoy,zero)
-        utn=min(uttbuoy,zero)
-        vtn=min(vttbuoy,zero)
-        wtn=min(wttbuoy,zero)
-
-        su(inp)=su(inp)+utp+vtp+wtp
-        sp(inp)=sp(inp)-(utn+vtn+wtn)/(ed(inp)+small)
+      if(boussinesq) then
+         uttbuoy=-gravx*utt(inp)*const*beta
+         vttbuoy=-gravy*vtt(inp)*const*beta
+         wttbuoy=-gravz*wtt(inp)*const*beta
+      else
+         uttbuoy=-gravx*utt(inp)*const/(t(inp)+small)
+         vttbuoy=-gravy*vtt(inp)*const/(t(inp)+small)
+         wttbuoy=-gravz*wtt(inp)*const/(t(inp)+small)
       end if
 
-      !
-      !=====================================
-      ! UNSTEADY TERM
-      !=====================================
-      if (ltransient) then
-        if( bdf .or. cn ) then
-          apotime = den(inp)*vol(inp)/timestep
-          su(inp) = su(inp) + apotime*edo(inp)
-          sp(inp) = sp(inp) + apotime
-        elseif( bdf2 ) then
-          apotime=den(inp)*vol(inp)/timestep
-          su(inp) = su(inp) + apotime*( 2*edo(inp) - 0.5_dp*edoo(inp) )
-          sp(inp) = sp(inp) + 1.5_dp*apotime
-        endif
+      utp=max(uttbuoy,zero)
+      vtp=max(vttbuoy,zero)
+      wtp=max(wttbuoy,zero)
+      utn=min(uttbuoy,zero)
+      vtn=min(vttbuoy,zero)
+      wtn=min(wttbuoy,zero)
+
+      su(inp)=su(inp)+utp+vtp+wtp
+      sp(inp)=sp(inp)-(utn+vtn+wtn)/(ed(inp)+small)
+    end if
+
+    !
+    !=====================================
+    ! UNSTEADY TERM
+    !=====================================
+    if (ltransient) then
+
+      apotime = den(inp)*vol(inp)/timestep
+
+      if( bdf .or. cn ) then
+
+        su(inp) = su(inp) + apotime*edo(inp)
+        sp(inp) = sp(inp) + apotime
+
+      elseif( bdf2 ) then
+
+        su(inp) = su(inp) + apotime*( 2*edo(inp) - 0.5_dp*edoo(inp) )
+        sp(inp) = sp(inp) + 1.5_dp*apotime
+
       endif
+
+    endif
 
   ! End of Epsilon volume source terms
   enddo
@@ -466,15 +457,16 @@ subroutine calcsc(Fi,dFidxi,ifi)
 
     prtr = prtr_ijp!*(1.0_dp-facint(i))+prtr_ijn*facint(i)
 
-    call facefluxsc(  ijp, ijn, &
+    ! Diffusion coefficient
+    viste = ( vis(ijp) + (vis(ijn)-vis(ijp))*facint(i) )-viscos
+    dcoef = viscos+viste*prtr
+
+    call facefluxsc(  i, ijp, ijn, &
                       xf(i), yf(i), zf(i), &
                       arx(i), ary(i), arz(i), &
-                      flmass(i), facint(i),&
-                      TurbModel%Scalar(ifi)%gds, &
+                      flmass(i), facint(i), gam, &
                       TurbModel%Scalar(ifi)%cScheme, &
-                      TurbModel%Scalar(ifi)%dScheme,&
-                      TurbModel%Scalar(ifi)%nrelax, &
-                      fi, dFidxi, prtr, cap, can, suadd )                      
+                      fi, dfidxi, dcoef, cap, can, suadd )                      
 
     ! > Off-diagonal elements:
 
@@ -514,7 +506,8 @@ subroutine calcsc(Fi,dFidxi,ifi)
   do ib=1,numBoundaries
 
     if ( bctype(ib) == 'inlet' .or. &
-         bctype(ib) == 'outlet' ) then
+         bctype(ib) == 'outlet' .or. &
+         bctype(ib) == 'pressure' ) then
 
       do i=1,nfaces(ib)
 
@@ -529,10 +522,15 @@ subroutine calcsc(Fi,dFidxi,ifi)
           prtr=fsst(ijp)*SIGMOM1 + (1.0_dp-fsst(ijp))*SIGMOM2
         endif
 
-        call facefluxsc( ijp, ijb, &
-                         xf(iface), yf(iface), zf(iface), arx(iface), ary(iface), arz(iface), &
+        ! Diffusion coefficient
+        viste = vis(ijb)-viscos
+        dcoef = viscos + viste*prtr 
+
+        call facefluxsc( ijp, &
+                         xf(iface), yf(iface), zf(iface), &
+                         arx(iface), ary(iface), arz(iface), &
                          flmass(iface), &
-                         fi, dFidxi, prtr, cap, can, suadd )
+                         dfidxi, dcoef, cap, can, suadd )
 
         Sp(ijp) = Sp(ijp)-can
 
@@ -565,16 +563,18 @@ subroutine calcsc(Fi,dFidxi,ifi)
           prtr_ijn = fsst(ijn)*SIGMOM1 + (1.0_dp-fsst(ijn))*SIGMOM2
         endif
 
-        prtr = 0.5* (prtr_ijp+prtr_ijn )
+        prtr = half*(prtr_ijp+prtr_ijn )
 
-
+        ! Diffusion coefficient
+        viste = half*(vis(ijp)+vis(ijn))-viscos
+        dcoef = viscos+viste*prtr
 
         ! face flux scalar but for periodic boundaries - it will be recognized by arguments
-        call facefluxsc(  ijp, ijn, &
+        call facefluxsc(  i, ijp, ijn, &
                           xf(if), yf(if), zf(if), &
                           arx(if), ary(if), arz(if), &
-                          flmass(if), TurbModel%Scalar(ifi)%gds, &
-                          fi, dFidxi, prtr, cap, can, suadd )
+                          flmass(if), gam, &
+                          fi, dFidxi, dcoef, cap, can, suadd )
 
 
         ! > Off-diagonal elements:
@@ -624,7 +624,7 @@ subroutine calcsc(Fi,dFidxi,ifi)
         ! > Wall boundary conditions for turbulence kinetic energy eq.
         !
 
-          su(ijp )= su(ijp)-gen(ijp)*vol(ijp) ! take out standard production from the wall ajdecent cell.
+          su(ijp) = su(ijp)-gen(ijp)*vol(ijp) ! take out standard production from the wall ajdecent cell.
 
           ! viss=viscos
           ! if(ypl(i).gt.ctrans) viss=visw(iwall)
@@ -677,7 +677,7 @@ subroutine calcsc(Fi,dFidxi,ifi)
           ed(ijp) = sqrt(wvis**2+wlog**2)
           su(ijp)=ed(ijp)
 
-          a( ioffset(ijp):ioffset(ijp+1)-1 ) = 0.0_dp
+          a( ia(ijp):ia(ijp+1)-1 ) = 0.0_dp
           sp(ijp) = 1.0_dp
 
         endif
@@ -709,7 +709,7 @@ subroutine calcsc(Fi,dFidxi,ifi)
         enddo
         do ijp=1,numCells
             apotime=den(ijp)*vol(ijp)/timestep
-            off_diagonal_terms = sum( a( ioffset(ijp) : ioffset(ijp+1)-1 ) ) - a(diag(ijp))
+            off_diagonal_terms = sum( a( ia(ijp) : ia(ijp+1)-1 ) ) - a(diag(ijp))
             su(ijp) = su(ijp) + (apotime + off_diagonal_terms)*teo(ijp)
             sp(ijp) = sp(ijp)+apotime
         enddo
@@ -728,7 +728,7 @@ subroutine calcsc(Fi,dFidxi,ifi)
         enddo
         do ijp=1,numCells
             apotime=den(ijp)*vol(ijp)/timestep
-            off_diagonal_terms = sum( a( ioffset(ijp) : ioffset(ijp+1)-1 ) ) - a(diag(ijp))
+            off_diagonal_terms = sum( a( ia(ijp) : ia(ijp+1)-1 ) ) - a(diag(ijp))
             su(ijp) = su(ijp) + (apotime + off_diagonal_terms)*edo(ijp)
             sp(ijp) = sp(ijp)+apotime
         enddo
@@ -746,7 +746,7 @@ subroutine calcsc(Fi,dFidxi,ifi)
 
         ! Main diagonal term assembly:
         a(diag(inp)) = sp(inp) 
-        do k = ioffset(inp),ioffset(inp+1)-1
+        do k = ia(inp),ia(inp+1)-1
           if (k.eq.diag(inp)) cycle
           a(diag(inp)) = a(diag(inp)) -  a(k)
         enddo
@@ -787,7 +787,7 @@ end subroutine calcsc
 
 !***********************************************************************
 !
-subroutine modify_mu_eff()
+subroutine modify_mu_eff
 !
 !***********************************************************************
 !

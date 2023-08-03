@@ -127,7 +127,7 @@ subroutine calcuvwp
         sv(inp) = sv(inp) + apotime*vo(inp)
         sw(inp) = sw(inp) + apotime*wo(inp)
 
-        ! NAPOMENA - NIJE DEN CONST!, PROMENI GORE ISTO, NEMOZE BITI APOTIME ISTO ZA SVE TIMESTEPOVE
+        ! NAPOMENA - NIJE DEN CONST!, PROMENI GORE ISTO, NE MOZE BITI APOTIME ISTO ZA SVE TIMESTEPOVE
         sp(inp) = deno(inp)*vol(inp)/timestep
 
 !@# Ispravi da idu na dijagonalu matrice!
@@ -478,7 +478,7 @@ subroutine calcuvwp
 
   do ib=1,numBoundaries
 
-    if ( bctype(ib) == 'inlet' ) then
+    if ( bctype(ib) == 'inlet' .or. bctype(ib) == 'outlet' .or. bctype(ib) == 'pressure' ) then
 
       do i=1,nfaces(ib)
 
@@ -497,26 +497,6 @@ subroutine calcuvwp
         sw(ijp) = sw(ijp) - cb*w(ijb) + swp
 
       end do
-
-    elseif ( bctype(ib) == 'outlet' ) then
-
-      do i=1,nfaces(ib)
-
-        if = startFace(ib) + i
-        ijp = owner(if)
-        ijb = iBndValueStart(ib) + i
-
-        call facefluxuvw(ijp, ijb, xf(if), yf(if), zf(if), arx(if), ary(if), arz(if), flmass(if), cp, cb, sup, svp, swp)  
-
-        spu(ijp) = spu(ijp) - cb
-        spv(ijp) = spv(ijp) - cb
-        sp(ijp)  = sp(ijp)  - cb
-
-        su(ijp) = su(ijp) - cb*u(ijb) + sup
-        sv(ijp) = sv(ijp) - cb*v(ijb) + svp
-        sw(ijp) = sw(ijp) - cb*w(ijb) + swp
-
-      enddo
 
     elseif ( bctype(ib) == 'symmetry') then
 
@@ -715,7 +695,7 @@ subroutine calcuvwp
 
     do ijp=1,numCells
         apotime = den(ijp)*vol(ijp)/timestep
-        sum_off_diagonal_terms = sum( a(ioffset(ijp) : ioffset(ijp+1)-1) ) - a(diag(ijp))
+        sum_off_diagonal_terms = sum( a(ia(ijp) : ia(ijp+1)-1) ) - a(diag(ijp))
         su(ijp) = su(ijp) + (apotime + sum_off_diagonal_terms)*uo(ijp)
         spu(ijp) = spu(ijp) + apotime
     enddo
@@ -730,12 +710,12 @@ subroutine calcuvwp
     ! Main diagonal term assembly:
     ! Sum all coefs in a row of a sparse matrix, but since we also included diagonal element 
     ! we substract it from the sum, to eliminate it from the sum.
-    ! We could also write sum( a(ioffset(inp)) : a(ioffset(inp+1)-1) ) because all diagonal terms are zero.
-    sum_off_diagonal_terms  = sum( a(ioffset(inp) : ioffset(inp+1)-1) ) - a(diag(inp)) 
+    ! We could also write sum( a(ia(inp)) : a(ia(inp+1)-1) ) because all diagonal terms are zero.
+    sum_off_diagonal_terms  = sum( a(ia(inp) : ia(inp+1)-1) ) - a(diag(inp)) 
     a(diag(inp)) = spu(inp) - sum_off_diagonal_terms
 
     ! a(diag(inp)) = spu(inp) 
-    ! do k = ioffset(inp),ioffset(inp+1)-1
+    ! do k = ia(inp),ia(inp+1)-1
     !   if (k.eq.diag(inp)) cycle
     !   a(diag(inp)) = a(diag(inp)) -  a(k)
     ! enddo
@@ -771,7 +751,7 @@ subroutine calcuvwp
 
     do ijp=1,numCells
         apotime=den(ijp)*vol(ijp)/timestep
-        sum_off_diagonal_terms = sum( a(ioffset(ijp) : ioffset(ijp+1)-1) ) - a(diag(ijp))
+        sum_off_diagonal_terms = sum( a(ia(ijp) : ia(ijp+1)-1) ) - a(diag(ijp))
         sv(ijp) = sv(ijp) + (apotime + sum_off_diagonal_terms)*vo(ijp)
         spv(ijp) = spv(ijp)+apotime
     enddo
@@ -790,11 +770,11 @@ subroutine calcuvwp
   do inp = 1,numCells
 
     ! Main diagonal term assembly:
-    sum_off_diagonal_terms  = sum( a(ioffset(inp) : ioffset(inp+1)-1) ) - a(diag(inp))
+    sum_off_diagonal_terms  = sum( a(ia(inp) : ia(inp+1)-1) ) - a(diag(inp))
     a(diag(inp)) = spv(inp) - sum_off_diagonal_terms
 
     ! a(diag(inp)) = spv(inp) 
-    ! do k = ioffset(inp),ioffset(inp+1)-1
+    ! do k = ia(inp),ia(inp+1)-1
     !   if (k.eq.diag(inp)) cycle
     !   a(diag(inp)) = a(diag(inp)) -  a(k)
     ! enddo
@@ -830,7 +810,7 @@ subroutine calcuvwp
 
     do ijp=1,numCells
         apotime = den(ijp)*vol(ijp)/timestep
-        sum_off_diagonal_terms = sum( a(ioffset(ijp) : ioffset(ijp+1)-1) ) - a(diag(ijp))
+        sum_off_diagonal_terms = sum( a(ia(ijp) : ia(ijp+1)-1) ) - a(diag(ijp))
         sw(ijp) = sw(ijp) + (apotime + sum_off_diagonal_terms)*wo(ijp)
         sp(ijp) = sp(ijp) + apotime
     enddo
@@ -849,11 +829,11 @@ subroutine calcuvwp
   do inp = 1,numCells
 
     ! Main diagonal term assembly:
-    sum_off_diagonal_terms  = sum( a(ioffset(inp) : ioffset(inp+1)-1) ) - a(diag(inp)) 
+    sum_off_diagonal_terms  = sum( a(ia(inp) : ia(inp+1)-1) ) - a(diag(inp)) 
     a(diag(inp)) = sp(inp) - sum_off_diagonal_terms
 
     ! a(diag(inp)) = sp(inp) 
-    ! do k = ioffset(inp),ioffset(inp+1)-1
+    ! do k = ia(inp),ia(inp+1)-1
     !   if (k.eq.diag(inp)) cycle
     !   a(diag(inp)) = a(diag(inp)) -  a(k)
     ! enddo

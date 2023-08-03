@@ -37,13 +37,13 @@ integer :: ninl ! No. of inlet boundary faces
 integer :: nout ! No. of outlet boundary faces
 integer :: nper ! Stores the number of periodic boundary pairs, which will be treated as a single inner boundary               
 
-integer, parameter :: nomax = 6 ! ### Max number of nodes in face - determines size of some arrays, just change this if necessary. ###
+integer, parameter :: nomax = 6 !!! Max number of nodes in face - determines size of some arrays, just change this if necessary. 
 real(dp), parameter :: tiny = 1e-30
 
 ! Mesh file units
 integer :: points_file, cells_file, faces_file, owner_file, neighbour_file, boundary_file, size_file
 
-integer, parameter :: interpolation_coeff_variant = 2 ! (1,2) look at the code below.
+integer, parameter :: interpolation_coeff_variant = 2 ! (1,2,3) look at the code below.
 
 
 ! Mesh geometry
@@ -64,12 +64,12 @@ real(dp), dimension(:), allocatable :: xf, yf, zf      ! Coordinates of cell fac
 real(dp), dimension(:), allocatable :: xpp, ypp, zpp   ! Coordinates of auxilliary points - owner cell 
 real(dp), dimension(:), allocatable :: xnp, ynp, znp   ! Coordinates of auxilliary points - neighbour cell 
 real(dp), dimension(:), allocatable :: facint          ! Interpolation factor 
-real(dp), dimension(:), allocatable :: dpn            ! Distance between neigbor cell centers [1:numInnerFaces]
+real(dp), dimension(:), allocatable :: Df              ! Diffusion geometric coefficient
 
 ! Geometry parameters defined for boundary faces
 
-real(dp), dimension(:), allocatable :: srds,dns    ! srds = |are|/|dns|, dns = normal distance to cell center from face |dpn*face_normal_unit_vec|
-real(dp), dimension(:), allocatable :: srdw,dnw    ! srdw = |are|/|dnw|, dnw = normal distance to cell center from face |dpn*face_normal_unit_vec|
+real(dp), dimension(:), allocatable :: srds,dns    ! srds = |are|/|dns|, dns = normal distance to cell center from face |dpn*face_normal|
+real(dp), dimension(:), allocatable :: srdw,dnw    ! srdw = |are|/|dnw|, dnw = normal distance to cell center from face |dpn*face_normal|
 
 ! Mesh topology information - connectivity of cells trough faces
 integer, dimension(:), allocatable :: owner     ! Index of the face owner cell
@@ -252,11 +252,8 @@ subroutine read_mesh_native
       nper = nper + 1 ! number of periodic boundary pairs increases by one
       numPeriodic = numPeriodic + nfaces(i) ! number of periodic faces increases by nfaces(i)
       backspace( boundary_file ) ! Move one line back.
-      ! Repeat reading but find some additional information is available for perodic boundary
+      ! Repeat reading the same line, but get additional information that should be available for perodic boundary,
       ! namely we have starting face for 'twin' boundary of this periodic boundary.  
-      ! In 'boundary' file, on the line of the twin periodic boundary, put bctype to 'empty' and 
-      ! copy the startFace to the end of the line of the 'older' twin, where bctype is 'periodic'. 
-      ! This is how I see this at the moment - propose improvement please. Nikola 
       read(boundary_file,*) bcname(i), bctype(i), nfaces(i), startFace(i), startFaceTwin(nper)
 
     endif
@@ -366,10 +363,15 @@ subroutine read_mesh_native
   ! are there.
   allocate ( dns(nsym) )      
   allocate ( srds(nsym) )  
+
   allocate ( dnw(nwal) )      
-  allocate ( srdw(nwal) )                             
+  allocate ( srdw(nwal) )   
 
+  ! allocate ( dnw(numBoundaryFaces) )      
+  ! allocate ( srdw(numBoundaryFaces) )     
 
+  allocate( Df(numInnerFaces) )
+  
 !******************************************************************************
 ! > Read and process Mesh files 
 !..............................................................................
@@ -397,7 +399,7 @@ subroutine read_mesh_native
 
   ! Allocate tmp array of number of nodes for each face - nnodes, and node array
   allocate( nnodes(numFaces) )
-  allocate( node(4,numFaces) )
+  allocate( node(nomax,numFaces) ) ! We should put nomax instead of 4, because like this there can be max 4 nodes on a face.
 
   do iface=1,numFaces
     read( faces_file, * ) nnodes(iface),(node(k,iface), k=1,nnodes(iface) )
@@ -571,12 +573,12 @@ subroutine read_mesh_native
 
       djn = sqrt( xpn**2 + ypn**2 + zpn**2 )
 
-      ! Interpolation factor |P Pj'|/|P Pj| where P is cell center, Pj neighbour cell center and j' intersection point.
+      ! Interpolation factor |P j'|/|P Pj| where P is cell center, Pj neighbour cell center and j' intersection point.
       facint(iface) = djn / dpn 
       
     enddo
 
-  else ! ( interpolation_coeff_variant == 2 )
+  elseif ( interpolation_coeff_variant == 2 ) then
 
     !
     ! > Interpolation factor > inner faces - Variant 2.
@@ -598,20 +600,100 @@ subroutine read_mesh_native
 
       djn = sqrt( xpn**2 + ypn**2 + zpn**2 )
 
-      ! Interpolation factor |PjF|/|PF + PjF|  where P is cell center, Pj neighbour cell center and F is face centroid.
+      ! Interpolation factor |jP|/(|jP|+|jN|)  where P is cell center, N neighbour cell center and j is face centroid.
       facint(iface) =  djp / ( djp + djn ) 
       
     enddo
 
+  else ! (interpolation_coef_variant == 3)
+
+    !
+    ! > Interpolation factor > inner faces - Variant 3.
+    !
+    do iface=1,numInnerFaces
+
+      inp = owner(iface)
+      inn = neighbour(iface)
+
+      xpn = xf(iface) - xc(inp)
+      ypn = yf(iface) - yc(inp)
+      zpn = zf(iface) - zc(inp)
+
+      djp = abs(arx(iface)*xpn + ary(iface)*ypn + arz(iface)*zpn)
+
+      xpn = xc(inn)-xc(inp)
+      ypn = yc(inn)-yc(inp)
+      zpn = zc(inn)-zc(inp)
+
+      dpn = abs(arx(iface)*xpn + ary(iface)*ypn + arz(iface)*zpn)
+
+      ! Interpolation factor = |Sf*djP|/|Sf*dPN|, where Sf face area (normal to face) vector,
+      ! dPN is distance vector between cell centers, djP distance vector from face centroid j to 
+      ! cell center P.
+      facint(iface) =  djp / dpn 
+      
+    enddo  
+
   endif
-  
+
+  !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  ! Calculate and store few recurrent geometric parameters:
+  !   > Df - diffusion coefficient:
+  !   _    _     _    _
+  !   Sf . Sf / (Sf . dpn)
+  !   It is recalculated frequently so it is best to keep it in memory
+  !   to speed up the simulation.
+  !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+  do iface=1,numInnerFaces
+
+    inp = owner(iface)
+    inn = neighbour(iface)
+
+    ! Distance vector between cell centers
+    xpn = xc(inn)-xc(inp)
+    ypn = yc(inn)-yc(inp)
+    zpn = zc(inn)-zc(inp)
+
+    ! Instead to enable reuse and efficiency, first store dot product of vectors Sf*Sf:
+    are = arx(iface)*arx(iface) + ary(iface)*ary(iface) + arz(iface)*arz(iface)
+
+    ! Create Df coefficient used for implicit Lalplacian discretizaton, where 
+    !      _    _     _    _
+    ! Df = Sf . Sf / (Sf . dpn)
+    Df(iface) = are /(arx(iface)*xpn + ary(iface)*ypn + arz(iface)*zpn)
+
+  !   ! Sqrt to get |Sf|
+  !   are = sqrt( are  )
+
+  !   ! Unit vectors of the normal
+  !   nxx=arx(iface)/are
+  !   nyy=ary(iface)/are
+  !   nzz=arz(iface)/are
+
+  !   ! Values at points p' and e' due to non-orthogonality. 
+  !   xpp(inp)=xf-(xf-xc(inp))*nxx
+  !   ypp(inp)=yf-(yf-yc(inp))*nyy
+  !   zpp(inp)=zf-(zf-zc(inp))*nzz
+
+  !   xnp(inn)=xf-(xf-xc(inn))*nxx
+  !   ynp(inn)=yf-(yf-yc(inn))*nyy
+  !   znp(inn)=zf-(zf-zc(inn))*nzz
+
+  enddo
+
+
+
   ! Note: don't deallocate we use it for cell to node interpolation weights calculation (node_interpolation module) - only then deallocate.
   ! deallocate(nnodes)
   ! deallocate(node)  
 
-
-  ! Loop over wall boundaries to calculate normal distance from cell center of the first cell layer - dnw, and
-  ! loop over symmetry boundaries to calculate normal distance from cell center of the first cell layer - dns.
+  !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  ! Loop over boundary faces to calculate 
+  ! normal distance from face center to cell center of the first cell layer - dnw,
+  ! and cell face area divided by norma distance to the cell center - srdw.
+  ! These are used in implementation of various boundary conditions.
+  !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
   iWall = 0
   iSym = 0
@@ -670,6 +752,32 @@ subroutine read_mesh_native
     endif 
 
   enddo
+
+  !
+  ! Same coefficients for all boundary faces - previous will be deprecated
+  !
+
+  ! do i=1,numBoundaryFaces
+   
+  !   iface=numInnerFaces+i
+  !   inp = owner(iface)
+
+  !   ! Face area 
+  !   are = sqrt(arx(iface)**2+ary(iface)**2+arz(iface)**2)
+
+  !   ! Face normals
+  !   nxf = arx(iface)/are
+  !   nyf = ary(iface)/are
+  !   nzf = arz(iface)/are
+
+  !   ! We need the minus sign because of the direction of normal vector to boundary face which is positive if it faces out.
+  !   dnw(i) = (xf(iface)-xc(inp))*nxf + (yf(iface)-yc(inp))*nyf + (zf(iface)-zc(inp))*nzf
+
+  !   ! Cell face area divided by distance to the cell center
+  !   srdw(i) = are/dnw(i)
+
+
+  ! enddo
 
 
 !******************************************************************************
@@ -868,9 +976,6 @@ subroutine read_mesh_openfoam
       backspace( boundary_file ) ! Move one line back.
       ! Repeat reading but find some additional information is available for perodic boundary
       ! namely we have starting face for 'twin' boundary of this periodic boundary.  
-      ! In 'boundary' file, on the line of the twin peridoci boundary, put bctype to 'empty' and 
-      ! copy the startFace to the end of the line of the 'older' twin. 
-      ! This is how I see this at the moment - propose improvement please. Nikola 
       read(boundary_file,*) bcname(i), bctype(i), nfaces(i), startFace(i), startFaceTwin(nper)
 
     endif
@@ -1139,11 +1244,18 @@ subroutine read_mesh_openfoam
   ! Array stroring the walue of distance to the nearest wall, needed only in some turb. models (maybe allocate only when needed)
   allocate ( wallDistance(numCells) )
 
-  ! We need this only for wall and symmetry, so it is not bad to have nsym and nwal wich count home many of them there is.
+  ! We need this only for wall and symmetry BCs, so it is not bad to have nsym and nwal parameters, which count home many of them 
+  ! are there.
   allocate ( dns(nsym) )      
   allocate ( srds(nsym) )  
+
   allocate ( dnw(nwal) )      
-  allocate ( srdw(nwal) )                             
+  allocate ( srdw(nwal) )   
+
+  ! allocate ( dnw(numBoundaryFaces) )      
+  ! allocate ( srdw(numBoundaryFaces) )     
+
+  allocate( Df(numInnerFaces) )                           
 
 
 !******************************************************************************
@@ -1208,12 +1320,6 @@ subroutine read_mesh_openfoam
 
     inp = owner(iface)
 
-    ! ! Initialize array of node indexes that construct the face
-    ! node = 0
-
-    ! ! Read line in 'faces' file
-    ! call read_line_faces_file_polyMesh(faces_file,nnodes,node,nomax)
-
     ! Initialize total area of polygon.
     areasum = 0.0_dp
 
@@ -1230,16 +1336,6 @@ subroutine read_mesh_openfoam
       qy = y( node(i+2,iface) )-y( node(1,iface) )
       qz = z( node(i+2,iface) )-z( node(1,iface) )
 
-      ! ! Vectors to vertices
-      ! ! 2-1
-      ! px = x(node(i+1))-x(node(1))
-      ! py = y(node(i+1))-y(node(1))
-      ! pz = z(node(i+1))-z(node(1))
-      ! ! 3-1
-      ! qx = x(node(i+2))-x(node(1))
-      ! qy = y(node(i+2))-y(node(1))
-      ! qz = z(node(i+2))-z(node(1))
-
 
       call triangle_area_vector( px,py,pz, qx,qy,qz, nx,ny,nz )
 
@@ -1255,11 +1351,6 @@ subroutine read_mesh_openfoam
       cx = third*( x( node(i+2,iface) ) + x( node(i+1,iface) ) + x( node(1,iface) ) )
       cy = third*( y( node(i+2,iface) ) + y( node(i+1,iface) ) + y( node(1,iface) ) )
       cz = third*( z( node(i+2,iface) ) + z( node(i+1,iface) ) + z( node(1,iface) ) ) 
-
-      ! ! Face center for a triangle
-      ! cx = third*( x(node(i+2)) + x(node(i+1)) + x(node(1)) )
-      ! cy = third*( y(node(i+2)) + y(node(i+1)) + y(node(1)) )
-      ! cz = third*( z(node(i+2)) + z(node(i+1)) + z(node(1)) ) 
 
       !
       ! > Cell-face centroid components - accumulation stage
@@ -1343,17 +1434,6 @@ subroutine read_mesh_openfoam
   ! Thank you.
   deallocate(r8tmp)
 
-
-  ! ! Rewind 'faces' file for one more sweep
-  ! rewind( faces_file )
-  ! ch = ' '
-  ! do
-  !   read(faces_file,*) ch
-  !   if (ch == "(") then
-  !     exit
-  !   endif
-  ! end do 
-
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! > Interpolation factor
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1368,11 +1448,6 @@ subroutine read_mesh_openfoam
 
       inp = owner(iface)
       inn = neighbour(iface)
-
-      ! node = 0
-
-      ! ! Read line in 'faces' file
-      ! call read_line_faces_file_polyMesh(faces_file,nnodes,node,nomax)
 
       xpn = xc(inn)-xc(inp)
       ypn = yc(inn)-yc(inp)
@@ -1394,17 +1469,6 @@ subroutine read_mesh_openfoam
                                    ! intersection point (output):
                                    xjp,yjp,zjp &
                                   )
-      ! call find_intersection_point(&
-      !                              ! plane defined by three face vertices:
-      !                              x(node(1)),y(node(1)),z(node(1)), &
-      !                              x(node(2)),y(node(2)),z(node(2)), &
-      !                              x(node(3)),y(node(3)),z(node(3)), &
-      !                              ! line defined by cell center and neighbour center:
-      !                              xc(inp),yc(inp),zc(inp), &
-      !                              xc(inn),yc(inn),zc(inn), &
-      !                              ! intersection point (output):
-      !                              xjp,yjp,zjp &
-      !                             )
       xpn = xjp - xc(inp)
       ypn = yjp - yc(inp)
       zpn = zjp - zc(inp)
@@ -1416,7 +1480,7 @@ subroutine read_mesh_openfoam
       
     enddo
 
-  else ! ( interpolation_coeff_variant == 2 )
+  elseif ( interpolation_coeff_variant == 2 ) then
 
     !
     ! > Interpolation factor > inner faces - Variant 2.
@@ -1443,11 +1507,96 @@ subroutine read_mesh_openfoam
       
     enddo
 
+  else ! (interpolation_coef_variant == 3)
+
+    !
+    ! > Interpolation factor > inner faces - Variant 3.
+    !
+    do iface=1,numInnerFaces
+
+      inp = owner(iface)
+      inn = neighbour(iface)
+
+      xpn = xf(iface) - xc(inp)
+      ypn = yf(iface) - yc(inp)
+      zpn = zf(iface) - zc(inp)
+
+      djp = abs(arx(iface)*xpn + ary(iface)*ypn + arz(iface)*zpn)
+
+      xpn = xc(inn)-xc(inp)
+      ypn = yc(inn)-yc(inp)
+      zpn = zc(inn)-zc(inp)
+
+      dpn = abs(arx(iface)*xpn + ary(iface)*ypn + arz(iface)*zpn)
+
+      ! Interpolation factor = |Sf*djP|/|Sf*dPN|, where Sf face area (normal to face) vector,
+      ! dPN is distance vector between cell centers, djP distance vector from face centroid j to 
+      ! cell center P.
+      facint(iface) =  djp / dpn 
+      
+    enddo  
+
 
   endif
 
-  ! Loop over wall boundaries to calculate normal distance from cell center of the first cell layer - dnw, and
-  ! loop over symmetry boundaries to calculate normal distance from cell center of the first cell layer - dns.
+  !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  ! Calculate and store few recurrent geometric parameters:
+  !   > Df - diffusion coefficient:
+  !   _    _     _    _
+  !   Sf . Sf / (Sf . dpn)
+  !   It is recalculated frequently so it is best to keep it in memory
+  !   to speed up the simulation.
+  !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+  do iface=1,numInnerFaces
+
+    inp = owner(iface)
+    inn = neighbour(iface)
+
+    ! Distance vector between cell centers
+    xpn = xc(inn)-xc(inp)
+    ypn = yc(inn)-yc(inp)
+    zpn = zc(inn)-zc(inp)
+
+    ! Instead to enable reuse and efficiency, first store dot product of vectors Sf*Sf:
+    are = arx(iface)*arx(iface) + ary(iface)*ary(iface) + arz(iface)*arz(iface)
+
+    ! Create Df coefficient used for implicit Lalplacian discretizaton, where 
+    !      _    _     _    _
+    ! Df = Sf . Sf / (Sf . dpn)
+    Df(iface) = are /(arx(iface)*xpn + ary(iface)*ypn + arz(iface)*zpn)
+
+  !   ! Sqrt to get |Sf|
+  !   are = sqrt( are  )
+
+  !   ! Unit vectors of the normal
+  !   nxx=arx(iface)/are
+  !   nyy=ary(iface)/are
+  !   nzz=arz(iface)/are
+
+  !   ! Values at points p' and e' due to non-orthogonality. 
+  !   xpp(inp)=xf-(xf-xc(inp))*nxx
+  !   ypp(inp)=yf-(yf-yc(inp))*nyy
+  !   zpp(inp)=zf-(zf-zc(inp))*nzz
+
+  !   xnp(inn)=xf-(xf-xc(inn))*nxx
+  !   ynp(inn)=yf-(yf-yc(inn))*nyy
+  !   znp(inn)=zf-(zf-zc(inn))*nzz
+
+  enddo
+
+
+
+  ! Note: don't deallocate we use it for cell to node interpolation weights calculation (node_interpolation module) - only then deallocate.
+  ! deallocate(nnodes)
+  ! deallocate(node)  
+
+  !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  ! Loop over boundary faces to calculate 
+  ! normal distance from face center to cell center of the first cell layer - dnw,
+  ! and cell face area divided by norma distance to the cell center - srdw.
+  ! These are used in implementation of various boundary conditions.
+  !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
   iWall = 0
   iSym = 0
@@ -1553,7 +1702,7 @@ subroutine read_mesh_openfoam
   ! call r8vec_print_some ( numInnerFaces, facint, 1, 10, &
   !     '  First 10 elements of interpolation factor (facint) array:' )
 
-  ! write ( *, '(a)' ) ' '
+  write ( *, '(a)' ) ' '
   
 !
 !  > CLOSE polyMesh format file: 'points', 'faces', 'owner', 'neighbour', 'boundary'.

@@ -3,7 +3,13 @@
 subroutine calcstress
 !***********************************************************************
 !
-! Calculates turbulent stresses
+! Calculates turbululent stresses,
+!
+! \tau_{ij} = 2*\mu_t*S_{ij} - 2/3*\rho*k*\delta_{ij}
+!
+! For Explicit Algebraic Reynolds Stress Models-EARSM we add anisotropy
+!
+! \tau_{ij} = 2 \mu_t S_{ij} - 2/3 \rho k \delta_{ij} + \rho k a_{ij}
 !
 !***********************************************************************
 !
@@ -24,7 +30,7 @@ subroutine calcstress
 
   do inp=1,numCells
 
-    mut=(vis(inp)-viscos) !/densit ! divide with density if tau is define with nu_t instead of mu_t
+    mut=(vis(inp)-viscos)
 
     dudx = dUdxi(1,inp)
     dudy = dUdxi(2,inp)
@@ -49,16 +55,18 @@ subroutine calcstress
     vw(inp) = mut*(dvdz+dwdy)
 
 
-    ! ! Wallin-Johansson EARSM  - check this again!
-    ! uu(inp) = mut*(dudx+dudx) - 2.*bij(1,inp)*te(inp) - twothirds*den(inp)*te(inp)
-    ! vv(inp) = mut*(dvdy+dvdy) - 2.*bij(4,inp)*te(inp) - twothirds*den(inp)*te(inp)
-    ! ! It seems that b(3,3)=-b(1,1)-b(2,2):
-    ! ww(inp) = mut*(dwdz+dwdz) + 2.*(bij(1,inp)+bij(4,inp))*te(inp) - twothirds*den(inp)*te(inp)
+    ! EARSM constitutive equation - add anisotropy tensor
+    if (lasm) then
 
-    ! uv(inp) = mut*(dudy+dvdx) - 2.*bij(2,inp)*den(inp)*te(inp)
-    ! uw(inp) = mut*(dudz+dwdx) - 2.*bij(3,inp)*den(inp)*te(inp)
-    ! vw(inp) = mut*(dvdz+dwdy) - 2.*bij(5,inp)*den(inp)*te(inp)
- 
+      uu(inp) = uu(inp) + den(inp)*te(inp)*aij(1,inp)
+      vv(inp) = vv(inp) + den(inp)*te(inp)*aij(4,inp)
+      ww(inp) = ww(inp) + den(inp)*te(inp)*aij(6,inp)
+
+      uv(inp) = uv(inp) + den(inp)*te(inp)*aij(2,inp)
+      uw(inp) = uw(inp) + den(inp)*te(inp)*aij(3,inp)
+      vw(inp) = vw(inp) + den(inp)*te(inp)*aij(5,inp)
+
+    endif
 
     ! Clip negative values
     uu(inp)=max(uu(inp),small)

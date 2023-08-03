@@ -1,20 +1,15 @@
-!***********************************************************************
-!
- subroutine writehistory
-!
+subroutine writehistory
 !***********************************************************************
 !  Writes values at each monitoring point, at each time-step for 
 !  transient simulation, to a specific monitor file.
 !
 !***********************************************************************
-!
+
   use parameters, only: ltransient,time,mpoints
   use variables, only: u,v,w,te,ed
 
   implicit none
-!
-!***********************************************************************
-!
+
   integer :: inp,imon
 
   if(ltransient) then

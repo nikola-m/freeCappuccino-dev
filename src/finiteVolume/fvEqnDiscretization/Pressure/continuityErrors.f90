@@ -4,26 +4,27 @@ subroutine continuityErrors
 !   Calculates and prints the continuity errors.
 !
   use types
-  use parameters, only: sumLocalContErr, globalContErr, cumulativeContErr, resor
+  use parameters, only: resor
   use geometry, only: numInnerFaces, owner, neighbour, numBoundaries, bctype, nfaces, startFace
-  use sparse_matrix, only: res,apu
+  use sparse_matrix, only: su,apu
   use variables, only: flmass
   use fieldManipulation, only: volumeWeightedAverage
 
   implicit none
 
   integer :: i, ijp, ijn, ib, iface
-  ! real(dp) :: sumLocalContErrPrev
+  real(dp) :: sumLocalContErr, globalContErr
+  real(dp), save :: cumulativeContErr = 0.0_dp
 
   ! Initialize array with zero value.
-  res = 0.0_dp
+  su = 0.0_dp
 
   ! Inner faces                                               
   do i=1,numInnerFaces                                                    
     ijp = owner(i)
     ijn = neighbour(i)
-    res(ijp) = res(ijp)-flmass(ijp)
-    res(ijn) = res(ijn)+flmass(ijp)
+    su(ijp) = su(ijp)-flmass(ijp)
+    su(ijn) = su(ijn)+flmass(ijp)
   enddo  
 
 
@@ -37,7 +38,7 @@ subroutine continuityErrors
 
         iface = startFace(ib) + i
         ijp = owner(iface)
-        res(ijp)=res(ijp)-flmass(iface)
+        su(ijp)=su(ijp)-flmass(iface)
 
       enddo
 
@@ -47,7 +48,7 @@ subroutine continuityErrors
 
         iface = startFace(ib) + i
         ijp = owner(iface)
-        res(ijp)=res(ijp)-flmass(iface)
+        su(ijp)=su(ijp)-flmass(iface)
 
       enddo
 
@@ -56,25 +57,14 @@ subroutine continuityErrors
   enddo
 
 
-  ! Used this so far..
-  sumLocalContErr = volumeWeightedAverage( abs(res*apu) )
-
-  ! Variant 2 - experimental, scaling as in Fluent theory guide
-  ! sumLocalContErrPrev = sumLocalContErr
-  ! sumLocalContErr = sum( abs( res ) )
-  ! ! Scale continuity residual as in Fluent theory guide
-  ! if ( (itime-itimes).le.5 .and. sumLocalContErrPrev < sumLocalContErr ) then
-  !   res5Mass = sumLocalContErr
-  ! endif    
-  ! ! Scale residual:
-  ! sumLocalContErr = sumLocalContErr / res5Mass
+  sumLocalContErr = volumeWeightedAverage( abs(su*apu) )
 
   ! Global mass conservation
-  globalContErr = sum( res )
+  globalContErr = sum( su )
 
   cumulativeContErr = cumulativeContErr + globalContErr
 
-  res = 0.0_dp
+  su = 0.0_dp
 
   ! For report of scaled residuals
   resor(4) = sumLocalContErr

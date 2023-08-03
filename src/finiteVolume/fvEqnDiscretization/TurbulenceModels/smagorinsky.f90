@@ -1,6 +1,6 @@
 module smagorinsky
 !
-! Implementation of Smagorinsky SGS model
+! NOT FINISHED! Implementation of Smagorinsky SGS model
 !
   use types
   use parameters
@@ -9,8 +9,10 @@ module smagorinsky
 
   implicit none
 
-  real(dp), parameter :: C_Les = 0.10_dp ! 0.1-0.2; for channel flow even 0.065(Ferziger)   
-  real(dp), parameter :: r13 = 1.0_dp/3.0_dp
+  real(dp), parameter :: C_Les = 0.17_dp ! 0.1-0.2; for channel flow even 0.065(Ferziger)   
+  real(dp), parameter :: C_delta = 0.158_dp
+  real(dp), parameter :: r13 = 1./3.0_dp
+  real(dp), parameter :: Aplus = 26.0_dp
 
   private 
 
@@ -26,47 +28,46 @@ subroutine modify_viscosity_smagorinsky
 !
   implicit none
 
-  ! integer :: i,ib,inp
-  ! integer :: iface, iwall, ijp,ijb
-  ! real(dp) :: visold
-  ! real(dp) :: nxf,nyf,nzf,are
-  ! real(dp) :: Vnp,Vtp,xtp,ytp,ztp
-  ! real(dp) :: Ut2,Utau,viscw
-  ! real(dp) :: Vis_Smag,Zplus,Cs
+  integer :: i,ib,inp
+  integer :: iface, iwall, ijp,ijb
+  real(dp) :: visold
+  real(dp) :: nxf,nyf,nzf,are
+  real(dp) :: Vnp,Vtp,xtp,ytp,ztp
+  real(dp) :: Ut2,Utau,viscw
+  real(dp) :: Vis_Smag,yplus,Cs
 
 !
 ! Loop trough cells 
 !
 
-  ! do inp=1,numCells
+  do inp=1,numCells
 
-  !   ! Store old value
-  !   visold = vis(inp)
-
-
-  !   ! Nondimensional distance
-  !   Zplus = wallDistance(inp)*Utau/(Viscos/Den(inp))
-
-  !   ! C_les coef with van Driest damping
-  !   Cs = C_Les*(1.-Exp(-Zplus/26.0))
-
-  !   ! Smagorinsky SGS viscosity
-  !   Vis_Smag = (Cs * Vol(Inp)**r13)**2 * magStrain(inp) * Den(Inp)
+    ! Store old value
+    visold = vis(inp)
 
 
-  !   ! Version implemented in OpenFOAM - merged ideas of Schumann(1991) and Van Driest:
-  !   ! C_Les = 0.17
-  !   ! Vis_Smag = ( min(C_Les*Vol(Inp)**r13, cappa/C_delta*wallDistance(inp)) * (1.-Exp(-Zplus/26.0)) )**2  &
-  !   !            * magStrain(inp) * Den(Inp)
+    ! Nondimensional distance
+    yplus = Den(inp)*wallDistance(inp)*Utau/Viscos
+
+    ! C_les coef with van Driest damping
+    ! Cs = C_Les*(1.-Exp(-yplus/26.0))
+
+    ! Smagorinsky SGS viscosity
+    ! Vis_Smag = Den(Inp) * (Cs * Vol(Inp)**r13)**2 * magStrain(inp)
+
+
+    ! Version implemented in OpenFOAM - merged ideas of Schumann(1991) and Van Driest:
+    damping = (1.0_dp-Exp(-yplus/Aplus))
+    Vis_Smag = Den(Inp) * ( min(C_Les*Vol(Inp)**r13, cappa*wallDistance(inp)/C_delta * damping)  )**2 * magStrain(inp)
                
 
-  !   ! Update effective viscosity:
-  !   Vis(inp) = Vis_Smag + Viscos
+    ! Update effective viscosity:
+    Vis(inp) = Vis_Smag + Viscos
 
-  !   ! Underelaxation
-  !   vis(inp)=urf(ivis)*vis(inp)+(1.0_dp-urf(ivis))*visold
+    ! Underelaxation
+    vis(inp)= visold+urf(ivis)*(vis(inp)-visold) 
 
-  ! enddo
+  enddo
 
   ! !
   ! ! Boundary faces 

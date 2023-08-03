@@ -2,12 +2,13 @@ subroutine modify_viscosity_turbulence
 
   use TurbModelData, only: TurbModel
   use variables, only: u,v,w,dUdxi,dVdxi,dWdxi
-  use gradients, only: grad
+  use gradients, only: grad_gauss
   use k_epsilon_std
   use k_epsilon_std_2lewt  
   use k_epsilon_rng
   use k_epsilon_rlzb  
   use k_epsilon_rlzb_2lewt 
+  use k_epsilon_zeta_f
   use k_omega_SST
   use DDES_k_omega_SST
   use IDDES_k_omega_SST
@@ -24,9 +25,9 @@ subroutine modify_viscosity_turbulence
 
 
   ! Velocity gradients: 
-  call grad(U,dUdxi)
-  call grad(V,dVdxi)
-  call grad(W,dWdxi)
+  call grad_gauss(U,dUdxi)
+  call grad_gauss(V,dVdxi)
+  call grad_gauss(W,dWdxi)
 
   call calcstress
 
@@ -57,6 +58,9 @@ subroutine modify_viscosity_turbulence
 
     case ('k_epsilon_rlzb_2lewt')
       call modify_viscosity_k_epsilon_rlzb_2lewt
+
+    case ('k_epsilon_zeta_f')
+      call modify_viscosity_k_epsilon_zeta_f
 
     case ('DDES_k_omega_sst')
       call modify_viscosity_DDES_k_omega_sst

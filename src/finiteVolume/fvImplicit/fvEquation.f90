@@ -102,7 +102,7 @@ function new_fvEquation( ) result(fvEqn)
     integer :: i
     type(fvEquation) :: fvEqn
 
-    allocate(fvEqn % ioffset ( numCells+1 ))
+    allocate(fvEqn % ia ( numCells+1 ))
     allocate(fvEqn % diag ( numCells ))
     allocate(fvEqn % ja ( nnz ))
     allocate(fvEqn % a ( nnz ))
@@ -116,7 +116,7 @@ function new_fvEquation( ) result(fvEqn)
     allocate(fvEqn % oo ( numTotal ))
 
     do i=1,numCells+1
-      fvEqn % ioffset(i) = ioffset(i)
+      fvEqn % ia(i) = ia(i)
     enddo
     do i=1,numCells+1
       fvEqn % diag(i) = diag(i)
@@ -132,7 +132,7 @@ function new_fvVectorEquation( ) result(fvEqn)
     integer :: i
     type(fvVectorEquation) :: fvEqn
 
-    allocate(fvEqn % ioffset ( numCells+1 ))
+    allocate(fvEqn % ia ( numCells+1 ))
     allocate(fvEqn % ja ( nnz ))
     allocate(fvEqn % a ( nnz ))
 
@@ -159,7 +159,7 @@ function new_fvVectorEquation( ) result(fvEqn)
     allocate(fvEqn % woo ( numTotal ))
 
     do i=1,numCells+1
-      fvEqn % ioffset(i) = ioffset(i)
+      fvEqn % ia(i) = ia(i)
     enddo
     do i=1,nnz
       fvEqn % ja(i) = ja(i)

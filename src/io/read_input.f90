@@ -177,7 +177,6 @@ subroutine read_input_file
         lstsq_dm, &           !@ |Distance-square weighted version of Least-Square Gradient, or...
         node_gauss, &         !@ |Node based Gauss gradient using pseudolaplacian interpolation, or...
         gauss, &              !@ |Cell based Gauss gradient with simple linear interpolation.
-        nigrad, &             ! Number of iterations for Gauss gradient approximation.   
         limiter, &            ! Gradient limiter - used for all fields
         !
         ! Solution method: pressure-velocity coupling

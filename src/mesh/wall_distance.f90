@@ -62,7 +62,7 @@ subroutine wall_distance_poisson
   use parameters
   use geometry
   use linear_solvers
-  use gradients, only: grad
+  use gradients, only: grad_gauss
 
   implicit none
 
@@ -125,7 +125,7 @@ subroutine wall_distance_poisson
 
 
   ! Gradient of solution field stored in phi:
-  call grad(phi,dPdxi)
+  call grad_gauss(phi,dPdxi)
 
   ! Wall distance computation from Poisson eq. solution stored in pp:
   wallDistance = -sqrt(  dPdxi(1,:)*dPdxi(1,:)+dPdxi(2,:)*dPdxi(2,:)+dPdxi(3,:)*dPdxi(3,:) ) + &

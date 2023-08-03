@@ -27,7 +27,9 @@ k_epsilon_rng.f90
 k_epsilon_rlzb.f90
 k_epsilon_rlzb_2lewt.f90
 k_epsilon_std_2lewt.f90
+k_epsilon_zeta_f.f90
 k_omega_SST.f90
+k_omega_EARSM_WJ.f90
 DDES_k_omega_SST.f90
 IDDES_k_omega_SST.f90
 spalart_allmaras.f90

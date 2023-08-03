@@ -39,8 +39,8 @@ end type
 !
 
 type TurbulenceModel
-  character (len=20) :: name = ' ' ! Turbulence model name - unique identifier.
-  type(TurbScalar), dimension(2) :: Scalar ! Data for solution of discretized PDE for specific scalar
+  character (len=20) :: name = 'none' ! Turbulence model name - unique identifier.
+  type(TurbScalar), dimension(4) :: Scalar ! Data for solution of discretized PDE for specific scalar
   real(dp) :: urfVis = 1.0_dp ! Under-relaxation facotr for eddy-viscosity (if the model is eddy-viscosity model)
 end type
 
@@ -98,6 +98,14 @@ implicit none
     case ('k_epsilon_rlzb_2lewt')
       solveTKE = .true.
       solveEpsilon = .true.
+
+    case ('k_epsilon_zeta_f')
+        solveTKE = .true.
+        solveEpsilon = .true.
+
+    case ('k_omega_EARSM_WJ') 
+        solveTKE = .true.
+        solveOmega = .true.
 
     case ('DDES_k_omega_sst')
         solveTKE = .true.

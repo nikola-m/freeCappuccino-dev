@@ -45,8 +45,8 @@ module energy
   character ( len=12 ) :: lSolverEn = 'bicgstab'    ! Linear algebraic solver.
   integer  :: maxiterEn = 10                        ! Max number of iterations in linear solver.
   real(dp) :: tolAbsEn = 1e-13                      ! Absolute residual level.
-  real(dp) :: tolRelEn = 0.025                      ! Relative drop in residual to exit linear solver.
-  real(dp) :: sigtEn = 0.85_dp                       ! sigma_t
+  real(dp) :: tolRelEn = 0.025_dp                   ! Relative drop in residual to exit linear solver.
+  real(dp) :: sigtEn = 0.85_dp                      ! sigma_t
   logical :: solveTotalEnergy = .True.              !@ What we solve here - default is total energy, change it 
   logical :: solveInternalEnergy = .False.          !@ in input.nml file.
   logical :: solveEnthalpy = .False.                !@
@@ -91,6 +91,7 @@ subroutine calc_energy
   use gradients
   use fieldManipulation, only: explDiv,fieldInterpolate
   use linear_solvers
+  use scalar_fluxes, only: facefluxsc
   
   implicit none
 
@@ -230,7 +231,7 @@ subroutine calc_energy
       apotime = den(inp)*vol(inp)/timestep
 
       if( bdf .or. cn ) then
-        
+
         su(inp) = su(inp) + apotime*( c_p*( T(inp) - To(inp) ) - ( En(inp)-Eno(inp) ) )
 
       elseif( bdf2 ) then
@@ -314,10 +315,13 @@ subroutine calc_energy
     ijp = owner(i)
     ijn = neighbour(i)
 
-    call facefluxsc( ijp, ijn, &
-                     xf(i), yf(i), zf(i), arx(i), ary(i), arz(i), &
-                     flmass(i), facint(i), gam, &
-                     T, dTdxi, prtr, cap, can, suadd ) ! Promenio u Temp iz En
+    dcoef = ( vis(ijp) + (vis(ijn)-vis(ijp))*facint(i) )*prtr
+
+    call facefluxsc( i, ijp, ijn, &
+                     xf(i), yf(i), zf(i), &
+                     arx(i), ary(i), arz(i), &
+                     flmass(i), facint(i), gam, cSchemeEn, &
+                     T, dTdxi, dcoef, cap, can, suadd ) ! Promenio u Temp iz En
 
     ! > Off-diagonal elements:
 
@@ -369,10 +373,14 @@ subroutine calc_energy
         ijp = owner(iface)
         ijb = iBndValueStart(ib) + i
 
-        call facefluxsc_boundary( ijp, ijb, &
-                         xf(iface), yf(iface), zf(iface), arx(iface), ary(iface), arz(iface), &
+        ! Diffusion coefficient
+        dcoef = vis(ijb)*prtr 
+
+        call facefluxsc( ijp, &
+                         xf(iface), yf(iface), zf(iface), &
+                         arx(iface), ary(iface), arz(iface), &
                          flmass(iface), &
-                         T, dTdxi, prtr, cap, can, suadd)
+                         dTdxi, dcoef, cap, can, suadd)
 
         Sp(ijp) = Sp(ijp)-can
 
@@ -394,14 +402,13 @@ subroutine calc_energy
 
         dcoef = viscos/pranl+(vis(ijp)-viscos)/sigtEn
         coef=dcoef*srdw(iWall)
-        !# are = sqrt(arx(iface)**2+ary(iface)**2+arz(iface)**2)
-        !# coef = dcoef*are/dnw(iWall)
+
         sp(ijp) = sp(ijp) + coef
         su(ijp) = su(ijp) + coef*T(ijb)
 
       enddo
 
-    elseif ( bctype(ib) == 'wall' .and. bcDFraction(7,ib)==0.0_dp ) then
+    elseif ( bctype(ib) == 'wall' .and. bcDFraction(7,ib)==zero ) then
 
       ! Adiabatic wall boundaries (that's actually zero grad on temperature)
 
@@ -415,7 +422,7 @@ subroutine calc_energy
 
       enddo
 
-    elseif ( bctype(ib) == 'wallQFlux') then
+    elseif ( bctype(ib) == 'wall' .and. bcDFraction(7,ib)==one) then
 
       ! Prescribed heat flux wall boundaries (that's actually non homo Neumann on temperature)
 
@@ -462,11 +469,15 @@ subroutine calc_energy
         iftwin = startFaceTwin(iPer) + i ! Where does the face data for twin start, looking at periodic boundary pair with index iPer.
         ijn = owner(iftwin)              ! Owner cell of the twin periodic face
 
+        ! Diffusion coefficient
+        dcoef = half*( vis(ijp) + vis(ijn) )*prtr
 
         ! face flux scalar but for periodic boundaries - it will be recognized by arguments
-        call facefluxsc_periodic( ijp, ijn, xf(if), yf(if), zf(if), arx(if), ary(if), arz(if), &
-                                  flmass(if), gam, &
-                                  T, dTdxi, prtr, cap, can, suadd )
+        call facefluxsc( i, ijp, ijn, &
+                         xf(if), yf(if), zf(if), &
+                         arx(if), ary(if), arz(if), &
+                         flmass(if), gam, &
+                         T, dTdxi, dcoef, cap, can, suadd )
 
 
         ! > Off-diagonal elements:
@@ -514,23 +525,23 @@ subroutine calc_energy
 
     a = 0.5_dp*a ! Doesn't affect the main diagonal because it's still zero.
 
-      do i = 1,numInnerFaces
-          ijp = owner(i)
-          ijn = neighbour(i)
+    do i = 1,numInnerFaces
+      ijp = owner(i)
+      ijn = neighbour(i)
 
-          k = icell_jcell_csr_index(i)
-          su(ijp) = su(ijp) - a(k)*To(ijn)
+      k = icell_jcell_csr_index(i)
+      su(ijp) = su(ijp) - a(k)*To(ijn)
 
-          k = jcell_icell_csr_index(i)
-          su(ijn) = su(ijn) - a(k)*To(ijp)
-      enddo
-      
-      do ijp=1,numCells
-          apotime=den(ijp)*vol(ijp)/timestep
-          off_diagonal_terms = sum( a( ioffset(ijp) : ioffset(ijp+1)-1 ) ) - a(diag(ijp))
-          su(ijp) = su(ijp) + (apotime + off_diagonal_terms)*To(ijp)
-          sp(ijp) = sp(ijp)+apotime
-      enddo
+      k = jcell_icell_csr_index(i)
+      su(ijn) = su(ijn) - a(k)*To(ijp)
+    enddo
+    
+    do ijp=1,numCells
+      apotime=den(ijp)*vol(ijp)/timestep
+      off_diagonal_terms = sum( a( ia(ijp) : ia(ijp+1)-1 ) ) - a(diag(ijp))
+      su(ijp) = su(ijp) + (apotime + off_diagonal_terms)*To(ijp)
+      sp(ijp) = sp(ijp)+apotime
+    enddo
 
   endif
 
@@ -544,7 +555,7 @@ subroutine calc_energy
     ! Main diagonal term assembly:
     ! Sum all off-diagonal coefs in a row of a sparse matrix.
     ! we substract the diagonal element from the sum, to eliminate it from the sum.
-    off_diagonal_terms  = sum( a(ioffset(inp) : ioffset(inp+1)-1) ) - a(diag(inp))
+    off_diagonal_terms  = sum( a(ia(inp) : ia(inp+1)-1) ) - a(diag(inp))
     a(diag(inp)) = sp(inp) - off_diagonal_terms
 
     ! Underelaxation:
@@ -579,413 +590,6 @@ subroutine calc_energy
 
 end subroutine
 
-
-!***********************************************************************
-!
-subroutine facefluxsc(ijp, ijn, xf, yf, zf, arx, ary, arz, &
-                      fm, lambda, gam, FI, dFidxi, &
-                      prtr, cap, can, suadd)
-!
-!***********************************************************************
-!
-  use types
-  use parameters, only: zero, viscos
-  use geometry, only: numTotal, numCells, xc,yc,zc
-  use variables, only: vis
-  use interpolation
-  use gradients
-
-  implicit none
-!
-!***********************************************************************
-! 
-
-  integer, intent(in) :: ijp, ijn ! owner and neighbour indices
-  real(dp), intent(in) :: xf,yf,zf ! face centroid coordinates
-  real(dp), intent(in) :: arx, ary, arz ! area vector
-  real(dp), intent(in) :: fm ! mass flow at face
-  real(dp), intent(in) :: lambda ! interpoaltion factor
-  real(dp), intent(in) :: gam  ! deferred correction factor [0,1], 1-high order.
-  real(dp), dimension(numTotal), intent(in) :: Fi ! Scalar field in question
-  real(dp), dimension(3,numCells), intent(in) :: dFidxi ! Gradient of the scalar field in question.
-  real(dp), intent(in) :: prtr ! One over prandtl coefficient
-  real(dp), intent(inout) :: cap, can, suadd ! On return - matrix coeffs for owner and neighbour and source contribution.
-
-
-! Local variables
-  real(dp) :: are
-  real(dp) :: xpn,ypn,zpn!, xi,yi,zi,r1,r2,psie,psiw
-  real(dp) :: dpn
-  real(dp) :: cp,cn
-  real(dp) :: fii
-  real(dp) :: fdfie,fdfii,fcfie,fcfii,ffic
-  real(dp) :: de, game, viste
-  real(dp) :: fxp,fxn
-  real(dp) :: dfixi,dfiyi,dfizi
-  real(dp) :: dfixii,dfiyii,dfizii
-!----------------------------------------------------------------------
-
-  ! > Geometry:
-
-  ! Face interpolation factor
-  fxn=lambda 
-  fxp=1.0_dp-lambda
-
-  ! Distance vector between cell centers
-  xpn=xc(ijn)-xc(ijp)
-  ypn=yc(ijn)-yc(ijp)
-  zpn=zc(ijn)-zc(ijp)
-
-  ! Distance from P to neighbor N
-  dpn=sqrt(xpn**2+ypn**2+zpn**2)     
-
-  ! cell face area
-  are=sqrt(arx**2+ary**2+arz**2)
-
-
-  ! Cell face diffussion coefficient
-  viste = (vis(ijp)-viscos)*fxp+(vis(ijn)-viscos)*fxn
-  game = viscos*prtr+viste/sigtEn
-
-
-  ! Difusion coefficient for linear system
-  ! de = game*are/dpn
-  de = game*(arx*arx+ary*ary+arz*arz)/(xpn*arx+ypn*ary+zpn*arz)
-
-  ! Convection fluxes - uds
-  cn = min(fm,zero) 
-  cp = max(fm,zero)
-
-  !-------------------------------------------------------
-  ! System matrix coefficients
-  !-------------------------------------------------------
-  cap = -de - cp
-  can = -de + cn
-  !-------------------------------------------------------
-
-
-  !-------------------------------------------------------
-  ! Explicit part of diffusion
-  !-------------------------------------------------------
-
-  call sngrad(ijp, ijn, xf, yf, zf, arx, ary, arz, lambda, &
-              Fi, dFidxi, nrelaxEn, dSchemeEn, dfixi, dfiyi, dfizi, &
-              dfixii, dfiyii, dfizii)
-  
-
-  ! Explicit diffusion
-  fdfie = game*(dfixii*arx + dfiyii*ary + dfizii*arz)  
-
-  ! Implicit diffussion 
-  fdfii = game*are/dpn*(dfixi*xpn+dfiyi*ypn+dfizi*zpn)
-
-
-  !-------------------------------------------------------
-  ! Explicit higher order convection
-  !-------------------------------------------------------
-  if( fm .ge. zero ) then 
-    ! Flow goes from p to pj - > p is the upwind node
-    fii = face_value(ijp, ijn, xf, yf, zf, fxp, fi, dFidxi, cSchemeEn )
-  else
-    ! Other way, flow goes from pj, to p -> pj is the upwind node.
-    fii = face_value(ijn, ijp, xf, yf, zf, fxn, fi, dFidxi, cSchemeEn )
-  endif
-
-  fcfie = fm*fii
-
-  !-------------------------------------------------------
-  ! Explicit first order convection
-  !-------------------------------------------------------
-  fcfii = cn*fi(ijn)+cp*fi(ijp)
-
-  !-------------------------------------------------------
-  ! Deferred correction for convection = gama_blending*(high-low)
-  !-------------------------------------------------------
-  ffic = gam*(fcfie-fcfii)
-
-  !-------------------------------------------------------
-  ! Explicit part of fluxes
-  !-------------------------------------------------------
-  suadd = -ffic+fdfie-fdfii 
-
-end subroutine
-
-
-
-
-
-!***********************************************************************
-!
-subroutine facefluxsc_periodic(ijp, ijn, &
-                               xf, yf, zf, arx, ary, arz, &
-                               flmass, gam, &
-                               FI, dFidxi, prtr, cap, can, suadd)
-!
-!***********************************************************************
-!
-  use types
-  use parameters
-  use variables, only: vis
-  use interpolation
-
-  implicit none
-!
-!***********************************************************************
-! 
-
-  integer, intent(in) :: ijp, ijn
-  real(dp), intent(in) :: xf,yf,zf
-  real(dp), intent(in) :: arx, ary, arz
-  real(dp), intent(in) :: flmass
-  real(dp), intent(in) :: gam 
-  ! character( len=30 ), intent(in) :: cScheme ! Convection scheme.
-  real(dp), dimension(numTotal), intent(in) :: Fi
-  real(dp), dimension(3,numCells), intent(in) :: dFidxi
-  real(dp), intent(in) :: prtr
-  real(dp), intent(inout) :: cap, can, suadd
-
-
-! Local variables
-  real(dp) :: are
-  real(dp) :: xpn,ypn,zpn
-  real(dp) :: dpn
-  real(dp) :: Cp,Ce
-  real(dp) :: fii,fm
-  real(dp) :: fdfie,fdfii,fcfie,fcfii,ffic
-  real(dp) :: de, game, viste
-  real(dp) :: fxp,fxn
-  real(dp) :: dfixi,dfiyi,dfizi
-!----------------------------------------------------------------------
-
-  ! > Geometry:
-
-  ! Face interpolation factor
-  fxn = 0.5_dp ! Assumption for periodic boundaries
-  fxp = fxn
-
-  ! Distance vector between cell centers
-  xpn = 2*( xf-xc(ijp) )
-  ypn = 2*( yf-yc(ijp) )
-  zpn = 2*( zf-zc(ijp) )
-
-  ! Distance from P to neighbor N
-  dpn=sqrt(xpn**2+ypn**2+zpn**2)     
-
-  ! cell face area
-  are=sqrt(arx**2+ary**2+arz**2)
-
-
-  ! Cell face diffussion coefficient
-  viste = (vis(ijp)-viscos)*fxp+(vis(ijn)-viscos)*fxn
-  game = viscos*prtr+viste/sigtEn
-
-
-  ! Difusion coefficient for linear system
-  ! de = game*are/dpn
-  de = game*(arx*arx+ary*ary+arz*arz)/(xpn*arx+ypn*ary+zpn*arz)
-
-  ! Convection fluxes - uds
-  fm = flmass
-  ce = min(fm,zero) 
-  cp = max(fm,zero)
-
-  !-------------------------------------------------------
-  ! System matrix coefficients
-  !-------------------------------------------------------
-  cap = -de - max(fm,zero)
-  can = -de + min(fm,zero)
-  !-------------------------------------------------------
-
-
-  !-------------------------------------------------------
-  ! Explicit part of diffusion
-  !-------------------------------------------------------
-
-  dfixi = dFidxi(1,ijp)*fxp+dFidxi(1,ijn)*fxn
-  dfiyi = dFidxi(2,ijp)*fxp+dFidxi(2,ijn)*fxn
-  dfizi = dFidxi(3,ijp)*fxp+dFidxi(3,ijn)*fxn
-
-  ! Explicit diffusion
-  fdfie = game*(dfixi*arx + dfiyi*ary + dfizi*arz)  
-
-  ! Implicit diffussion 
-  fdfii = game*are/dpn*(dfixi*xpn+dfiyi*ypn+dfizi*zpn)
-
-
-  !-------------------------------------------------------
-  ! Explicit higher order convection, cSheme is set in input
-  !-------------------------------------------------------
-  if( flmass .ge. zero ) then 
-    ! Flow goes from p to pj - > p is the upwind node
-    fii = face_value_cds(ijp, ijn, fxp, fi)
-  else
-    ! Other way, flow goes from pj, to p -> pj is the upwind node.
-    fii = face_value_cds(ijn, ijp, fxn, fi)
-  endif
-
-  fcfie = fm*fii
-
-  !-------------------------------------------------------
-  ! Explicit first order convection
-  !-------------------------------------------------------
-  fcfii = ce*fi(ijn)+cp*fi(ijp)
-
-  !-------------------------------------------------------
-  ! Deffered correction for convection = gama_blending*(high-low)
-  !-------------------------------------------------------
-  ffic = gam*(fcfie-fcfii)
-
-  !-------------------------------------------------------
-  ! Explicit part of fluxes
-  !-------------------------------------------------------
-  suadd = -ffic+fdfie-fdfii 
-
-end subroutine
-
-
-
-
-!***********************************************************************
-!
-subroutine facefluxsc_boundary(ijp, ijn, xf, yf, zf, arx, ary, arz, fm, FI, dFidxi, prtr, cap, can, suadd)
-!
-!***********************************************************************
-!
-  use types
-  use parameters, only: zero,viscos
-  use geometry, only: numTotal, numCells, xc,yc,zc
-  use variables, only: vis
-
-  implicit none
-!
-!***********************************************************************
-! 
-
-  integer, intent(in) :: ijp, ijn
-  real(dp), intent(in) :: xf,yf,zf
-  real(dp), intent(in) :: arx, ary, arz
-  real(dp), intent(in) :: fm
-  real(dp), dimension(numTotal), intent(in) :: Fi
-  real(dp), dimension(3,numCells), intent(in) :: dFidxi
-  real(dp), intent(in) :: prtr
-  real(dp), intent(inout) :: cap, can, suadd
-
-
-! Local variables
-  real(dp) :: are
-  real(dp) :: xpn,ypn,zpn
-  real(dp) :: nxx,nyy,nzz,ixi1,ixi2,ixi3,dpn,costheta,costn
-  real(dp) :: cp,cn
-  real(dp) :: fdfie,fdfii
-  real(dp) :: d1x,d1y,d1z,d2x,d2y,d2z
-  real(dp) :: de, vole, game, viste
-  real(dp) :: fxp,fxn
-  real(dp) :: dfixi,dfiyi,dfizi
-  real(dp) :: dfixii,dfiyii,dfizii
-
-!----------------------------------------------------------------------
-
-  dfixi = 0.0_dp
-  dfiyi = 0.0_dp
-  dfizi = 0.0_dp
-
-  ! > Geometry:
-
-  ! Face interpolation factor
-  fxn=1.0_dp
-  fxp=0.0_dp
-
-  ! Distance vector between cell center and face center
-  xpn=xf-xc(ijp)
-  ypn=yf-yc(ijp)
-  zpn=zf-zc(ijp)
-
-  ! Distance from P to neighbor N
-  dpn=sqrt(xpn**2+ypn**2+zpn**2)     
-
-  ! Components of the unit vector i_ksi
-  ixi1=xpn/dpn
-  ixi2=ypn/dpn
-  ixi3=zpn/dpn
-
-  ! Cell face area
-  are=sqrt(arx**2+ary**2+arz**2)
-
-  ! Unit vectors of the normal
-  nxx=arx/are
-  nyy=ary/are
-  nzz=arz/are
-
-  ! Angle between vectors n and i_xi - we need cosine
-  costheta=nxx*ixi1+nyy*ixi2+nzz*ixi3
-
-  ! Relaxation factor for higher-order cell face gradient
-  ! Minimal correction: nrelax = +1 :
-  !costn = costheta
-  ! Orthogonal correction: nrelax =  0 : 
-  costn = 1.0_dp
-  ! Over-relaxed approach: nrelax = -1 :
-  !costn = 1./costheta
-  ! In general, nrelax can be any signed integer from some 
-  ! reasonable interval [-nrelax,nrelax] (or maybe even real number): 
-  !costn = costheta**nrelax
-
-  ! dpp_j * sf
-  vole=xpn*arx+ypn*ary+zpn*arz
-
-  ! Turbulent viscosity
-  viste = vis(ijn)-viscos
-
-  ! Cell face diffussion coefficient for TEMPERATURE
-  game = viscos*prtr + viste/sigtEn
-
-
-  !-- Skewness correction --
-
-  ! Overrelaxed correction vector d2, where s=dpn+d2
-  d1x = costn
-  d1y = costn
-  d1z = costn
-
-  d2x = xpn*costn
-  d2y = ypn*costn
-  d2z = zpn*costn
-
-  ! Interpolate gradients defined at CV centers to faces..
-  ! It should be dFidxi(:,ijn), because fxn=1.0, but we write dFidxi(:,ijp) because constant gradient
-  ! is applied between cell center and boundary cell face.
-  dfixi = dFidxi(1,ijp)
-  dfiyi = dFidxi(2,ijp)
-  dfizi = dFidxi(3,ijp) 
-
-  !.....du/dx_i interpolated at cell face:
-  dfixii = dfixi*d1x + arx/vole*( fi(ijn)-fi(ijp)-dfixi*d2x-dfiyi*d2y-dfizi*d2z ) 
-  dfiyii = dfiyi*d1y + ary/vole*( fi(ijn)-fi(ijp)-dfixi*d2x-dfiyi*d2y-dfizi*d2z ) 
-  dfizii = dfizi*d1z + arz/vole*( fi(ijn)-fi(ijp)-dfixi*d2x-dfiyi*d2y-dfizi*d2z ) 
- 
-
-  ! Explicit diffusion
-  fdfie = game*(dfixii*arx + dfiyii*ary + dfizii*arz)   
-
-  ! Implicit diffussion 
-  fdfii = game*are/dpn*(dfixi*xpn+dfiyi*ypn+dfizi*zpn)
-
-
-  ! Difusion coefficient
-  de = game*are/dpn
-
-  ! Convection fluxes - uds
-  cn = min(fm,zero) 
-  cp = max(fm,zero)
-
-  ! System matrix coefficients
-  cap = -de - cp
-  can = -de + cn
-
-  ! Explicit part of fluxes
-  suadd = fdfie-fdfii 
-
-end subroutine
 
 
 subroutine correct_energy

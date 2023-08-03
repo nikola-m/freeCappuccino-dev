@@ -19,12 +19,12 @@ implicit none
 ! Discrtetization and solution parameters - modified trough input.nml file
 !
 logical  :: calcEpot = .False.                  ! To activate the solution of this field in the main function. 
-real(dp) :: urfEpot = 0.7                      ! Under-relaxation factor.
-real(dp) :: gdsEpot = 1.0                      ! Deferred correction factor.
-character ( len=10 ) :: lSolverEpot = 'iccg'   ! Linear algebraic solver.
-integer  :: maxiterEpot = 5                       ! Max number of iterations in linear solver.
-real(dp) :: tolAbsEpot = 1e-13                    ! Absolute residual level.
-real(dp) :: tolRelEpot = 0.025                    ! Relative drop in residual to exit linear solver.
+real(dp) :: urfEpot = 0.7_dp                    ! Under-relaxation factor.
+real(dp) :: gdsEpot = 1.0_dp                    ! Deferred correction factor.
+character ( len=10 ) :: lSolverEpot = 'iccg'    ! Linear algebraic solver.
+integer  :: maxiterEpot = 5                     ! Max number of iterations in linear solver.
+real(dp) :: tolAbsEpot = 1e-13                  ! Absolute residual level.
+real(dp) :: tolRelEpot = 0.025_dp               ! Relative drop in residual to exit linear solver.
 
 real(dp), dimension(:), allocatable :: BMAGX,BMAGY,BMAGZ ! Magnetic inductions vector field components.
 real(dp), dimension(:), allocatable :: EPOT              ! Electric potential.

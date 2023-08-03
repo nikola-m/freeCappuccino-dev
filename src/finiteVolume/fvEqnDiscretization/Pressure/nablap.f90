@@ -1,8 +1,7 @@
 module nablap
 
 use types
-use gradients
-use interpolation, only: face_value_central, face_value_cds, face_value_harmonic
+use interpolation, only: face_value_central, face_value_cds
 
 implicit none
 
@@ -10,333 +9,54 @@ implicit none
 
 private
 
-public :: surfaceIntegratePressure,surfaceIntegratePressureCrankNicolson,surfaceIntegratePressureCorr
+public :: gradp_and_sources
 public :: pscheme ! parameter for input.nml
 
 contains
     
 !***********************************************************************
 !
-subroutine surfaceIntegratePressure 
+subroutine gradp_and_sources(p)
 !
 !***********************************************************************
-! 
-!  -(nabla p) is a vector field: -( (nabla p)x . i + (nabla p)y . j + (nabla p)z . k )
-!  Instead of computing the Grad(p) vector field in center and integrate volumetricaly
-!  multiplying cell centroid value by Vol(ijp), we write it in divergence form.
-!  Interpolate to face {-p e_i}_f * S_f
-!  Source(u_i) = sum_over_cell_faces {-p}_f * S_fi
-!  Interpolation to cell face centers done by central scheme.
-!
-!***********************************************************************
-!
+
   use geometry
   use parameters, only: small
-  use variables, only: p,dPdxi
+  use variables, only: dPdxi
   use sparse_matrix, only: su,sv,sw,apu
 
   implicit none
 
-  ! Local
-  integer :: i,ijp,ijn,ijb,iface
-  real(dp) :: dfxe,dfye,dfze
-  real(dp) :: pf
-
-!
-!***********************************************************************
-!
-
-    ! Calculate terms integrated over surfaces
-
-    ! Inner face
-    do i=1,numInnerFaces
-      ijp = owner(i)
-      ijn = neighbour(i)
-
-      if ( pscheme == 'linear' ) then
-
-        ! Value of the variable at cell-face center
-        pf = face_value_cds( ijp, ijn, facint(i), p)
-
-      elseif ( pscheme == 'central' ) then
-
-        pf = face_value_central( ijp, ijn, xf(i), yf(i), zf(i),  p, dPdxi ) 
-
-
-      elseif ( pscheme == 'weighted' ) then
-
-        ! Pressure on face based on "Standard" interpolation in Fluent.
-        ! This is weighted interpolation where weights are mass flows estimated at respective cell center
-        pf = ( p(ijp)*Apu(ijp)+p(ijn)*Apu(ijn) ) / ( Apu(ijp) + Apu(ijn) + small )
-
-      else
-
-        write(*,'(a)') ' '
-        write(*,'(a)') 'Fatal error: non-existing interpolation scheme for pressure!'
-        stop
-    
-      endif
-
-
-      ! Contribution =(interpolated mid-face value)x(area)
-      dfxe = pf*arx(i)
-      dfye = pf*ary(i)
-      dfze = pf*arz(i)
-
-      ! Accumulate contribution at cell center and neighbour.
-      ! ***NOTE, we calculate negative Divergence, therefore opposite sign (minus in front of e.g. dfxe, etc.) 
-      su(ijp) = su(ijp)-dfxe
-      sv(ijp) = sv(ijp)-dfye
-      sw(ijp) = sw(ijp)-dfze
-       
-      su(ijn) = su(ijn)+dfxe
-      sv(ijn) = sv(ijn)+dfye
-      sw(ijn) = sw(ijn)+dfze
-
-    enddo
-
-    ! Contribution from boundaries, p(ijb) is updated in bpres.
-
-    do i=1,numBoundaryFaces
-      iface = numInnerFaces + i
-      ijp = owner(iface)
-      ijb = numCells + i
-    
-      su(ijp) = su(ijp) - p(ijb)*arx(iface)
-      sv(ijp) = sv(ijp) - p(ijb)*ary(iface)
-      sw(ijp) = sw(ijp) - p(ijb)*arz(iface)
-
-    enddo
-
-end subroutine
-
-
-!***********************************************************************
-!
-subroutine surfaceIntegratePressureCorr
-!
-!***********************************************************************
-! 
-!  -(nabla p) is a vector field: -( (nabla p)x . i + (nabla p)y . j + (nabla p)z . k )
-!  Instead of computing the Grad(p) vector field in center and integrate volumetricaly
-!  multiplying cell centroid value by Vol(ijp), we write it in divergence form.
-!  Interpolate to face {-p e_i}_f * S_f
-!  Source(u_i) = sum_over_cell_faces {-p}_f * S_fi
-!  Interpolation to cell face centers done by central scheme.
-!
-!***********************************************************************
-!
-  use geometry
-  use parameters, only: small
-  use variables, only: pp,dPdxi
-  use sparse_matrix, only: su,sv,sw,apu
-
-  implicit none
+  real(dp), dimension(numTotal), intent(in) :: p
 
   ! Local
-  integer :: i,ijp,ijn,ijb,iface
-  real(dp) :: dfxe,dfye,dfze
-  real(dp) :: pf
-
-!
-!***********************************************************************
-!
-
-    ! Calculate terms integrated over surfaces
-
-    ! Inner face
-    do i=1,numInnerFaces
-      ijp = owner(i)
-      ijn = neighbour(i)
-
-      if ( pscheme == 'linear' ) then
-
-        ! Value of the variable at cell-face center
-        pf = face_value_cds( ijp, ijn, facint(i), pp)
-
-      elseif ( pscheme == 'central' ) then
-
-        pf = face_value_central( ijp, ijn, xf(i), yf(i), zf(i),  pp, dPdxi ) 
-
-
-      elseif ( pscheme == 'weighted' ) then
-
-        ! Pressure on face based on "Standard" interpolation in Fluent.
-        ! This is weighted interpolation where weights are mass flows estimated at respective cell center
-        pf = ( pp(ijp)*Apu(ijp)+pp(ijn)*Apu(ijn) ) / ( Apu(ijp) + Apu(ijn) + small )
-
-      else
-
-        write(*,'(a)') ' '
-        write(*,'(a)') 'Fatal error: non-existing interpolation scheme for pressure!'
-        stop
-    
-      endif
-
-
-      ! Contribution =(interpolated mid-face value)x(area)
-      dfxe = pf*arx(i)
-      dfye = pf*ary(i)
-      dfze = pf*arz(i)
-
-      ! Accumulate contribution at cell center and neighbour.
-      ! ***NOTE, we calculate negative Divergence, therefore opposite sign (minus in front of e.g. dfxe, etc.) 
-      su(ijp) = su(ijp)-dfxe
-      sv(ijp) = sv(ijp)-dfye
-      sw(ijp) = sw(ijp)-dfze
-       
-      su(ijn) = su(ijn)+dfxe
-      sv(ijn) = sv(ijn)+dfye
-      sw(ijn) = sw(ijn)+dfze
-
-    enddo
-
-    ! Contribution from boundaries
-
-    ! iPer = 0
-
-    ! ! Loop over boundaries
-    ! do ib=1,numBoundaries
-      
-    !   if ( bctype(ib) /= 'periodic' ) then
-
-    !     do i=1,nfaces(ib)
-
-    !       iface = startFace(ib) + i
-    !       ijp = owner(iface)
-    !       ijb = iBndValueStart(ib) + i
-
-    !       su(ijp) = su(ijp) - pp(ijb)*arx(iface)
-    !       sv(ijp) = sv(ijp) - pp(ijb)*ary(iface)
-    !       sw(ijp) = sw(ijp) - pp(ijb)*arz(iface)
-
-    !     end do
-
-
-    !   elseif (  bctype(ib) == 'periodic' ) then
-
-    !     iPer = iPer + 1
-
-    !     ! Faces trough periodic boundaries
-    !     do i=1,nfaces(ib)
-
-    !       if = startFace(ib) + i
-    !       ijp = owner(if)
-
-
-    !       iftwin = startFaceTwin(iPer) + i
-    !       ijn = owner(iftwin)
-
-    !       ijb = iBndValueStart(ib) + i
-
-    !       su(ijp) = su(ijp) - pp(ijb)*arx(iface)
-    !       sv(ijp) = sv(ijp) - pp(ijb)*ary(iface)
-    !       sw(ijp) = sw(ijp) - pp(ijb)*arz(iface)
-
-    !       ijb = numCells + ( startFaceTwin(iPer) - numInnerFaces ) + i
-
-    !       su(ijn) = su(ijn) - pp(ijb)*arx(iftwin)
-    !       sv(ijn) = sv(ijn) - pp(ijb)*ary(iftwin)
-    !       sw(ijn) = sw(ijn) - pp(ijb)*arz(iftwin)
-
-
-    !     end do 
-
-    !   endif 
-
-    ! enddo 
-
-    ! Contribution from boundaries
-    
-    do i=1,numBoundaryFaces
-      iface = numInnerFaces + i
-      ijp = owner(iface)
-      ijb = numCells + i
-    
-      su(ijp) = su(ijp) - pp(ijb)*arx(iface)
-      sv(ijp) = sv(ijp) - pp(ijb)*ary(iface)
-      sw(ijp) = sw(ijp) - pp(ijb)*arz(iface)
-
-    enddo
-
-end subroutine
-
-
-!***********************************************************************
-!
-subroutine surfaceIntegratePressureCrankNicolson 
-!
-!***********************************************************************
-! 
-!  -(nabla p) is a vector field: -( (nabla p)x . i + (nabla p)y . j + (nabla p)z . k )
-!  Instead of computing the Grad(p) vector field in center and integrate volumetricaly
-!  multiplying cell centroid value by Vol(ijp), we write it in divergence form.
-!  Interpolate to face {-p e_i}_f * S_f
-!  Source(u_i) = sum_over_cell_faces {-p}_f * S_fi
-!  Interpolation to cell face centers done by central scheme.
-!
-!***********************************************************************
-!
-  use geometry
-  use parameters, only: small
-  use variables, only: p,po,dPdxi
-  use sparse_matrix, only: su,sv,sw,apu
-
-  implicit none
-
-  ! Local
-  integer, parameter :: nipgrad = 2 
   integer :: i,ijp,ijn,ijb,iface,istage
   real(dp) :: dfxe,dfye,dfze
   real(dp) :: pf
+  real(dp) :: volr
 
 !
 !***********************************************************************
 !
+  ! Clear source arrays
+  su = 0.0_dp
+  sv = 0.0_dp
+  sw = 0.0_dp  
 
-    ! Pressure gradient - only if using central scheme
-    if ( pscheme == 'central' ) then
-      do istage=1,nipgrad
-        ! Pressure po at boundaries (for correct calculation of press. gradient)
-        call bpres(po,istage)
-        ! Calculate po pressure gradient.
-        call grad(po,dPdxi)
-      end do
-    endif
 
-    ! Calculate terms integrated over surfaces
+  ! Accumulate  sum(-pf*Sf.x), sum(-pf*Sf.y), and sum(-pf*Sf.x) in source vectors su, sv, and sw.
+  ! for each cell, by looping over inner faces at first.
 
-    ! Inner face
+
+  if ( pscheme == 'linear' .or. pscheme == 'central' ) then
+
     do i=1,numInnerFaces
       ijp = owner(i)
       ijn = neighbour(i)
 
-      if ( pscheme == 'linear' ) then
+      ! Value of the variable at cell-face center
+      pf = face_value_cds( ijp, ijn, facint(i), p )
 
-        ! Value of the variable at cell-face center
-        pf = face_value_cds( ijp, ijn, facint(i), po)
-
-      elseif ( pscheme == 'central' ) then
-
-        pf = face_value_central( ijp, ijn, xf(i), yf(i), zf(i),  po, dPdxi ) 
-
-      elseif ( pscheme == 'weighted' ) then
-
-        ! Pressure on face based on "Standard" interpolation in Fluent.
-        ! This is weighted interpolation where weights are mass flows estimated at respective cell center
-        pf = ( po(ijp)*Apu(ijp)+po(ijn)*Apu(ijn) ) / ( Apu(ijp) + Apu(ijn) + small )
-
-      else
-
-        write(*,'(a)') ' '
-        write(*,'(a)') 'Fatal error: non-existing interpolation scheme for pressure!'
-        stop
-    
-      endif
-
-      ! For Crank-Nicolson - pressure source is split into two contributions from two consecutive timesteps
-      ! each weighted by half.
-      pf = 0.5_dp * pf 
 
       ! Contribution =(interpolated mid-face value)x(area)
       dfxe = pf*arx(i)
@@ -355,105 +75,137 @@ subroutine surfaceIntegratePressureCrankNicolson
 
     enddo
 
-    ! Contribution from boundaries
+  elseif ( pscheme == 'weighted' ) then
 
-    do i=1,numBoundaryFaces
-      iface = numInnerFaces + i
-      ijp = owner(iface)
-      ijb = numCells + i
-
-      ! For Crank-Nicolson - pressure source is split into two contributions from two consecutive timesteps
-      ! each weighted by half.
-      pf = 0.5_dp * po(ijb)
-
-      su(ijp) = su(ijp) - pf*arx(iface)
-      sv(ijp) = sv(ijp) - pf*ary(iface)
-      sw(ijp) = sw(ijp) - pf*arz(iface)
-
-    enddo
-
-  !
-  ! > Pressure source from present timestep
-  !
-  
-    ! Pressure gradient - only if using central scheme
-    if ( pscheme == 'central' ) then
-      do istage=1,nipgrad
-        ! Pressure po at boundaries (for correct calculation of press. gradient)
-        call bpres(p,istage)
-        ! Calculate po pressure gradient.
-        call grad(p,dPdxi)
-      end do
-    endif
-
-    ! Calculate terms integrated over surfaces
-
-    ! Inner face
     do i=1,numInnerFaces
       ijp = owner(i)
       ijn = neighbour(i)
 
-      if ( pscheme == 'linear' ) then
+      ! Pressure on face based on "Standard" interpolation in Fluent.
+      ! This is weighted interpolation where weights are mass flows estimated at respective cell center
+      pf = ( p(ijp)*Apu(ijp)+p(ijn)*Apu(ijn) ) / ( Apu(ijp) + Apu(ijn) + small )
 
-        ! Value of the variable at cell-face center
-        pf = face_value_cds( ijp, ijn, facint(i), p)
 
-      elseif ( pscheme == 'central' ) then
+      ! Contribution =(interpolated mid-face value)x(area)
+      dfxe = pf*arx(i)
+      dfye = pf*ary(i)
+      dfze = pf*arz(i)
+
+      ! Accumulate contribution at cell center and neighbour.
+      ! ***NOTE, we calculate negative Divergence, therefore opposite sign (minus in front of e.g. dfxe, etc.) 
+      su(ijp) = su(ijp)-dfxe
+      sv(ijp) = sv(ijp)-dfye
+      sw(ijp) = sw(ijp)-dfze
+       
+      su(ijn) = su(ijn)+dfxe
+      sv(ijn) = sv(ijn)+dfye
+      sw(ijn) = sw(ijn)+dfze
+
+    enddo
+
+  else
+
+    write(*,'(a)') ' '
+    write(*,'(a)') 'Fatal error: non-existing interpolation scheme for pressure!'
+    stop
+
+  endif
+
+
+  ! From accumulation in su, sv, and sw we'll calculate the pressure gradient dPdxi.
+
+ 
+  ! Update pressure at boundary faces and calculate gradient in two stages.
+  ! Stage 1: by simple zero gradient extrapolation to boundaries;
+  ! Stage 2: by linear extrapolation using newly created gradients to update p at wall boundries.
+  do istage=1,2
+
+    ! Update boundary pressure
+    call bpres(p,istage)
+
+
+    ! Recalculate sum(-pf*Sf) over inner faces in second stage only if we use 'central' scheme
+    ! because in the first stage we didn't have necessary pressure gradients dPdxi.
+    if ( istage == 2 .and. pscheme == 'central' ) then
+
+      ! Clear source arrays
+      su = 0.0_dp
+      sv = 0.0_dp
+      sw = 0.0_dp 
+
+      do i=1,numInnerFaces
+        ijp = owner(i)
+        ijn = neighbour(i)
 
         pf = face_value_central( ijp, ijn, xf(i), yf(i), zf(i),  p, dPdxi ) 
 
-      elseif ( pscheme == 'weighted' ) then
 
-        ! Pressure on face based on "Standard" interpolation in Fluent.
-        ! This is weighted interpolation where weights are mass flows estimated at respective cell center
-        pf = ( p(ijp)*Apu(ijp)+p(ijn)*Apu(ijn) ) / ( Apu(ijp) + Apu(ijn) + small )
+        ! Contribution =(interpolated mid-face value)x(area)
+        dfxe = pf*arx(i)
+        dfye = pf*ary(i)
+        dfze = pf*arz(i)
 
-      else
+        ! Accumulate contribution at cell center and neighbour.
+        ! ***NOTE, we calculate negative Divergence, therefore opposite sign (minus in front of e.g. dfxe, etc.) 
+        su(ijp) = su(ijp)-dfxe
+        sv(ijp) = sv(ijp)-dfye
+        sw(ijp) = sw(ijp)-dfze
+         
+        su(ijn) = su(ijn)+dfxe
+        sv(ijn) = sv(ijn)+dfye
+        sw(ijn) = sw(ijn)+dfze
 
-        write(*,'(a)') ' '
-        write(*,'(a)') 'Fatal error: non-existing interpolation scheme for pressure!'
-        stop
-    
-      endif
+      enddo
 
-      ! For Crank-Nicolson - pressure source is split into two contributions from two consecutive timesteps
-      ! each weighted by half.
-      pf = 0.5_dp * pf 
+    endif
 
-      ! Contribution =(interpolated mid-face value)x(area)
-      dfxe = pf*arx(i)
-      dfye = pf*ary(i)
-      dfze = pf*arz(i)
 
-      ! Accumulate contribution at cell center and neighbour.
-      ! ***NOTE, we calculate negative Divergence, therefore opposite sign (minus in front of e.g. dfxe, etc.) 
-      su(ijp) = su(ijp)-dfxe
-      sv(ijp) = sv(ijp)-dfye
-      sw(ijp) = sw(ijp)-dfze
-       
-      su(ijn) = su(ijn)+dfxe
-      sv(ijn) = sv(ijn)+dfye
-      sw(ijn) = sw(ijn)+dfze
+    ! Take stored accumulation - note the minus sign because in su,sv and sw, we have negative divergence.
+    dpdxi(1,1:numCells) = -su(1:numCells) 
+    dpdxi(2,1:numCells) = -sv(1:numCells) 
+    dpdxi(3,1:numCells) = -sw(1:numCells) 
 
-    enddo
 
-    ! Contribution from boundaries
-
+    ! Contribution from boundaries.
     do i=1,numBoundaryFaces
       iface = numInnerFaces + i
       ijp = owner(iface)
       ijb = numCells + i
-
-      ! For Crank-Nicolson - pressure source is split into two contributions from two consecutive timesteps
-      ! each weighted by half.
-      pf = 0.5_dp * p(ijb)
-
-      su(ijp) = su(ijp) - pf*arx(iface)
-      sv(ijp) = sv(ijp) - pf*ary(iface)
-      sw(ijp) = sw(ijp) - pf*arz(iface)
+    
+      dpdxi(1,ijp) = dpdxi(1,ijp) + p(ijb)*arx(iface)
+      dpdxi(2,ijp) = dpdxi(2,ijp) + p(ijb)*ary(iface)
+      dpdxi(3,ijp) = dpdxi(3,ijp) + p(ijb)*arz(iface)
 
     enddo
 
+    ! Finally calculate gradient components at cv-centers by dividing the accumulated sum by vol(inp)
+    do ijp=1,numCells
+      volr = 1.0_dp/vol(ijp)
+      dpdxi(:,ijp) = dpdxi(:,ijp)*volr
+    enddo
+
+  end do
+
+
+  ! Now when we have the correct p values at boundaries we'll add 
+  ! boundary faces contribution to su,sv, and sw vectors.
+
+
+  ! Contribution from boundaries.
+  do i=1,numBoundaryFaces
+    iface = numInnerFaces + i
+    ijp = owner(iface)
+    ijb = numCells + i
+  
+    su(ijp) = su(ijp) - p(ijb)*arx(iface)
+    sv(ijp) = sv(ijp) - p(ijb)*ary(iface)
+    sw(ijp) = sw(ijp) - p(ijb)*arz(iface)
+
+  enddo
+
+
+
 end subroutine
+
 
 end module

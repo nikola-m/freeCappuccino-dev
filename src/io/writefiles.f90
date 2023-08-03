@@ -25,7 +25,7 @@ subroutine writefiles
   use rheology
   use mhd
   use velocity, only: calc_wall_shear
-  use node_interpolation
+  use node_interpolation, only: interpolate_to_nodes
 
   implicit none
 !
@@ -218,7 +218,7 @@ subroutine writefiles
 ! > Open and write a unstructuctured .vtp file for EACH boundary region.
 !  
 
-  ! Before writing calculate wall shear ad yplus for postprocessing
+  ! Before writing calculate wall shear and yplus for postprocessing
   call calc_wall_shear
 
   iWall = 1

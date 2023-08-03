@@ -118,10 +118,11 @@ subroutine calcuvw
   ! real(dp) :: Utp, Vtp, Wtp
   ! real(dp) :: Vnp,fdne
 
-  ! Initialize sources
-  su = 0.0_dp
-  sv = 0.0_dp
-  sw = 0.0_dp
+
+  ! ! Initialize sources (no need, it is done below in gradp_and_sources)
+  ! su = 0.0_dp
+  ! sv = 0.0_dp
+  ! sw = 0.0_dp
 
   ! For u  sp => spu; for v  sp => spv; for w  sp => sp 
   spu = 0.0_dp
@@ -166,6 +167,11 @@ subroutine calcuvw
   call grad(U,dUdxi)
   call grad(V,dVdxi)
   call grad(W,dWdxi)
+  
+  ! Calc pressure gradient and (as a side effect-for better or for worse),
+  ! su,sv,sw source vectors are filled with -Sum(pfSf.i), i=x,y,z.
+  call gradp_and_sources(p)
+
 
   ! Update values of Lorentz force vector components in MHD case.
   if( calcEpot)  call calculate_Lorentz_force
@@ -282,8 +288,8 @@ subroutine calcuvw
     ijp = owner(i)
     ijn = neighbour(i)
 
-    call facefluxuvw(ijp, ijn, xf(i), yf(i), zf(i), arx(i), ary(i), arz(i), flmass(i), facint(i), gdsU, &
-      cap, can, sup, svp, swp)
+    call facefluxuvw( i, ijp, ijn, xf(i), yf(i), zf(i), arx(i), ary(i), arz(i), flmass(i), facint(i), gdsU, &
+      cap, can, sup, svp, swp )
 
     ! > Off-diagonal elements:
 
@@ -307,13 +313,15 @@ subroutine calcuvw
 
   end do 
 
+  !
+  ! Implement boundary conditions
+  !
 
   iSym = 0
   iWall = 0
   iPer = 0
   l = numInnerFaces
       
-  ! Implement boundary conditions
  
   do ib=1,numBoundaries
 
@@ -561,26 +569,9 @@ subroutine calcuvw
     rW = sw
   endif
 
-  !
-  ! If flow is compressible add 2/3*mu*div(U) to pressure field
-  !
-  if (compressible) p(1:numCells) = p(1:numCells) + 2./3.*vis(1:numCells)*explDiv( U, V, W )
 
-
-  ! Contribution to source of the -grad(p) term
-  if (CN) then
-
-    call surfaceIntegratePressureCrankNicolson
-
-    ! Modify coefficients for Crank-Nicolson (doesn't affect the main diagonal because is still zero).
-    a = 0.5_dp*a 
-    
-  else
-
-    call surfaceIntegratePressure
-
-  endif
-
+  ! ! If flow is compressible add 2/3*mu*div(U) source - NOTE: rethink this, maybe add to pressure above
+  ! if (compressible) p(1:numCells) = p(1:numCells) + twothirds*vis(1:numCells)*explDiv( U, V, W )*vol(1:numCells)
 
 
 !
@@ -589,6 +580,10 @@ subroutine calcuvw
 
   ! Crank-Nicolson time stepping source terms
   if ( CN ) then
+
+    ! Modify coefficients for Crank-Nicolson 
+    ! Note: this doesn't affect the main diagonal because it's still zero.
+    a = half*a   
 
     do i = 1,numInnerFaces
         ijp = owner(i)
@@ -603,7 +598,7 @@ subroutine calcuvw
 
     do ijp=1,numCells
         apotime = den(ijp)*vol(ijp)/timestep
-        sum_off_diagonal_terms = sum( a(ioffset(ijp) : ioffset(ijp+1)-1) ) - a(diag(ijp))
+        sum_off_diagonal_terms = sum( a(ia(ijp) : ia(ijp+1)-1) ) - a(diag(ijp))
         su(ijp) = su(ijp) + (apotime + sum_off_diagonal_terms)*uo(ijp)
         spu(ijp) = spu(ijp) + apotime
     enddo
@@ -618,8 +613,7 @@ subroutine calcuvw
     ! Main diagonal term assembly:
     ! Sum all coefs in a row of a sparse matrix, but since we also included diagonal element 
     ! we substract it from the sum, to eliminate it from the sum.
-    ! We could also write sum( a(ioffset(inp)) : a(ioffset(inp+1)-1) ) because all diagonal terms are zero.
-    sum_off_diagonal_terms  = sum( a(ioffset(inp) : ioffset(inp+1)-1) ) - a(diag(inp)) 
+    sum_off_diagonal_terms  = sum( a(ia(inp) : ia(inp+1)-1) ) - a(diag(inp)) 
     
     a(diag(inp)) = spu(inp) - sum_off_diagonal_terms
 
@@ -627,7 +621,7 @@ subroutine calcuvw
 
     ! Alternative way, loop instead of array slice:
     ! a(diag(inp)) = spu(inp) 
-    ! do k = ioffset(inp),ioffset(inp+1)-1
+    ! do k = ia(inp),ia(inp+1)-1
     !   if (k.eq.diag(inp)) cycle
     !   a(diag(inp)) = a(diag(inp)) -  a(k)
     ! enddo
@@ -663,7 +657,7 @@ subroutine calcuvw
 
     do ijp=1,numCells
         apotime=den(ijp)*vol(ijp)/timestep
-        sum_off_diagonal_terms = sum( a(ioffset(ijp) : ioffset(ijp+1)-1) ) - a(diag(ijp))
+        sum_off_diagonal_terms = sum( a(ia(ijp) : ia(ijp+1)-1) ) - a(diag(ijp))
         sv(ijp) = sv(ijp) + (apotime + sum_off_diagonal_terms)*vo(ijp)
         spv(ijp) = spv(ijp)+apotime
     enddo
@@ -683,18 +677,11 @@ subroutine calcuvw
   do inp = 1,numCells
 
     ! Main diagonal term assembly:
-    sum_off_diagonal_terms  = sum( a(ioffset(inp) : ioffset(inp+1)-1) ) - a(diag(inp))
+    sum_off_diagonal_terms  = sum( a(ia(inp) : ia(inp+1)-1) ) - a(diag(inp))
 
     a(diag(inp)) = spv(inp) - sum_off_diagonal_terms
 
     apv(inp) = 1./(a(diag(inp))+small)
-
-    ! Alternative way, loop instead of array slice:
-    ! a(diag(inp)) = spv(inp) 
-    ! do k = ioffset(inp),ioffset(inp+1)-1
-    !   if (k.eq.diag(inp)) cycle
-    !   a(diag(inp)) = a(diag(inp)) -  a(k)
-    ! enddo
 
     ! Underelaxation:
     a(diag(inp)) = a(diag(inp))*urfr
@@ -725,7 +712,7 @@ subroutine calcuvw
 
     do ijp=1,numCells
         apotime = den(ijp)*vol(ijp)/timestep
-        sum_off_diagonal_terms = sum( a(ioffset(ijp) : ioffset(ijp+1)-1) ) - a(diag(ijp))
+        sum_off_diagonal_terms = sum( a(ia(ijp) : ia(ijp+1)-1) ) - a(diag(ijp))
         sw(ijp) = sw(ijp) + (apotime + sum_off_diagonal_terms)*wo(ijp)
         sp(ijp) = sp(ijp) + apotime
     enddo
@@ -745,18 +732,11 @@ subroutine calcuvw
   do inp = 1,numCells
 
     ! Main diagonal term assembly:
-    sum_off_diagonal_terms  = sum( a(ioffset(inp) : ioffset(inp+1)-1) ) - a(diag(inp)) 
+    sum_off_diagonal_terms  = sum( a(ia(inp) : ia(inp+1)-1) ) - a(diag(inp)) 
    
     a(diag(inp)) = sp(inp) - sum_off_diagonal_terms
 
     apw(inp) = 1./(a(diag(inp))+small)
-
-    ! Alternative way, loop instead of array slice:
-    ! a(diag(inp)) = sp(inp) 
-    ! do k = ioffset(inp),ioffset(inp+1)-1
-    !   if (k.eq.diag(inp)) cycle
-    !   a(diag(inp)) = a(diag(inp)) -  a(k)
-    ! enddo
 
     ! Underelaxation:
     a(diag(inp)) = a(diag(inp))*urfr
@@ -771,7 +751,7 @@ end subroutine
 
 
 
-subroutine facefluxuvw(ijp, ijn, xf, yf, zf, arx, ary, arz, flomass, lambda, gam, cap, can, sup, svp, swp)
+subroutine facefluxuvw(i, ijp, ijn, xf, yf, zf, arx, ary, arz, flomass, lambda, gam, cap, can, sup, svp, swp)
 !
 !  Puprose: 
 !   Face fluxes of momentum eq for inner faces.
@@ -779,14 +759,14 @@ subroutine facefluxuvw(ijp, ijn, xf, yf, zf, arx, ary, arz, flomass, lambda, gam
 ! 
   use types
   use parameters
-  use geometry, only: xc,yc,zc
+  use geometry, only: Df
   use variables
   use gradients, only: sngrad
   use interpolation, only: face_value
 
   implicit none
 
-  integer, intent(in) :: ijp, ijn
+  integer, intent(in) :: i,ijp, ijn
   real(dp), intent(in) :: xf,yf,zf
   real(dp), intent(in) :: arx, ary, arz
   real(dp), intent(in) :: flomass
@@ -796,8 +776,6 @@ subroutine facefluxuvw(ijp, ijn, xf, yf, zf, arx, ary, arz, flomass, lambda, gam
   real(dp), intent(inout) :: sup, svp, swp
 
   ! Local variables
-  real(dp) :: are,dpn
-  real(dp) :: xpn,ypn,zpn
   real(dp) :: cp,ce
   real(dp) :: duxi,duyi,duzi, &
               dvxi,dvyi,dvzi, &
@@ -819,27 +797,14 @@ subroutine facefluxuvw(ijp, ijn, xf, yf, zf, arx, ary, arz, flomass, lambda, gam
   fxn=lambda 
   fxp=1.0_dp-lambda
 
-  ! Distance vector between cell centers
-  xpn=xc(ijn)-xc(ijp)
-  ypn=yc(ijn)-yc(ijp)
-  zpn=zc(ijn)-zc(ijp)
-
-  ! Distance from P to neighbor N
-  dpn=sqrt(xpn**2+ypn**2+zpn**2)     
-
-  ! cell face area
-  are=sqrt(arx**2+ary**2+arz**2)
-
-
 
   ! > Equation coefficients:
 
   ! Cell face viscosity
-  game = vis(ijp)*fxp+vis(ijn)*fxn
+  game = vis(ijp) + ( vis(ijn)-vis(ijp) )*lambda
 
   ! Difusion coefficient
-  ! de = game*are/dpn
-  de = game*(arx*arx+ary*ary+arz*arz)/(xpn*arx+ypn*ary+zpn*arz)
+  de = game*Df(i)
 
   ! > Equation coefficients - implicit diffusion and convection
   ce = min(flomass,zero) 
@@ -852,37 +817,26 @@ subroutine facefluxuvw(ijp, ijn, xf, yf, zf, arx, ary, arz, flomass, lambda, gam
 
   ! > Explicit diffusion: 
 
+  ! Face normal gradient of all three velocity components
+  call sngrad(i, ijp, ijn, arx, ary, arz, lambda, u, dudxi, duxi, duyi, duzi, duxii, duyii, duzii)
+  call sngrad(i, ijp, ijn, arx, ary, arz, lambda, v, dvdxi, dvxi, dvyi, dvzi, dvxii, dvyii, dvzii)
+  call sngrad(i, ijp, ijn, arx, ary, arz, lambda, w, dwdxi, dwxi, dwyi, dwzi, dwxii, dwyii, dwzii)
 
-  call sngrad(ijp, ijn, xf, yf, zf, arx, ary, arz, lambda, &
-              u, dudxi, nrelaxU, dSchemeU, duxi, duyi, duzi,  &
-              duxii, duyii, duzii)
 
-  call sngrad(ijp, ijn, xf, yf, zf, arx, ary, arz, lambda, &
-              v, dvdxi, nrelaxU, dSchemeU, dvxi, dvyi, dvzi, &
-              dvxii, dvyii, dvzii)
+  ! Explicit diffussion: diff_coef*(dUjdxi)*Sf == diff_coef*transpose( grad(U) )*Sf 
+  fdue = game*( duxii*arx + dvxii*ary + dwxii*arz )
+  fdve = game*( duyii*arx + dvyii*ary + dwyii*arz )
+  fdwe = game*( duzii*arx + dvzii*ary + dwzii*arz )
 
-  call sngrad(ijp, ijn, xf, yf, zf, arx, ary, arz, lambda, &
-              w, dwdxi, nrelaxU, dSchemeU, dwxi, dwyi, dwzi, &
-              dwxii, dwyii, dwzii)
+  ! ONLY nonorthogonal correction to the implicit diffussion:
+  fdui = game*( duxi + duyi + duzi )
+  fdvi = game*( dvxi + dvyi + dvzi )
+  fdwi = game*( dwxi + dwyi + dwzi )
 
-!---------------------------------------------------------------------------------------
-!     We calculate explicit and implicit diffusion fde and fdi,
-!     later we put their difference (fde-fdi) to rhs vector:
-!     su = su + (fdue-fdui)
-!     sv = sv + (fdve-fdvi)
-!     sw = sw + (fdwe-fdwi)
-!---------------------------------------------------------------------------------------
-
-  ! Explicit diffussion: 
-  fdue = game*( (duxii+duxii)*arx + (duyii+dvxii)*ary + (duzii+dwxii)*arz )
-  fdve = game*( (duyii+dvxii)*arx + (dvyii+dvyii)*ary + (dvzii+dwyii)*arz )
-  fdwe = game*( (duzii+dwxii)*arx + (dwyii+dvzii)*ary + (dwzii+dwzii)*arz )
-
-  ! Implicit diffussion:
-  fdui = game*are/dpn*(duxi*xpn+duyi*ypn+duzi*zpn)
-  fdvi = game*are/dpn*(dvxi*xpn+dvyi*ypn+dvzi*zpn)
-  fdwi = game*are/dpn*(dwxi*xpn+dwyi*ypn+dwzi*zpn)
-
+  ! On the RHS nonorthogonal correction of impicit diffusion is ADDED to the explicit diffusion
+  fdue = fdue+fdui
+  fdve = fdve+fdvi
+  fdwe = fdwe+fdwi
 
 
   ! > Explicit convection: 
@@ -916,9 +870,10 @@ subroutine facefluxuvw(ijp, ijn, xf, yf, zf, arx, ary, arz, flomass, lambda, gam
 
 ! > Explicit part of diffusion fluxes and sources due to deffered correction.
 
-  sup = -gam*(fuhigh-fuuds)+fdue-fdui
-  svp = -gam*(fvhigh-fvuds)+fdve-fdvi
-  swp = -gam*(fwhigh-fwuds)+fdwe-fdwi
+  sup = -gam*(fuhigh-fuuds)+fdue
+  svp = -gam*(fvhigh-fvuds)+fdve
+  swp = -gam*(fwhigh-fwuds)+fdwe
+  
 
 end subroutine
 
@@ -946,12 +901,7 @@ subroutine facefluxuvw_bnd(ijp, ijb, xf, yf, zf, arx, ary, arz, flomass, cap, ca
   real(dp), intent(inout) :: sup, svp, swp
 
 ! Local variables
-  real(dp) :: are
   real(dp) :: xpn,ypn,zpn
-  real(dp) :: nxx,nyy,nzz
-  real(dp) :: ixi1,ixi2,ixi3
-  real(dp) :: dpn,costheta,costn
-  real(dp) :: xi,yi,zi
 
   real(dp) :: duxi,duyi,duzi, &
               dvxi,dvyi,dvzi, &
@@ -961,10 +911,7 @@ subroutine facefluxuvw_bnd(ijp, ijb, xf, yf, zf, arx, ary, arz, flomass, cap, ca
               duyii,dvyii,dwyii, &
               duzii,dvzii,dwzii
 
-  real(dp) :: d2x,d2y,d2z,d1x,d1y,d1z
-
-  real(dp) :: de, vole, game
-  real(dp) :: fxp,fxn
+  real(dp) :: de, Dfi, vole, game
   real(dp) :: fdue,fdve,fdwe,fdui,fdvi,fdwi
 !----------------------------------------------------------------------
 
@@ -973,70 +920,25 @@ subroutine facefluxuvw_bnd(ijp, ijb, xf, yf, zf, arx, ary, arz, flomass, cap, ca
 
   ! > Geometry:
 
-  ! Face interpolation factor:
-  ! fxn=lambda 
-  ! fxp=1.0_dp-lambda
-  fxn=1.0_dp
-  fxp=0.0_dp
-
-  ! Distance vector between cell centers:
-  ! xpn=xc(ijb)-xc(ijp)
-  ! ypn=yc(ijb)-yc(ijp)
-  ! zpn=zc(ijb)-zc(ijp)
+  ! Distance vector between cell center and boundary cell face center:
   xpn=xf-xc(ijp)
   ypn=yf-yc(ijp)
   zpn=zf-zc(ijp)
 
-  ! Distance from P to neighbor N
-  dpn=sqrt(xpn**2+ypn**2+zpn**2)     
-
-  ! Components of the unit vector i_ksi
-  ixi1=xpn/dpn
-  ixi2=ypn/dpn
-  ixi3=zpn/dpn
-
-  ! cell face area
-  are=sqrt(arx**2+ary**2+arz**2)
-
-  ! Unit vectors of the normal
-  nxx=arx/are
-  nyy=ary/are
-  nzz=arz/are
-
-  ! Angle between vectorsa n and i_xi - we need cosine
-  costheta=nxx*ixi1+nyy*ixi2+nzz*ixi3
-
-  ! Relaxation factor for higher-order cell face gradient
-  ! Minimal correction: nrelax = +1 :
-  !costn = costheta
-  ! Orthogonal correction: nrelax =  0 : 
-  costn = 1.0_dp
-  ! Over-relaxed approach: nrelax = -1 :
-  !costn = 1./costheta
-  ! In general, nrelax can be any signed integer from some 
-  ! reasonable interval [-nrelax,nrelax] (or maybe even real number): 
-  !costn = costheta**nrelax
-
   ! dpn * sf
   vole=xpn*arx+ypn*ary+zpn*arz
 
-  ! Overrelaxed correction vector d2, where s=dpn+d2
-  d1x = costn
-  d1y = costn
-  d1z = costn
-
-  d2x = xpn*costn
-  d2y = ypn*costn
-  d2z = zpn*costn
+  ! (sf*sf)/(dpn * sf)
+  Dfi = (arx*arx+ary*ary+arz*arz)/vole
 
 
   ! > Equation coefficients:
 
   ! Cell face viscosity
-  game = vis(ijb) !<- it's (vis(ijp)*fxp+vis(ijb)*fxn) with fxn = 1.0
+  game = vis(ijb)
 
   ! Difusion coefficient
-  de = game*are/dpn
+  de = game*Dfi
 
 
   ! Equation coefficients - implicit diffusion and convection
@@ -1044,14 +946,12 @@ subroutine facefluxuvw_bnd(ijp, ijb, xf, yf, zf, arx, ary, arz, flomass, cap, ca
   cap = -de - max(flomass,zero)
 
 
-  ! > Face velocity components and Explicit diffusion: 
-
-  ! Coordinates of point j'
-  xi = xf
-  yi = yf
-  zi = zf
-
-
+  !-------------------------------------------------------
+  ! Explicit part of fluxes
+  !-------------------------------------------------------
+  
+  !+++ u sngrad
+  
   ! interpolate gradients defined at cv centers to faces
 
   ![NOTE]: Commented out version is for inner faces..
@@ -1059,77 +959,77 @@ subroutine facefluxuvw_bnd(ijp, ijb, xf, yf, zf, arx, ary, arz, flomass, cap, ca
   !        face center (ijb index, b as 'boundary'), 
   !        but since we have constant gradient for
   !        inlet and outlet, for which this routine is called,
-  !        we take adjecent cell center value of gradient instead.
-
+  !        we take adjecent cell center value of the gradient instead.
+  !
   ! duxi = dUdxi(1,ijp)*fxp+dUdxi(1,ijb)*fxn
   ! duyi = dUdxi(2,ijp)*fxp+dUdxi(2,ijb)*fxn
   ! duzi = dUdxi(3,ijp)*fxp+dUdxi(3,ijb)*fxn
   duxi = dUdxi(1,ijp)
   duyi = dUdxi(2,ijp)
-  duzi = dUdxi(3,ijp) !...because constant gradient
+  duzi = dUdxi(3,ijp) 
 
   ! du/dx_i interpolated at cell face:
-  duxii = duxi*d1x + arx/vole*( u(ijb)-u(ijp)-duxi*d2x-duyi*d2y-duzi*d2z ) 
-  duyii = duyi*d1y + ary/vole*( u(ijb)-u(ijp)-duxi*d2x-duyi*d2y-duzi*d2z ) 
-  duzii = duzi*d1z + arz/vole*( u(ijb)-u(ijp)-duxi*d2x-duyi*d2y-duzi*d2z ) 
+  duxii = duxi + arx/vole*( u(ijb)-u(ijp)-duxi*xpn-duyi*ypn-duzi*zpn ) 
+  duyii = duyi + ary/vole*( u(ijb)-u(ijp)-duxi*xpn-duyi*ypn-duzi*zpn ) 
+  duzii = duzi + arz/vole*( u(ijb)-u(ijp)-duxi*xpn-duyi*ypn-duzi*zpn ) 
+
+  ! Create non-orthogonal correction to gradient only
+  duxi = duxi*(arx-Dfi*xpn)
+  duyi = duyi*(ary-Dfi*ypn)
+  duzi = duzi*(arz-Dfi*zpn)
 
 
-  ! dvxi = dVdxi(1,ijp)*fxp+dVdxi(1,ijb)*fxn
-  ! dvyi = dVdxi(2,ijp)*fxp+dVdxi(2,ijb)*fxn
-  ! dvzi = dVdxi(3,ijp)*fxp+dVdxi(3,ijb)*fxn
+  !+++ v sngrad
+
   dvxi = dVdxi(1,ijp)
   dvyi = dVdxi(2,ijp)
-  dvzi = dVdxi(3,ijp) !...because constant gradient
+  dvzi = dVdxi(3,ijp) 
 
   ! dv/dx_i interpolated at cell face:
-  dvxii = dvxi*d1x + arx/vole*( v(ijb)-v(ijp)-dvxi*d2x-dvyi*d2y-dvzi*d2z ) 
-  dvyii = dvyi*d1y + ary/vole*( v(ijb)-v(ijp)-dvxi*d2x-dvyi*d2y-dvzi*d2z ) 
-  dvzii = dvzi*d1z + arz/vole*( v(ijb)-v(ijp)-dvxi*d2x-dvyi*d2y-dvzi*d2z ) 
+  dvxii = dvxi + arx/vole*( v(ijb)-v(ijp)-dvxi*xpn-dvyi*ypn-dvzi*zpn ) 
+  dvyii = dvyi + ary/vole*( v(ijb)-v(ijp)-dvxi*xpn-dvyi*ypn-dvzi*zpn ) 
+  dvzii = dvzi + arz/vole*( v(ijb)-v(ijp)-dvxi*xpn-dvyi*ypn-dvzi*zpn ) 
+
+  ! Create non-orthogonal correction to gradient only
+  dvxi = dvxi*(arx-Dfi*xpn)
+  dvyi = dvyi*(ary-Dfi*ypn)
+  dvzi = dvzi*(arz-Dfi*zpn)
 
 
-  ! dwxi = dWdxi(1,ijp)*fxp+dWdxi(1,ijb)*fxn
-  ! dwyi = dWdxi(2,ijp)*fxp+dWdxi(2,ijb)*fxn
-  ! dwzi = dWdxi(3,ijp)*fxp+dWdxi(3,ijb)*fxn
+  !+++ w sngrad
+
   dwxi = dWdxi(1,ijp)
   dwyi = dWdxi(2,ijp)
-  dwzi = dWdxi(3,ijp) !...because constant gradient
+  dwzi = dWdxi(3,ijp) 
 
   ! dw/dx_i interpolated at cell face:
-  dwxii = dwxi*d1x + arx/vole*( w(ijb)-w(ijp)-dwxi*d2x-dwyi*d2y-dwzi*d2z ) 
-  dwyii = dwyi*d1y + ary/vole*( w(ijb)-w(ijp)-dwxi*d2x-dwyi*d2y-dwzi*d2z ) 
-  dwzii = dwzi*d1z + arz/vole*( w(ijb)-w(ijp)-dwxi*d2x-dwyi*d2y-dwzi*d2z ) 
+  dwxii = dwxi + arx/vole*( w(ijb)-w(ijp)-dwxi*xpn-dwyi*ypn-dwzi*zpn ) 
+  dwyii = dwyi + ary/vole*( w(ijb)-w(ijp)-dwxi*xpn-dwyi*ypn-dwzi*zpn ) 
+  dwzii = dwzi + arz/vole*( w(ijb)-w(ijp)-dwxi*xpn-dwyi*ypn-dwzi*zpn ) 
 
-!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-!     We calculate explicit and implicit diffusion fde and fdi,
-!     later we put their difference (fde-fdi) to rhs vector
-!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+  ! Create non-orthogonal correction to gradient only
+  dwxi = dwxi*(arx-Dfi*xpn)
+  dwyi = dwyi*(ary-Dfi*ypn)
+  dwzi = dwzi*(arz-Dfi*zpn)
 
-  ! explicit diffussion 
-  fdue = game*( (duxii+duxii)*arx + (duyii+dvxii)*ary + (duzii+dwxii)*arz )
-  fdve = game*( (duyii+dvxii)*arx + (dvyii+dvyii)*ary + (dvzii+dwyii)*arz )
-  fdwe = game*( (duzii+dwxii)*arx + (dwyii+dvzii)*ary + (dwzii+dwzii)*arz )
-
-  ! implicit diffussion 
-  fdui = game*are/dpn*(duxi*xpn+duyi*ypn+duzi*zpn)
-  fdvi = game*are/dpn*(dvxi*xpn+dvyi*ypn+dvzi*zpn)
-  fdwi = game*are/dpn*(dwxi*xpn+dwyi*ypn+dwzi*zpn)
-!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+  !+++
 
 
-  ! > Explicit convection: 
-  ! - None -
+  ! Explicit diffussion: diff_coef*(dUjdxi)*Sf == diff_coef*transpose( grad(U) )*Sf 
+  fdue = game*( duxii*arx + dvxii*ary + dwxii*arz )
+  fdve = game*( duyii*arx + dvyii*ary + dwyii*arz )
+  fdwe = game*( duzii*arx + dvzii*ary + dwzii*arz )
 
 
-  ! Explicit part of diffusion fluxes and sources due to deffered correction.
+  ! ONLY nonorthogonal correction to the implicit diffussion:
+  fdui = game*( duxi + duyi + duzi )
+  fdvi = game*( dvxi + dvyi + dvzi )
+  fdwi = game*( dwxi + dwyi + dwzi )
 
-  ![NOTE]: Deferred correction blending coefficient (gam) is taken to be zero
-  !        so we have only explicit diffusion below.
-  ! sup = -gam*(fuhigh-fuuds)+fdue-fdui
-  ! svp = -gam*(fvhigh-fvuds)+fdve-fdvi
-  ! swp = -gam*(fwhigh-fwuds)+fdwe-fdwi
-  sup = fdue-fdui
-  svp = fdve-fdvi
-  swp = fdwe-fdwi 
+  ! On the RHS nonorthogonal correction of impicit diffusion is ADDED to the explicit diffusion
+  sup = fdue+fdui
+  svp = fdve+fdvi
+  swp = fdwe+fdwi 
 
 end subroutine
 
@@ -1197,7 +1097,6 @@ subroutine facefluxuvw_periodic(ijp, ijn, xf, yf, zf, arx, ary, arz, flomass, ga
   game = vis(ijp)*fxp+vis(ijn)*fxn
 
   ! Difusion coefficient
-  ! de = game*are/dpn
   de = game*(arx*arx+ary*ary+arz*arz)/(xpn*arx+ypn*ary+zpn*arz)
 
   ! > Equation coefficients - implicit diffusion and convection

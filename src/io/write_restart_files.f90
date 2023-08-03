@@ -84,6 +84,7 @@ subroutine write_restart_files
 
   endif
 
-  write(6,*)'=*=*= Simulation restart files have been written! =*=*='
+  write(6,'(a)') ' '
+  write(6,'(a)') ' =*=*= Simulation restart files have been written! =*=*='
 
 end subroutine

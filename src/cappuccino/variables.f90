@@ -15,7 +15,8 @@ module variables
     real(dp), dimension(:), allocatable :: flmassoo
     real(dp), dimension(:), allocatable :: flmassooo
 
-    real(dp), dimension(:), allocatable :: p,pp               ! Pressure, Pressure correction,  
+    real(dp), dimension(:), allocatable :: p                  ! Pressure
+    real(dp), dimension(:), allocatable :: pp                 ! Pressure correction 
     real(dp), dimension(:), allocatable :: po
     real(dp), dimension(:), allocatable :: poo
     real(dp), dimension(:), allocatable :: pooo
@@ -40,8 +41,8 @@ module variables
     real(dp), dimension(:), allocatable :: gen                ! Turb. kin. energy generation (production)
 
     real(dp), dimension(:), allocatable :: T                  ! Temperature
-    real(dp), dimension(:), allocatable :: to
-    real(dp), dimension(:), allocatable :: too
+    real(dp), dimension(:), allocatable :: To
+    real(dp), dimension(:), allocatable :: Too
     real(dp),dimension(:,:), allocatable :: dTdxi
 
 
@@ -65,8 +66,8 @@ module variables
     ! real(dp), dimension(:), allocatable :: Ret              ! Turbulent Re number
 
     real(dp), dimension(:), allocatable :: uu,vv,ww,uv,uw,vw  ! Reynolds stress tensor components
+    real(dp), dimension(:,:), allocatable :: aij              ! Reynlods stress anisotropy tensor 
     real(dp), dimension(:), allocatable :: utt,vtt,wtt        ! Turbulent heat fluxes
-    real(dp), dimension(:,:), allocatable :: bij              ! Reynolds stress anisotropy tensor
     real(dp), dimension(:), allocatable :: visw               ! Effective visc. for boundary face,
     real(dp), dimension(:), allocatable :: ypl                ! y+ non-dimensional distance from wall
     real(dp), dimension(:), allocatable :: tau                ! tau - wall shear stress

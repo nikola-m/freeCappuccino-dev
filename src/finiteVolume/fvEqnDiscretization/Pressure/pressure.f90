@@ -26,11 +26,11 @@ module pressure
   ! Discrtetization and solution parameters - modified trough input.nml file
   !
   logical  :: calcP = .True.                     ! To activate the solution of this field in the main function. 
-  real(dp) :: urfP = 0.2                         ! Under-relaxation factor.
-  character ( len=40 ) :: lSolverP = 'iccg'      ! Linear algebraic solver.
-  integer  :: maxiterP = 5                       ! Max number of iterations in linear solver.
+  real(dp) :: urfP = 0.2_dp                      ! Under-relaxation factor.
+  character ( len = 60 ) :: lSolverP = 'iccg'      ! Linear algebraic solver.
+  integer  :: maxiterP = 30                      ! Max number of iterations in linear solver.
   real(dp) :: tolAbsP = 1e-13                    ! Absolute residual level.
-  real(dp) :: tolRelP = 0.025                    ! Relative drop in residual to exit linear solver.
+  real(dp) :: tolRelP = 0.025_dp                 ! Relative drop in residual to exit linear solver.
 
   private 
 
@@ -43,10 +43,11 @@ module pressure
 contains
 
  ! I will use simple include statements to include specific files, you can look into any of these for more details
+ ! I use C style include with #include and not fortran style 'include' to avoid warnings related to preprocessor
+ ! directives in the two files below.
+#include "calcp_simple.f90" 
 
- include "calcp_simple.f90" 
-
- include "calcp_piso.f90"
+#include "calcp_piso.f90"
 
 
 end module

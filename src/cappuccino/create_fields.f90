@@ -6,12 +6,13 @@ subroutine create_fields
 !
   use parameters
   use geometry
-  use sparse_matrix
   use variables
   use statistics
   use temperature, only: calct
   use energy, only: calcen
   use concentration, only: calccon
+  use sparse_matrix, only: nnz,h,rU,rV,rW
+  use linear_solvers, only: res,reso,pk,zk,d,uk,vk 
   use mhd
 
   implicit none 
@@ -20,7 +21,7 @@ subroutine create_fields
 !
   integer :: ierr 
 
-  ! Velocities 
+  ! Velocity components
   allocate(u(numTotal),stat=ierr) 
     if(ierr /= 0)write(*,*)"allocation error: u" 
 
@@ -30,6 +31,7 @@ subroutine create_fields
   allocate(w(numTotal),stat=ierr) 
     if(ierr /= 0)write(*,*)"allocation error: w" 
 
+  ! Past time level (n-1) velocity components
   allocate(uo(numTotal),stat=ierr) 
     if(ierr /= 0)write(*,*)"allocation error: uo"
 
@@ -39,6 +41,7 @@ subroutine create_fields
   allocate(wo(numTotal),stat=ierr) 
     if(ierr /= 0)write(*,*)"allocation error: wo" 
 
+  ! Level n-2 past time velocity components
   if( bdf2 .or. bdf3 ) then
 
   allocate(uoo(numTotal),stat=ierr) 
@@ -52,6 +55,7 @@ subroutine create_fields
 
   endif
  
+   ! Level n-3 past time velocity components for BDF3 time-stepping
   if( bdf3 ) then
 
     allocate(uooo(numTotal),stat=ierr) 
@@ -65,6 +69,7 @@ subroutine create_fields
 
   endif
 
+  ! Gradient vectors for three velocity components
   allocate(dUdxi(3,numTotal),stat=ierr) 
     if(ierr /= 0)write(*,*)"allocation error: dUdxi"
 
@@ -74,7 +79,8 @@ subroutine create_fields
   allocate(dWdxi(3,numTotal),stat=ierr) 
     if(ierr /= 0)write(*,*)"allocation error: dWdxi"
 
-
+   
+  ! Averaged fields of velocity components
   if (ltransient) then
     allocate(u_aver(numTotal),stat=ierr) 
       if(ierr /= 0)write(*,*)"allocation error: u_aver" 
@@ -85,6 +91,7 @@ subroutine create_fields
     allocate(w_aver(numTotal),stat=ierr) 
       if(ierr /= 0)write(*,*)"allocation error: w_aver" 
   endif
+
 
 
   ! Pressure and pressure correction
@@ -322,11 +329,6 @@ subroutine create_fields
     allocate(ww(numCells),stat=ierr) 
       if(ierr /= 0)write(*,*)"allocation error: ww" 
 
-    if(lasm) then
-      allocate(bij(5,numCells), stat=ierr)
-        if(ierr/=0)write(*,*)"allocate error: bij"
-     endif
-
     if(ltransient) then
 
       allocate(uu_aver(numCells),stat=ierr) 
@@ -347,6 +349,12 @@ subroutine create_fields
       allocate(vw_aver(numCells),stat=ierr) 
         if(ierr /= 0)write(*,*)"allocation error: vw_aver" 
 
+    endif
+
+    ! Reynolds stress anisotropy for EARSM models
+    if (lasm) then
+      allocate( aij(6,numCells), stat=ierr )
+      if(ierr /= 0)write(*,*)"allocation error: aij" 
     endif
 
   endif 
@@ -404,5 +412,9 @@ subroutine create_fields
 
   ! allocate( phimin( numCells ), stat=ierr) 
   !   if(ierr /= 0)write(*,*)"allocation error: phimin" 
+
+  ! Allocating arrays for linear solvers
+  allocate( res(numCells), reso(numCells), pk(numCells), uk(numCells), zk(numCells), vk(numCells), d(numCells), stat=ierr)
+    if(ierr /= 0)write(*,*)"allocation error: arrays for linear solvers" 
 
 end subroutine

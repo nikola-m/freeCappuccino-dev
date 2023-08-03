@@ -23,7 +23,7 @@ subroutine calcp_simple
 !
 !  Modified:
 !
-!    Feb-2021: Capability for compressible flows using pressure-density-velocity coupling.
+!    Feb-2023: Written this version using LIS solvers.
 !
 !  Author:
 !
@@ -49,10 +49,9 @@ subroutine calcp_simple
   use linear_solvers
   use faceflux_mass
   use nablap
-  use velocity, only: updateVelocityAtBoundary
-#ifdef LIS  
-  use LIS_linear_solvers, only: lis_spsolve
-#endif
+  use velocity, only: updateVelocityAtBoundary 
+  use LIS_linear_solvers
+
 
   implicit none
 
@@ -65,16 +64,18 @@ subroutine calcp_simple
   ! For compressible flows
   real(dp) :: Crho, suadd
 
-  ! Clear matrix coefficient and default rhs vector arrays
-  a = 0.0_dp
-  su = 0.0_dp
+  ! Help array of pressure equation coefficients, aspd:  a-matrix and spd -symmetric positive definite
+  real(dp), dimension(:), allocatable :: aspd
 
 
-  ! Tentative (!) velocity gradients used for velocity interpolation: 
-  ! (comment it out if only CDS interpolation of Ui is used)
-  ! call grad_gauss(U,dUdxi)
-  ! call grad_gauss(V,dVdxi)
-  ! call grad_gauss(W,dWdxi)
+  ! Create matrix
+  call lis_matrix_create(0, Alis, ierr)
+  call lis_matrix_set_size(Alis, 0, numCells, ierr)
+
+  ! Allocate arrays to strore matrix coefficients
+  allocate( aspd(numInnerFaces) )
+
+ 
 
   ! > Assemble off diagonal entries of system matrix and find mass flux at faces using Rhie-Chow interpolation
 
@@ -94,26 +95,35 @@ subroutine calcp_simple
     ! > Off-diagonal elements:
 
     ! (icell,jcell) matrix element:
-    k = icell_jcell_csr_index(i)
-    a(k) = cap
+    ! k = icell_jcell_csr_index(i)
+    ! a(k) = cap
+    call lis_matrix_set_value(LIS_INS_VALUE, ijp, ijn, cap, Alis, ierr)
 
     ! (jcell,icell) matrix element:
-    k = jcell_icell_csr_index(i)
-    a(k) = cap
+    ! k = jcell_icell_csr_index(i)
+    ! a(k) = cap
+    call lis_matrix_set_value(LIS_INS_VALUE, ijn, ijp, cap, Alis, ierr)
+
+    ! Save coefs
+    aspd(i) = cap
 
     ! > Elements on main diagonal:
 
     ! (icell,icell) main diagonal element
-    k = diag(ijp)
-    a(k) = a(k) - cap
+    ! k = diag(ijp)
+    ! a(k) = a(k) - cap
+    call lis_matrix_set_value(LIS_ADD_VALUE, ijp, ijp, -cap, Alis, ierr)
 
     ! (jcell,jcell) main diagonal element
-    k = diag(ijn)
-    a(k) = a(k) - cap
+    ! k = diag(ijn)
+    ! a(k) = a(k) - cap
+    call lis_matrix_set_value(LIS_INS_VALUE, ijn, ijn, -cap, Alis, ierr)
 
     ! > Sources:
-    su(ijp) = su(ijp) - flmass(i)
-    su(ijn) = su(ijn) + flmass(i) 
+    ! su(ijp) = su(ijp) - flmass(i)
+    call lis_vector_set_value(LIS_ADD_VALUE, ijp, -flmass(i), b, ierr)
+    ! su(ijn) = su(ijn) + flmass(i) 
+    call lis_vector_set_value(LIS_ADD_VALUE, ijn, flmass(i), b, ierr)
 
   end do
 
@@ -139,8 +149,8 @@ subroutine calcp_simple
 
         ! Minus sign is there to make fmi(i) positive since it enters the cell.
         ! Check out comments in bcin.f90
-        su(ijp) = su(ijp) - flmass(iface)
-
+        ! su(ijp) = su(ijp) - flmass(iface)
+        call lis_vector_set_value(LIS_ADD_VALUE, i, -flmass(iface), b, ierr)
       end do
 
 
@@ -155,6 +165,7 @@ subroutine calcp_simple
         ! fmout is positive because of same direction of velocity and surface normal vectors
         ! but the mass flow is going out of the cell, therefore minus sign.
         su(ijp) = su(ijp) - flmass(iface)
+        call lis_vector_set_value(LIS_ADD_VALUE, i, -flmass(iface), b, ierr)
             
       end do
 
@@ -167,14 +178,16 @@ subroutine calcp_simple
         ijp = owner(if)
         ijb = iBndValueStart(ib) + i
 
-        call facefluxmassPressBnd( ijp, ijb, xf(if), yf(if), zf(if), arx(if), ary(if), arz(if), cap, flmass(if) )
+        call facefluxmassPressBnd(ijp, ijb, xf(if), yf(if), zf(if), arx(if), ary(if), arz(if), cap, flmass(if))
 
         ! > Elements on main diagonal:
-        k = diag(ijp)
-        a(k) = a(k) - cap
+        ! k = diag(ijp)
+        ! a(k) = a(k) - cap
+        call lis_matrix_set_value(LIS_ADD_VALUE, ijp, ijp, -cap, Alis, ierr)
 
         ! > Sources:
-        su(ijp) = su(ijp) - flmass(if)
+        ! su(ijp) = su(ijp) - flmass(if)
+        call lis_vector_set_value(LIS_ADD_VALUE, ijp, -flmass(if), b, ierr)
 
         ! > Pressure Boundary value of pressure correction:
         pp(ijb) = 0.0_dp
@@ -205,27 +218,32 @@ subroutine calcp_simple
         l = l + 1
 
         ! (icell,jcell) matrix element:
-        k = icell_jcell_csr_index(l)
-        a(k) = cap
+        ! k = icell_jcell_csr_index(l)
+        ! a(k) = cap
+        call lis_matrix_set_value(LIS_INS_VALUE, ijp, ijn, cap, Alis, ierr)
 
         ! (jcell,icell) matrix element:
-        k = jcell_icell_csr_index(l)
-        a(k) = cap
+        ! k = jcell_icell_csr_index(l)
+        ! a(k) = cap
+        call lis_matrix_set_value(LIS_INS_VALUE, ijn, ijp, cap, Alis, ierr)
 
         ! > Elements on main diagonal:
 
         ! (icell,icell) main diagonal element
-        k = diag(ijp)
-        a(k) = a(k) - cap
+        ! k = diag(ijp)
+        ! a(k) = a(k) - cap
+        call lis_matrix_set_value(LIS_ADD_VALUE, ijp, ijp, -cap, Alis, ierr)
 
         ! (jcell,jcell) main diagonal element
-        k = diag(ijn)
-        a(k) = a(k) - cap
+        ! k = diag(ijn)
+        ! a(k) = a(k) - cap
+        call lis_matrix_set_value(LIS_ADD_VALUE, ijn, ijn, -cap, Alis, ierr)
 
         ! > Sources:
-        su(ijp) = su(ijp) - flmass(if)
-        su(ijn) = su(ijn) + flmass(if) 
-
+        ! su(ijp) = su(ijp) - flmass(if)
+        call lis_vector_set_value(LIS_ADD_VALUE, ijp, -flmass(if), b, ierr)
+        ! su(ijn) = su(ijn) + flmass(if) 
+        call lis_vector_set_value(LIS_ADD_VALUE, ijn, flmass(if), b, ierr)
 
       end do 
 
@@ -278,31 +296,39 @@ subroutine calcp_simple
       ! > Off-diagonal elements:
 
       ! (icell,jcell) matrix element:
-      k = icell_jcell_csr_index(i)
+      ! k = icell_jcell_csr_index(i)
       ! a(k) already keeps coefficients of the pressure correction eqn. just add compressible part
       ! so that below when we perfom mass flux correction we have included also contribution due to
       ! compressibility.
-      a(k) = a(k) + can  
+      ! a(k) = a(k) + can  
+      call lis_matrix_set_value(LIS_ADD_VALUE, ijp, ijn, can, Alis, ierr)
 
       ! (jcell,icell) matrix element:
-      k = jcell_icell_csr_index(i)
+      ! k = jcell_icell_csr_index(i)
+      ! a(k) = a(k) + cap
+      call lis_matrix_set_value(LIS_ADD_VALUE, ijn, ijp, cap, Alis, ierr)
 
-      a(k) = a(k) + cap
 
       ! > Elements on main diagonal:
 
       ! (icell,icell) main diagonal element
-      k = diag(ijp)
-      a(k) = a(k) - can
+      ! k = diag(ijp)
+      ! a(k) = a(k) - can
+      call lis_matrix_set_value(LIS_ADD_VALUE, ijp, ijp, -can, Alis, ierr)
 
       ! (jcell,jcell) main diagonal element
-      k = diag(ijn)
-      a(k) = a(k) - cap
+      ! k = diag(ijn)
+      ! a(k) = a(k) - cap
+      call lis_matrix_set_value(LIS_ADD_VALUE, ijn, ijn, -cap, Alis, ierr)
+
 
       ! > Sources:
 
-      su(ijp) = su(ijp) + suadd
-      su(ijn) = su(ijn) - suadd 
+      ! su(ijp) = su(ijp) + suadd
+      ! su(ijn) = su(ijn) - suadd 
+      call lis_vector_set_value(LIS_ADD_VALUE, ijp,  suadd, b, ierr)
+      call lis_vector_set_value(LIS_ADD_VALUE, ijn, -suadd, b, ierr)
+
 
     end do
 
@@ -317,12 +343,47 @@ subroutine calcp_simple
   ! Multiple pressure corrections loop *******************************************************************
   do ipcorr=1,npcor
 
-    ! Solving pressure correction equation
-#ifdef LIS  
-    call lis_spsolve( pp, su, 'p' )
-#else
-    call csrsolve( lSolverP, pp, su, resor(4), maxiterP, tolAbsP, tolRelP, 'p' ) 
-#endif    
+
+    ! > Solution vector - initial value
+    do i=1,numCells
+      call lis_vector_set_value(LIS_INS_VALUE, i, pp(i), x, ierr)
+    enddo
+
+    ! Calculate initial residual norm
+    res0 = 0.0_dp
+    do i=1,numCells
+      resid = rhs(i) 
+      do k = ia(i), ia(i+1)-1
+        resid = resid -  a(k) * fi( ja(k) ) 
+      enddo
+      res0 = res0 + abs(resid) 
+    enddo
+
+
+    ! Set matrix type to CSR and assemble matrix.
+    call lis_matrix_set_type(Alis, LIS_MATRIX_CSR, ierr)
+    call lis_matrix_assemble(Alis, ierr)
+
+    ! > Solver execution
+    call lis_solve(Alis, b, x, solver, ierr)
+
+    ! > Write the solution in the solution vector that is passed
+    do i=1,numCells
+      call lis_vector_get_value(x, i, pp(i), ierr)
+    enddo
+
+
+    ! > Output iterative solution summary
+    call lis_solver_get_iterex(solver, iter, iter_double, iter_quad, ierr)
+    call lis_solver_get_residualnorm(solver, resid, ierr)
+
+
+    ! Write linear solver report:
+    write(*,'(3a,1PE10.3,a,1PE10.3,a,I0)') '  LIS['//trim(lis_solver_options)//']:  Solving for ', &
+    trim( chvar ),', Initial residual = ',res0,', Final residual = ',res0*resid,', No Iterations ',iter
+
+
+ 
     !
     ! Correct mass fluxes
     !
@@ -447,8 +508,11 @@ subroutine calcp_simple
 
         flmass(i) = flmass(i)+fmcor
 
-        su(ijp) = su(ijp)-fmcor
-        su(ijn) = su(ijn)+fmcor 
+        ! su(ijp) = su(ijp)-fmcor
+        ! su(ijn) = su(ijn)+fmcor 
+        call lis_vector_set_value(LIS_ADD_VALUE, ijp, -fmcor, b, ierr)
+        call lis_vector_set_value(LIS_ADD_VALUE, ijn,  fmcor, b, ierr)
+
 
       enddo                                                              
 
@@ -466,6 +530,11 @@ subroutine calcp_simple
 
   ! Correct driving force for a constant mass flow rate simulation:
   if(const_mflux) call constant_mass_flow_forcing
+
+
+  ! Destroy the matrix
+  call lis_matrix_destroy(Alis, ierr)
+  deallocate( aspd )
 
 end subroutine
 

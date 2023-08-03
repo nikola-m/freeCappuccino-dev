@@ -17,7 +17,7 @@ module fvxGradient
 !
 use types
 use geometry
-use sparse_matrix, only: ioffset,ja,diag
+use sparse_matrix, only: ia,ja,diag
 use tensorFields
 
 implicit none
@@ -492,10 +492,10 @@ subroutine slope_limiter_Barth_Jespersen(phi, dPhidx,dPhidy,dPhidz )
     phi_p = phi(inp)
 
     ! max and min values over current cell and neighbors
-    phi_max = phi(ja( ioffset(inp) ))
-    phi_min = phi(ja( ioffset(inp) ))
+    phi_max = phi(ja( ia(inp) ))
+    phi_min = phi(ja( ia(inp) ))
 
-    do k=ioffset(inp)+1, ioffset(inp+1)-1
+    do k=ia(inp)+1, ia(inp+1)-1
       phi_max = max( phi_max, phi(ja(k)) )
       phi_min = min( phi_max, phi(ja(k)) )      
     enddo
@@ -506,7 +506,7 @@ subroutine slope_limiter_Barth_Jespersen(phi, dPhidx,dPhidy,dPhidz )
 
     slopelimit = 1.0_dp
 
-    do k=ioffset(inp), ioffset(inp+1)-1
+    do k=ia(inp), ia(inp+1)-1
 
       if (k == diag(inp)) cycle
    
@@ -579,10 +579,10 @@ subroutine slope_limiter_Venkatakrishnan(phi, dPhidx,dPhidy,dPhidz )
     phi_p = phi(inp)
 
     ! max and min values over current cell and neighbors
-    phi_max = phi(ja( ioffset(inp) ))
-    phi_min = phi(ja( ioffset(inp) ))
+    phi_max = phi(ja( ia(inp) ))
+    phi_min = phi(ja( ia(inp) ))
 
-    do k=ioffset(inp)+1, ioffset(inp+1)-1
+    do k=ia(inp)+1, ia(inp+1)-1
       phi_max = max( phi_max, phi(ja(k)) )
       phi_min = min( phi_max, phi(ja(k)) )      
     enddo
@@ -593,7 +593,7 @@ subroutine slope_limiter_Venkatakrishnan(phi, dPhidx,dPhidy,dPhidz )
 
     slopelimit = 1.0_dp
 
-    do k=ioffset(inp), ioffset(inp+1)-1
+    do k=ia(inp), ia(inp+1)-1
 
       if (k == diag(inp)) cycle
    
@@ -663,10 +663,10 @@ subroutine slope_limiter_multidimensional(phi, dPhidx,dPhidy,dPhidz )
   do inp = 1,numCells
 
     ! max and min values over current cell and neighbors
-    phimax(inp) = phi(ja( ioffset(inp) ))
-    phimin(inp) = phi(ja( ioffset(inp) ))
+    phimax(inp) = phi(ja( ia(inp) ))
+    phimin(inp) = phi(ja( ia(inp) ))
 
-    do k=ioffset(inp)+1, ioffset(inp+1)-1
+    do k=ia(inp)+1, ia(inp+1)-1
       phimax(inp) = max( phimax(inp), phi(ja(k)) )
       phimin(inp) = min( phimin(inp), phi(ja(k)) )      
     enddo
@@ -682,7 +682,7 @@ subroutine slope_limiter_multidimensional(phi, dPhidx,dPhidy,dPhidz )
       if (k==1) then
         ijp = owner(iface)
       else
-        ijp = owner(iface)
+        ijp = neighbour(iface)
       endif
 
       ! Initialize gradient vector with current unlimited value
@@ -1001,15 +1001,19 @@ subroutine grad_lsq_qr_matrix
   ! Locals
   integer ::  i,l,ijp,ijn,inp,iface
 
-  integer, dimension(numCells) :: neighbour_index  
+  integer, dimension(:), allocatable :: neighbour_index  
 
   real(dp), dimension(m,n) :: Dtmp
   real(dp), dimension(n,m) :: Dtmpt
 
-  ! REAL(dp), DIMENSION(m,n) :: R
-  ! REAL(dp), DIMENSION(m,m) :: Q
-  ! REAL(dp), DIMENSION(n,n) :: R1
-  ! REAL(dp), DIMENSION(n,m) :: Q1t
+#ifndef LAPACK
+
+  REAL(dp), DIMENSION(m,n) :: R
+  REAL(dp), DIMENSION(m,m) :: Q
+  REAL(dp), DIMENSION(n,n) :: R1
+  REAL(dp), DIMENSION(n,m) :: Q1t
+
+#else
 
   integer :: k
   INTEGER :: INFO
@@ -1020,11 +1024,16 @@ subroutine grad_lsq_qr_matrix
   REAL(dp), DIMENSION(n,n) :: R
   REAL(dp), DIMENSION(m,m) :: Q
 
+#endif
+
+
  
 !**************************************************************************************************
 ! Coefficient matrix - should be calculated only once 
 !**************************************************************************************************
   Dtmp = 0.0d0
+
+  allocate(neighbour_index(numCells))
   neighbour_index = 0
 
   ! Inner faces:                                             
@@ -1070,20 +1079,25 @@ subroutine grad_lsq_qr_matrix
   Dtmpt = D(:,:,inp)
   Dtmp = transpose(Dtmpt)
 
-  !1) ...Decompose A=QR using Householder
+
+#ifndef LAPACK
+
+  ! 1) Decompose A=QR using Householder
   ! call householder_qr(Dtmp, m, n, Q, R)
-  !2) ...Decompose A=QR using Gram-Schmidt >>
-  ! call mgs_qr(Dtmp, m, n, Q, R)
+  ! 2) Decompose A=QR using Gram-Schmidt
+  call mgs_qr(Dtmp, m, n, Q, R)
 
-  ! Q = transpose(Q)
-  ! Q1t = Q(1:n,1:m)      ! NOTE: A=Q1R1 is so-called 'thin QR factorization' - see Golub & Van Loan
-  !                       ! Here Q1 is actually Q1^T a transpose of Q1(thin Q - Q with m-n column stripped off)
-  ! R1 = R(1:n,1:n)       ! our Q1 is thin transpose of original Q.
-  ! R1 = inv(R1)          ! inv is a function in matrix_module, now works only for 3x3 matrices.
-  ! Q1t  = matmul(R1,Q1t) ! this is actually R^(-1)*Q^T - a matrix of size n x m.
-  ! D(:,:,INP) = Q1t      ! Store it for later.
+  Q = transpose(Q)
+  Q1t = Q(1:n,1:m)      ! NOTE: A=Q1R1 is so-called 'thin QR factorization' - see Golub & Van Loan
+                        ! Here Q1 is actually Q1^T a transpose of Q1(thin Q - Q with m-n column stripped off)
+  R1 = R(1:n,1:n)       ! our Q1 is thin transpose of original Q.
+  R1 = inv(R1)          ! inv is a function in matrix_module, now works only for 3x3 matrices.
+  Q1t  = matmul(R1,Q1t) ! this is actually R^(-1)*Q^T - a matrix of size n x m.
+  D(:,:,INP) = Q1t      ! Store it for later.
 
-  !<<
+
+#else
+
 
   !3....LAPACK routine DGEQRF >>>
   CALL DGEQRF( l, N, Dtmp, M, TAU, WORK, N, INFO )
@@ -1111,9 +1125,14 @@ subroutine grad_lsq_qr_matrix
     D(2,k,inp) = q(k,2)/r(2,2) - (r(2,3)*q(k,3))/(r(2,2)*r(3,3))
     D(3,k,inp) = q(k,3)/r(3,3)
   enddo
-  !<<<
+
+
+#endif 
+
 
   enddo
+
+  deallocate(neighbour_index)
 
 end subroutine
 
@@ -1283,7 +1302,7 @@ subroutine grad_lsq_dm_matrix
   ! !
   ! ! **Extended interpolation molecule: neighbours of neighbours**
   ! !
-  !   nb_loop: do k = ioffset( neighbour(i) ), ioffset( neighbour(i)+1 )-1
+  !   nb_loop: do k = ia( neighbour(i) ), ia( neighbour(i)+1 )-1
 
   !     ijn = ja(k)
 
@@ -1458,7 +1477,7 @@ subroutine grad_lsq_dm( Phi, dPhidx,dPhidy,dPhidz )
   ! !
   ! ! **Extended interpolation molecule: neighbours of neighbours**
   ! !
-  !   nb_loop2: do k = ioffset( neighbour(i) ), ioffset( neighbour(i)+1 )-1
+  !   nb_loop2: do k = ia( neighbour(i) ), ia( neighbour(i)+1 )-1
 
   !     ijn = ja(k)
 

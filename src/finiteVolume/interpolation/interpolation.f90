@@ -85,14 +85,8 @@ function face_value(ijp,ijn,xf,yf,zf,lambda,u,dUdxi,scheme) result(vf)
     case ( 'cds' )
       vf = face_value_cds(ijp,ijn, lambda, u) 
 
-    ! case ( 'cdscorr' )
-    !   vf = face_value_cds_corrected(ijp, ijn, xf, yf, zf, lambda, u, dUdxi)
-
     case ( 'central' )
       vf = face_value_central(ijp, ijn, xf, yf, zf, u, dUdxi)
-
-    ! case ('harmonic')
-    !   vf = face_value_harmonic(ijp,ijn, lambda, u) 
 
     case ('linearUpwind')
       vf = face_value_2nd_upwind(ijp, xf, yf, zf, u, dUdxi)
@@ -100,6 +94,12 @@ function face_value(ijp,ijn,xf,yf,zf,lambda,u,dUdxi,scheme) result(vf)
     case('kappa')
       vf = face_value_kappa(ijp, ijn, xf, yf, zf, u, dUdxi)
 
+    ! case ('harmonic')
+    !   vf = face_value_harmonic(ijp,ijn, lambda, u) 
+
+    ! case ( 'cdscorr' )
+    !   vf = face_value_cds_corrected(ijp, ijn, xf, yf, zf, lambda, u, dUdxi)
+    
     ! case('cubic')
     !   vf = face_value_cubic(ijp, ijn, lambda, u, dUdxi)
 
@@ -151,16 +151,8 @@ function face_value_cds(ijp, ijn, lambda, fi) result(vf)
   integer :: ijp, ijn
   real(dp) :: lambda
   real(dp), dimension(numTotal) :: fi
-!
-! Local variables
-!
-  real(dp) :: fxn,fxp
 
-  ! Face interpolation factor
-  fxn=lambda 
-  fxp=1.0_dp-lambda
-
-  vf = fi(ijp)*fxp+fi(ijn)*fxn
+  vf = fi(ijp)+(fi(ijn)-fi(ijp))*lambda
 
 end function
 
@@ -267,7 +259,7 @@ function face_value_central(inp,inn, xf, yf, zf, fi, gradfi) result(vf)
   gradfidr=gradfi(1,inp)*(xf-xc(inp))+gradfi(2,inp)*(yf-yc(inp))+gradfi(3,inp)*(zf-zc(inp)) &
           +gradfi(1,inn)*(xf-xc(inn))+gradfi(2,inn)*(yf-yc(inn))+gradfi(3,inn)*(zf-zc(inn))
 
-  vf = 0.5_dp*( fi(inp) + fi(inn) + gradfidr)
+  vf = 0.5_dp*( fi(inp) + fi(inn) + gradfidr )
 
 end function
 
@@ -601,9 +593,6 @@ function face_value_flux_limiter(ijp, ijn, lambda, u, dUdxi, scheme) result(vf)
 
   case ('boundedCentral' ) 
     psi = max(0., min(r, 4.0)) ! <-See Waterson-Deconninck JCP paper how to get this from Chakravarty-Osher
-
-  case ('linearUpwindFL') 
-    psi = 1.0_dp ! unbounded 2nd order upwind (luds) scheme, also a kappa scheme with kappa = -1
 
   case ( 'fromm' )  ! Fromm scheme - unique symmetric kappa scheme, kappa=0
     psi = 0.5_dp*r+0.5_dp

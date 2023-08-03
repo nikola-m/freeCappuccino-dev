@@ -27,7 +27,8 @@ subroutine laplacian(mu,phi)
   integer :: i, k, ijp, ijn
   integer :: ib,ijb,iface
   real(dp) :: cap, can
-  real(dp) :: are,dpw,dcoef
+  real(dp) :: nxf,nyf,nzf
+  real(dp) :: are,dfn,dcoef
 
 
   ! Initialize matrix array
@@ -66,11 +67,11 @@ subroutine laplacian(mu,phi)
   end do
 
 
-!.....Modify matrix coefficients to reflect presence of Boundary Conditions in PDE problem.
+  ! Modify matrix coefficients to reflect presence of Boundary Conditions in PDE problem.
 
   do ib=1,numBoundaries
 
-    !if ( bctype(ib) == 'wall') then
+    !if ( bctype(ib) == '...') then
 
       do i=1,nfaces(ib)
 
@@ -78,10 +79,19 @@ subroutine laplacian(mu,phi)
         ijp = owner(iface)
         ijb = iBndValueStart(ib) + i
 
+        ! Face area 
         are = sqrt(arx(iface)**2+ary(iface)**2+arz(iface)**2)
-        dpw = sqrt( (xc(ijp)-xf(iface))**2 + (yc(ijp)-yf(iface))**2 + (zc(ijp)-zf(iface))**2 )
 
-        dcoef   = mu(ijp)*are/dpw
+        ! Face normals
+        nxf = arx(iface)/are
+        nyf = ary(iface)/are
+        nzf = arz(iface)/are
+
+        ! We need the minus sign because of the direction of normal vector to boundary face which is positive if it faces out.
+        dfn = (xf(iface)-xc(ijp))*nxf + (yf(iface)-yc(ijp))*nyf + (zf(iface)-zc(ijp))*nzf
+
+        dcoef   = mu(ijp)*are/dfn
+
         a( diag(ijp) ) = a( diag(ijp) ) - dcoef  
         su(ijp) = su(ijp) - dcoef*phi(ijb)
 
@@ -120,8 +130,6 @@ subroutine faceFluxLaplacian(ijp, ijn, arx, ary, arz, lambda, mu, cap, can)
   real(dp) :: fxn, fxp
   real(dp) :: xpn,ypn,zpn
   real(dp) :: smdpn
-  ! real(dp) :: are
-  ! real(dp) :: dpn
 
   ! Face interpolation factor
   fxn=lambda 
@@ -132,16 +140,8 @@ subroutine faceFluxLaplacian(ijp, ijn, arx, ary, arz, lambda, mu, cap, can)
   ypn=yc(ijn)-yc(ijp)
   zpn=zc(ijn)-zc(ijp)
 
-  ! distance from p to p_j
-  ! dpn = sqrt(xpn**2+ypn**2+zpn**2)
-  ! cell face area
-  ! are=sqrt(arx**2+ary**2+arz**2)
-  !             _    _
-  ! First way: |Sf|/|dpn|
-  ! smdpn = are/dpn
-
-  !             _    _     _    _
-  ! Second way: Sf . Sf / (Sf . dpn)
+  ! _    _     _    _
+  ! Sf . Sf / (Sf . dpn)
   smdpn = (arx*arx+ary*ary+arz*arz)/(arx*xpn+ary*ypn+arz*zpn)
 
   ! Coefficients of discretized Laplace equation

@@ -43,13 +43,12 @@ module parameters
   real(dp) :: CoNumFixValue   ! Fixed value for Courant number - set in modinp for now - may be read in input
   real(dp) :: CoNum ! Courant number (max value). 
   real(dp) :: meanCoNum  ! Courant number (mean value). 
-  ! character(len=9) :: timechar! A char string to write current timestep
 
     
   ! Logicals, mostly read from simulation-input file:
   logical :: lturb,lread,lwrite,ltest   ! turbulent simulation, read restart file, write restart file, print residual of the linear solver,.,..      
   logical :: ltransient                 ! LTRANSIENT is TRUE for transient (non-stationary) simulations              
-  logical :: lasm,lles,lsgdh,lggdh,lafm ! eddy-viscosity, algebraic stress model or LES, simple gradient or generalized gradient hypothesis, algerbaic flux model
+  logical :: lasm,lsgdh,lggdh,lafm      ! eddy-viscosity, algebraic stress model or LES, simple gradient or generalized gradient hypothesis, algerbaic flux model
   logical :: bdf,bdf2,bdf3,cn           ! control for the time-stepping algorithm
   logical :: simple,piso                ! control for the velocity-pressure coupling algorithm
   logical :: compressible               ! If true together with SIMPLE, then pressure based algorithm for all speeds is activated.
@@ -60,21 +59,13 @@ module parameters
   integer :: icorr                   ! PISO iteration no.: icorr=1..ncorr
   integer :: npcor                   ! No. of pressure-corrections; non-orthogonality correctors
   integer :: ipcorr                  ! Iteration no.: ipcorr=1..npcor
-  integer :: nigrad = 1              ! No. of iters. for iterative cell-centered gradient calculation
   integer, parameter :: nipgrad = 2  ! No. of stages for 'pressure extrapolation at boundary + pressure gradient update' loop
 
-  ! logical :: roughWall          ! Is aerodynamically rough wall assumed
-  ! real(dp) :: erough            ! E parameter for rough wall
-  ! real(dp) :: zzero             ! z0 - wall roughness [m] for aerodynamically rough walls
-
   real(dp) :: magUbar, gradPcmf ! Magnitude of the bulk velocity,and pressure grad that will drive the constant mass-flux flow (cmf)
-  real(dp) :: sumLocalContErr, globalContErr, cumulativeContErr, res5Mass   ! Continuity errors
-
   real(dp), dimension(12) :: resor ! Normalized residuals for monitoring convergence of SIMPLE iterations.
 
   character(len=70) :: title         ! Case title-short description for monitor file.
-
-  character(len=100) :: input_file,grid_file,monitor_file,restart_file
+  character(len=20) :: input_file,monitor_file,restart_file
 
   ! Referent values - initialized here, should be initialized through a configuration file
   real(dp) :: Rhoref = 1.0_dp  ! Reference density

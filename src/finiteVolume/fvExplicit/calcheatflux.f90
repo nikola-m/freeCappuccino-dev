@@ -159,9 +159,9 @@ subroutine calcheatflux
 
 
     ! Under-relaxation:
-    utt(inp)=facflx*utt(inp)+(1.0d0-facflx)*uttold
-    vtt(inp)=facflx*vtt(inp)+(1.0d0-facflx)*vttold
-    wtt(inp)=facflx*wtt(inp)+(1.0d0-facflx)*wttold
+    utt(inp) = uttold+facflx*(utt(inp)-uttold)  
+    vtt(inp) = vttold+facflx*(vtt(inp)-vttold)
+    wtt(inp) = wttold+facflx*(wtt(inp)-wttold)
 
   end do ! cell-loop
 

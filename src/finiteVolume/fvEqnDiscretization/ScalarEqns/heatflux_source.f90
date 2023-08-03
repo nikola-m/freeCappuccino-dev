@@ -52,21 +52,21 @@ do i=1,numInnerFaces
   fxn = facint(ijp)
   fxp = 1.0_dp-facint(ijp)
 
-        ! Interpolate term1:
-        term1i = (den(ijn)*utt(ijn)+dTdxi(1,ijn)*prtr*(vis(ijn)-viscos))*fxn+ &
-                 (den(ijp)*utt(ijp)+dTdxi(1,ijp)*prtr*(vis(ijp)-viscos))*fxp
+  ! Interpolate term1:
+  term1i = (den(ijn)*utt(ijn)+dTdxi(1,ijn)*prtr*(vis(ijn)-viscos))*fxn+ &
+           (den(ijp)*utt(ijp)+dTdxi(1,ijp)*prtr*(vis(ijp)-viscos))*fxp
 
-        ! Interpolate term2:
-        term2i = (den(ijn)*vtt(ijn)+dTdxi(2,ijn)*prtr*(vis(ijn)-viscos))*fxn+ &
-                 (den(ijp)*vtt(ijp)+dTdxi(2,ijp)*prtr*(vis(ijp)-viscos))*fxp
+  ! Interpolate term2:
+  term2i = (den(ijn)*vtt(ijn)+dTdxi(2,ijn)*prtr*(vis(ijn)-viscos))*fxn+ &
+           (den(ijp)*vtt(ijp)+dTdxi(2,ijp)*prtr*(vis(ijp)-viscos))*fxp
 
-        ! Interpolate term3:
-        term3i = (den(ijn)*wtt(ijn)+dTdxi(3,ijn)*prtr*(vis(ijn)-viscos))*fxn+ &
-                 (den(ijp)*wtt(ijp)+dTdxi(3,ijp)*prtr*(vis(ijp)-viscos))*fxp
+  ! Interpolate term3:
+  term3i = (den(ijn)*wtt(ijn)+dTdxi(3,ijn)*prtr*(vis(ijn)-viscos))*fxn+ &
+           (den(ijp)*wtt(ijp)+dTdxi(3,ijp)*prtr*(vis(ijp)-viscos))*fxp
 
-        su(ijp) = su(ijp) - ( term1i * arx(i) + term2i * ary(i) + term3i * arz(i) )
+  su(ijp) = su(ijp) - ( term1i * arx(i) + term2i * ary(i) + term3i * arz(i) )
 
-        su(ijn) = su(ijn) + ( term1i * arx(i) + term2i * ary(i) + term3i * arz(i) )
+  su(ijn) = su(ijn) + ( term1i * arx(i) + term2i * ary(i) + term3i * arz(i) )
 enddo
 
 

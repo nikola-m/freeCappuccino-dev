@@ -59,17 +59,20 @@ subroutine calcp_piso
   use variables
   use gradients
   use linear_solvers
-  use fieldmanipulation
   use faceflux_mass
   use nablap
   use velocity, only: updateVelocityAtBoundary
+#ifdef LIS  
+  use LIS_linear_solvers, only: lis_spsolve
+#endif
 
   implicit none
 !
 !***********************************************************************
 !
-  integer :: i, k, ib, iface, istage
+  integer :: i, k, ib, if, istage
   integer :: ijp, ijn, ijb
+  integer :: iPer, l, iftwin
   ! integer :: inp
   real(dp) :: cap, can
   real(dp) :: pavg, fmcor
@@ -79,8 +82,8 @@ subroutine calcp_piso
 
   ! if( const_mflux ) call constant_mass_flow_forcing
 
-  !== PISO Corrector loop =============================================
-  do icorr=1,ncorr
+  
+  do icorr=1,ncorr !== PISO Corrector loop ========================================================
 
     ! This is taken from cfd-online forum post:
     !// From the last solution of velocity, extract the diag. term from the matrix and store the reciprocal
@@ -94,6 +97,7 @@ subroutine calcp_piso
     ! Posle ovoga imamo novo H(u)/ap, H(v)/ap ,i H(w)/ap A.K.A. "HbyA" smesteno u U,V, i W. To je polje brzina 
     ! bez uticaja gradijenta pritiska!
 
+    ! First the right hand side of the momentum equations
     su = rU
     sv = rV
     sw = rW
@@ -124,11 +128,11 @@ subroutine calcp_piso
     w(1:numCells) = apw*sw
 
 
-    ! Tentative (!) velocity gradients used for velocity interpolation: 
-    call updateVelocityAtBoundary
-    call grad(U,dUdxi)
-    call grad(V,dVdxi)
-    call grad(W,dWdxi) 
+    ! ! Tentative (!) velocity gradients used for velocity interpolation: 
+    ! call updateVelocityAtBoundary
+    ! call grad_gauss(U,dUdxi)
+    ! call grad_gauss(V,dVdxi)
+    ! call grad_gauss(W,dWdxi) 
 
 
     ! Initialize coefficient array and source:
@@ -144,10 +148,10 @@ subroutine calcp_piso
       ijp = owner(i)
       ijn = neighbour(i)
 
-      call facefluxmass_piso( ijp, ijn, &
-                              xf(i), yf(i), zf(i), &
+      call facefluxmass_piso( i, ijp, ijn, &
                               arx(i), ary(i), arz(i), facint(i), &
-                              cap, can, flmass(i) )!, flmasso(i), flmassoo(i),flmassooo(i) )
+                              cap, can, flmass(i) )
+                              !, flmasso(i), flmassoo(i),flmassooo(i) )
 
       ! > Off-diagonal elements:
 
@@ -182,6 +186,9 @@ subroutine calcp_piso
     if(.not.const_mflux) call adjustMassFlow
 
     ! Add contributions to source of the inlet and outlet boundaries.
+ 
+    iPer = 0
+    l = numInnerFaces
 
     ! Loop over boundaries
     do ib=1,numBoundaries
@@ -190,12 +197,12 @@ subroutine calcp_piso
 
         do i=1,nfaces(ib)
 
-          iface = startFace(ib) + i
-          ijp = owner(iface)
+          if = startFace(ib) + i
+          ijp = owner(if)
 
           ! Minus sign is there to make fmi(i) positive since it enters the cell.
           ! Check out comments in bcin.f90
-          su(ijp) = su(ijp) - flmass(iface)
+          su(ijp) = su(ijp) - flmass(if)
 
         end do
 
@@ -203,24 +210,24 @@ subroutine calcp_piso
 
         do i=1,nfaces(ib)
 
-          iface = startFace(ib) + i
-          ijp = owner(iface)
+          if = startFace(ib) + i
+          ijp = owner(if)
           ijb = iBndValueStart(ib) + i
 
           call facefluxmassPressBnd( ijp, ijb, &
-                                     xf(iface), yf(iface), zf(iface), &
-                                     arx(iface), ary(iface), arz(iface), &
-                                     cap, flmass(iface) )
+                                     xf(if), yf(if), zf(if), &
+                                     arx(if), ary(if), arz(if), &
+                                     cap, flmass(if) )
 
           ! > Elements on main diagonal:
           k = diag(ijp)
           a(k) = a(k) - cap
 
           ! > Sources:
-          su(ijp) = su(ijp) - flmass(iface)
+          su(ijp) = su(ijp) - flmass(if)
 
-          ! > Pressure Boundary value of pressure correction:
-          pp(ijb) = 0.0_dp
+          ! ! > Pressure Boundary value of pressure correction: - Do we need this? We work with pressure.
+          ! pp(ijb) = 0.0_dp
 
         end do
 
@@ -228,62 +235,62 @@ subroutine calcp_piso
 
         do i=1,nfaces(ib)
 
-          iface = startFace(ib) + i
-          ijp = owner(iface)
+          if = startFace(ib) + i
+          ijp = owner(if)
 
           ! fmout is positive because of same direction of velocity and surface normal vectors
           ! but the mass flow is going out of the cell, therefore minus sign.
-          su(ijp) = su(ijp) - flmass(iface)
+          su(ijp) = su(ijp) - flmass(if)
               
         end do
 
 
-      ! elseif (  bctype(ib) == 'periodic' ) then
+      elseif (  bctype(ib) == 'periodic' ) then
 
-      !   iPer = iPer + 1
+        iPer = iPer + 1
 
-      !   ! Faces trough periodic boundaries
-      !   do i=1,nfaces(ib)
+        ! Faces trough periodic boundaries
+        do i=1,nfaces(ib)
 
-      !     if = startFace(ib) + i
-      !     ijp = owner(if)
+          if = startFace(ib) + i
+          ijp = owner(if)
 
-      !     iftwin = startFaceTwin(iPer) + i
-      !     ijn = owner(iftwin)
-
-
-      !     call facefluxmass2_periodic(ijp, ijn, xf(if), yf(if), zf(if), arx(if), ary(if), arz(if), half, cap, can, flmass(if))
+          iftwin = startFaceTwin(iPer) + i
+          ijn = owner(iftwin)
 
 
-      !     ! > Off-diagonal elements:
-
-      !     ! l is in interval [numInnerFaces+1, numInnerFaces+numPeriodic]
-      !     l = l + 1
-
-      !     ! (icell,jcell) matrix element:
-      !     k = icell_jcell_csr_index(l)
-      !     a(k) = cap
-
-      !     ! (jcell,icell) matrix element:
-      !     k = jcell_icell_csr_index(l)
-      !     a(k) = cap
-
-      !     ! > Elements on main diagonal:
-
-      !     ! (icell,icell) main diagonal element
-      !     k = diag(ijp)
-      !     a(k) = a(k) - cap
-
-      !     ! (jcell,jcell) main diagonal element
-      !     k = diag(ijn)
-      !     a(k) = a(k) - cap
-
-      !     ! > Sources:
-      !     su(ijp) = su(ijp) - flmass(if)
-      !     su(ijn) = su(ijn) + flmass(if) 
+          call facefluxmass2_periodic(i, ijp, ijn, xf(if), yf(if), zf(if), arx(if), ary(if), arz(if), half, cap, can, flmass(if))
 
 
-      !   end do 
+          ! > Off-diagonal elements:
+
+          ! l is in interval [numInnerFaces+1, numInnerFaces+numPeriodic]
+          l = l + 1
+
+          ! (icell,jcell) matrix element:
+          k = icell_jcell_csr_index(l)
+          a(k) = cap
+
+          ! (jcell,icell) matrix element:
+          k = jcell_icell_csr_index(l)
+          a(k) = cap
+
+          ! > Elements on main diagonal:
+
+          ! (icell,icell) main diagonal element
+          k = diag(ijp)
+          a(k) = a(k) - cap
+
+          ! (jcell,jcell) main diagonal element
+          k = diag(ijn)
+          a(k) = a(k) - cap
+
+          ! > Sources:
+          su(ijp) = su(ijp) - flmass(if)
+          su(ijn) = su(ijn) + flmass(if) 
+
+
+        end do 
 
 
       endif 
@@ -305,7 +312,7 @@ subroutine calcp_piso
       ! !    pEqn.setReference(pRefCell, pRefValue);
       ! !//
       ! ! So:
-      ! a( ioffset(pRefCell):ioffset(pRefCell+1)-1 ) = 0.0_dp
+      ! a( ia(pRefCell):ia(pRefCell+1)-1 ) = 0.0_dp
       ! a( diag(pRefCell) ) = 1.0_dp
       ! ! Set rhs value for pRefCell to be reference pressure
       ! su(pRefCell) = p(pRefCell)
@@ -313,11 +320,14 @@ subroutine calcp_piso
       !
       ! Solve pressure equation system
       !
-      call csrsolve(lSolverP, pp, su, resor(4), maxiterP, tolAbsP, tolRelP, 'p') 
+#ifdef LIS  
+      call lis_spsolve( pp, su, 'p' )
+#else
+      call csrsolve( lSolverP, pp, su, resor(4), maxiterP, tolAbsP, tolRelP, 'p' ) 
+#endif
 
       ! We have pure Neumann problem - take out the average of the field as the additive constant
       pavg = sum(pp(1:numCells))/dble(numCells)
-      ! p(1:numCells) = p(1:numCells) - pavg
 
       ! Under-relaxation
       p(1:numCells) = (1.0_dp-urfP)*p(1:numCells) + urfP*(pp(1:numCells)-pavg)
@@ -329,12 +339,9 @@ subroutine calcp_piso
         call bpres(p,istage)
 
         ! Calculate pressure gradient.
-        call grad(p,dPdxi)
+        call grad_gauss(p,dPdxi)
 
       end do
-
-      ! If simulation uses least-squares gradients call this to get conservative pressure correction gradients.
-      if ( lstsq_qr .or. lstsq_dm .or. lstsq_qr ) call grad(p,dPdxi,'gauss_corrected','nolimit')
 
       !                                                                                  
       ! Laplacian source term modification due to non-orthogonality.
@@ -358,47 +365,25 @@ subroutine calcp_piso
       !                                                                                        
       ! We have hit the last iteration of nonorthogonality correction: 
       !                     
-      else ! or in other words if(ipcorr.eq.npcor) then   
+      else ! that is if(ipcorr.eq.npcor)   
 
         !
         ! Correct mass fluxes at inner cv-faces only (only inner flux)
         !
 
         ! Inner faces:
-        do iface=1,numInnerFaces
+        do if=1,numInnerFaces
 
-            ijp = owner(iface)
-            ijn = neighbour(iface)
+            ijp = owner(if)
+            ijn = neighbour(if)
 
             ! (icell,jcell) matrix element:
-            k = icell_jcell_csr_index(iface)
+            k = icell_jcell_csr_index(if)
 
-            flmass(iface) = flmass(iface) + a(k) * (p(ijn)-p(ijp))
+            flmass(if) = flmass(if) + a(k) * (p(ijn)-p(ijp))
       
         enddo
-                                           
-        !                                                                                  
-        ! Additional mass flux correction due to non-orthogonality.
-        !  
-
-        ! ! Pressure gradient
-        ! do istage=1,nipgrad
-
-        !   ! Pressure at boundaries.
-        !   call bpres(p,istage)
-
-        !   ! Calculate pressure gradient field.
-        !   call grad(p,dPdxi,'gauss_corrected','no-limit')        
-
-        ! end do  
-
-        ! do i=1,numInnerFaces
-
-        !   call fluxmc(ijp, ijn, xf(i), yf(i), zf(i), arx(i), ary(i), arz(i), facint(i), fmcor)
-
-        !   flmass(i) = flmass(i)-fmcor 
-
-        ! enddo                                                              
+                                                                                                      
 
         ! Write continuity error report:
         call continuityErrors 
@@ -417,21 +402,23 @@ subroutine calcp_piso
 
     !
     ! Correct velocities
-    !      
+    !    
+
+    !+++
+
     ! do inp=1,numCells
     !   u(inp) = u(inp) - apu(inp)*dPdxi(1,inp)*vol(inp)
     !   v(inp) = v(inp) - apv(inp)*dPdxi(2,inp)*vol(inp)
     !   w(inp) = w(inp) - apw(inp)*dPdxi(3,inp)*vol(inp)
     ! enddo 
 
+    !+++
+
     ! ...or like this ...
     ! Do it in consistent way to how pressure was treated in calcuvw
-    su = 0.0_dp
-    sv = 0.0_dp
-    sw = 0.0_dp   
 
     ! Use this to get: Source(u_i) = sum_f {-p}_f * S_fi.
-    call surfaceIntegratePressure
+    call gradp_and_sources(p)
 
     ! Correction is: u = u* + sum_f {-p}_f * S_fi / ap.
 
@@ -439,22 +426,54 @@ subroutine calcp_piso
     v(1:numCells) = v(1:numCells) + sv*apv
     w(1:numCells) = w(1:numCells) + sw*apw
 
+    !+++
+
     ! 
     ! Correct mass fluxes (and velocity) at pressure boundaries
     !
+
+    ! Correct mass fluxes at periodic and pressure faces:
+    iPer = 0
+    l = numInnerFaces
+            
     do ib=1,numBoundaries
+
+      if (  bctype(ib) == 'periodic' ) then
+
+        iPer = iPer + 1 ! found one periodic boundary pair
+
+        ! Loop trough periodic boundary faces
+        do i=1,nfaces(ib)
+
+          if = startFace(ib) + i
+          ijp = owner(if)
+
+          iftwin = startFaceTwin(iPer) + i
+          ijn = owner(iftwin)
+
+          ! l is in interval [numInnerFaces+1, numInnerFaces+numPeriodic]
+          l = l + 1
+
+          ! (icell,jcell) matrix element - the same as (jcell,icel) 
+          ! since pressure poisson equation is symmetric:
+          k = icell_jcell_csr_index(l)
+
+          ! Correct mass fluxes trough these faces 
+          flmass(if)  = flmass(if)  + a(k) * (p(ijn)-p(ijp)) 
+          flmass(iftwin) = flmass(if)
+
+        end do 
+
       
-      if ( bctype(ib) == 'pressure' ) then
+      elseif ( bctype(ib) == 'pressure' ) then
 
         do i=1,nfaces(ib)
 
-          iface = startFace(ib) + i
-          ijp = owner(iface)
+          if = startFace(ib) + i
+          ijp = owner(if)
           ijb = iBndValueStart(ib) + i
-          call facefluxmassCorrPressBnd( ijp, ijb, &
-                                         xf(iface), yf(iface), zf(iface), &
-                                         arx(iface), ary(iface), arz(iface), &
-                                         flmass(iface) )
+
+          call facefluxmassCorrPressBnd( ijp, ijb, xf(if), yf(if), zf(if), arx(if), ary(if), arz(if), flmass(if) )
 
         end do
 
@@ -466,8 +485,8 @@ subroutine calcp_piso
     ! Explicit correction of boundary conditions 
     call updateVelocityAtBoundary
 
-  !== END: PISO Corrector loop =========================================
-  enddo
+  
+  enddo !== END: PISO Corrector loop ==============================================================
                
   ! Correct driving force for a constant mass flow rate simulation:
   if(const_mflux) call constant_mass_flow_forcing                                                                                                        

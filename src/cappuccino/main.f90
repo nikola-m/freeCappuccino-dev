@@ -75,7 +75,10 @@ program cappuccino
   use statistics
   use monitors
   use timescale
-  use utils, only: show_logo
+#ifdef LIS
+  use LIS_linear_solvers, only: lis_destroy_solver
+#endif
+  use utils, only: show_logo, say_goodbye
 
   implicit none
 
@@ -193,24 +196,16 @@ program cappuccino
       !  Simulation management - residuals, loop control, output, etc.
       !---------------------------------------------------------------
 
+
       ! Check normalized residual and stop program if residuals diverge
       ! We check here only residual norms of u-mom, v-mom, w-mom 
       source = max( resor(1),resor(2),resor(3) ) 
       
       if( source.gt.slarge ) then
-        write(6,"(//,10x,a)") "*** Program terminated -  iterations diverge ***" 
+        write(6,'(//,a)') " *** Program terminated -  iterations diverge! ***" 
         stop
       endif
 
-      ! If residuals fall to level below tolerance level - simulation is finished.
-      if( .not.ltransient .and. source.lt.tolerance ) then
-
-        call write_restart_files
-        call writefiles
-        write(6,"(//,10x,a)") "*** Successful end -  iterations converged ***" 
-        exit time_loop
-
-      end if
 
       if (ltransient) then 
 
@@ -227,7 +222,7 @@ program cappuccino
           call calc_statistics 
 
           ! Write field values after nzapis iterations or at the end of time-dependent simulation:
-          if( mod(itime,nzapis).eq.0  .or. itime.eq.numstep ) then
+          if( mod(itime,nzapis).eq.0  .or. (itime-itimes+1).eq.numstep ) then
 
             call write_restart_files
             call writefiles
@@ -238,20 +233,48 @@ program cappuccino
        
         endif
 
+
+      else ! steady state
+     
+          !  Observe change in values during simulation
+          call log_monitored_values
+
+
+          ! Write field values after nzapis iterations or at the end of false-time-stepping simulation:
+          if( ( mod(itime,nzapis).eq.0 .or. (itime-itimes+1).eq.numstep ) ) then
+           
+            call write_restart_files
+            call writefiles   
+          
+          endif
+
+
+          ! If residuals fall below tolerance level - simulation is finished.
+          if( source.lt.tolerance ) then
+           
+            call write_restart_files
+            call writefiles
+           
+            write(6,'(//,a)') " *** Successful end -  iterations converged! ***" 
+            exit time_loop
+            
+          end if
+
+
       end if 
+
 
     end do iteration_loop
 
-    ! Write field values after nzapis iterations or at the end of false-time-stepping simulation:
-    if(.not.ltransient .and. ( mod(itime,nzapis).eq.0 .or. (itime-itimes+1).eq.numstep ) ) then
 
-      call write_restart_files
-      call writefiles
-      
-    endif
-
-    if(ltransient) call flush(6)
+    ! if(ltransient) call flush(6)
 
   end do time_loop
+
+#ifdef LIS
+  call lis_destroy_solver
+#endif
+
+  call say_goodbye
 
 end program

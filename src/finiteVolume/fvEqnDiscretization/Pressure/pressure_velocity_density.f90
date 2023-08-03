@@ -127,7 +127,7 @@ subroutine pressure_velocity_density_coupling
     ! write(maxno,'(i5)') nsw(ip)
     ! write(tol,'(es9.2)') sor(ip)
     ! write(options,'(a)') "-i gmres -restart [20] -p ilut -maxiter "//adjustl(maxno)//"-tol "//adjustl(tol)
-    ! call solve_csr( numCells, nnz, ioffset, ja, a, su, pp )
+    ! call solve_csr( numCells, nnz, ia, ja, a, su, pp )
 
    
     do istage=1,nipgrad

@@ -26,10 +26,11 @@ module linear_solvers
   use types
   use parameters
   use geometry, only: numCells,numTotal
-  use sparse_matrix, only: nnz, ioffset, ja, a, diag
-  use LIS_linear_solvers, only: lis_spsolve
+  use sparse_matrix, only: nnz, ia, ja, a, diag
 
   implicit none
+
+  real(dp), dimension(:), allocatable :: res,reso,pk,zk,d,uk,vk
 
   public
 
@@ -61,19 +62,19 @@ subroutine csrsolve(solver, fi, rhs, res0, itr_max, tol_abs, tol_rel, chvar)
 
   if( solver .eq. 'gauss-seidel') then
 
-    call GaussSeidel( numCells, nnz, ioffset, ja, a, diag, fi(1:numCells), rhs, res0, itr_max, tol_abs, tol_rel, chvar, ltest )
+    call GaussSeidel( numCells, nnz, ia, ja, a, diag, fi(1:numCells), rhs, res0, itr_max, tol_abs, tol_rel, chvar, ltest )
 
   elseif( solver .eq. 'dpcg' ) then
 
-    call dpcg( numCells, nnz, ioffset, ja, a, diag, fi(1:numCells), rhs, res0, itr_max, tol_abs, tol_rel, chvar, ltest )
+    call dpcg( numCells, nnz, ia, ja, a, diag, fi(1:numCells), rhs, res0, itr_max, tol_abs, tol_rel, chvar, ltest )
 
   elseif( solver .eq. 'iccg' ) then 
 
-    call iccg( numCells, nnz, ioffset, ja, a, diag, fi(1:numCells), rhs, res0, itr_max, tol_abs, tol_rel, chvar, ltest )
+    call iccg( numCells, nnz, ia, ja, a, diag, fi(1:numCells), rhs, res0, itr_max, tol_abs, tol_rel, chvar, ltest )
 
   elseif( solver .eq. 'bicgstab' ) then  
 
-    call bicgstab( numCells, nnz, ioffset, ja, a, diag, fi(1:numCells), rhs, res0, itr_max, tol_abs, tol_rel, chvar, ltest ) 
+    call bicgstab( numCells, nnz, ia, ja, a, diag, fi(1:numCells), rhs, res0, itr_max, tol_abs, tol_rel, chvar, ltest ) 
 
   elseif( solver .eq. 'pmgmres' ) then 
 
@@ -81,15 +82,7 @@ subroutine csrsolve(solver, fi, rhs, res0, itr_max, tol_abs, tol_rel, chvar)
     ! Here we have hardcoded the restart parameter - m in restarted GMRES algorithm - GMRES(m), to m=4. 
     ! Play with this number if you want, the greater like m=20, better the convergence, but much more memory is required.
 
-    call pmgmres_ilu( numCells, nnz, ioffset, ja, a, diag, fi(1:numCells), rhs, res0, itr_max, 4, tol_abs, tol_rel, chvar, ltest )
-
-  else
-
-    !
-    ! If nothing above is chosen, we devert to solvers from LIS library
-    !
-
-      call lis_spsolve( solver, fi(1:numCells), rhs, chvar )
+    call pmgmres_ilu( numCells, nnz, ia, ja, a, diag, fi(1:numCells), rhs, res0, itr_max, 4, tol_abs, tol_rel, chvar, ltest )
 
 
   endif
@@ -100,7 +93,7 @@ end subroutine
 
 !***********************************************************************
 !
-subroutine GaussSeidel( n, nnz, ioffset, ja, a, diag, fi, rhs, resor, itr_max, tol_abs, tol_rel, chvar, verbose )
+subroutine GaussSeidel( n, nnz, ia, ja, a, diag, fi, rhs, resor, itr_max, tol_abs, tol_rel, chvar, verbose )
 !
 !***********************************************************************
 !
@@ -117,7 +110,7 @@ subroutine GaussSeidel( n, nnz, ioffset, ja, a, diag, fi, rhs, resor, itr_max, t
 !
   integer, intent(in) :: n                              ! Number of unknowns, length of a solution vector
   integer, intent(in) :: nnz                            ! Number of non-zero elements in sparse matrix
-  integer, dimension(n+1), intent(in) :: ioffset        ! The offsets of each row in coef array
+  integer, dimension(n+1), intent(in) :: ia        ! The offsets of each row in coef array
   integer, dimension(nnz), intent(in) :: ja             ! Columns array
   real(dp), dimension(nnz), intent(in) :: a             ! Coefficient array
   integer, dimension(n), intent(in) :: diag             ! Position of diagonal elements in coeff. array
@@ -135,13 +128,13 @@ subroutine GaussSeidel( n, nnz, ioffset, ja, a, diag, fi, rhs, resor, itr_max, t
 !
   integer :: i, k, l, itr_used
   real(dp) :: res0, rsm, resl, factor
-  real(dp), dimension(:), allocatable :: res                         ! Residual vector
+
 
 !
 ! Start iterations
 !
 
-  allocate( res(n))
+  ! allocate( res(n))
 
   itr_used = 0
   factor = 0.0
@@ -153,7 +146,7 @@ subroutine GaussSeidel( n, nnz, ioffset, ja, a, diag, fi, rhs, resor, itr_max, t
 !
   do i=1,n
     res(i) = rhs(i) 
-    do k = ioffset(i),ioffset(i+1)-1
+    do k = ia(i),ia(i+1)-1
       res(i) = res(i) -  a(k) * fi( ja(k) ) 
     enddo
     fi(i) = fi(i) + res(i)/(a( diag(i) )+small)   
@@ -203,14 +196,14 @@ subroutine GaussSeidel( n, nnz, ioffset, ja, a, diag, fi, rhs, resor, itr_max, t
   write(*,'(3a,1PE10.3,a,1PE10.3,a,I0)') '  Gauss-Seidel:  Solving for ',trim( chvar ), &
   ', Initial residual = ',resor,', Final residual = ',resl/factor,', No Iterations ',itr_used 
 
-  deallocate( res )
+  ! deallocate( res )
 
 end subroutine
 
 
 !***********************************************************************
 !
-subroutine dpcg( n, nnz, ioffset, ja, a, diag, fi, rhs, resor, itr_max, tol_abs, tol_rel, chvar, verbose )
+subroutine dpcg( n, nnz, ia, ja, a, diag, fi, rhs, resor, itr_max, tol_abs, tol_rel, chvar, verbose )
 !
 !***********************************************************************
 !
@@ -227,7 +220,7 @@ subroutine dpcg( n, nnz, ioffset, ja, a, diag, fi, rhs, resor, itr_max, tol_abs,
 !
   integer, intent(in) :: n                              ! Number of unknowns, length of a solution vector
   integer, intent(in) :: nnz                            ! Number of non-zero elements in sparse matrix
-  integer, dimension(n+1), intent(in) :: ioffset        ! The offsets of each row in coef array
+  integer, dimension(n+1), intent(in) :: ia        ! The offsets of each row in coef array
   integer, dimension(nnz), intent(in) :: ja             ! Columns array
   real(dp), dimension(nnz), intent(in) :: a             ! Coefficient array
   integer, dimension(n), intent(in) :: diag             ! Position of diagonal elements in coeff. array
@@ -245,13 +238,12 @@ subroutine dpcg( n, nnz, ioffset, ja, a, diag, fi, rhs, resor, itr_max, tol_abs,
   integer :: i, k, l, itr_used
   real(dp) :: res0, rsm, resl, factor
   real(dp) :: s0, sk, alf, bet, pkapk
-  real(dp), dimension(:), allocatable :: res,pk,zk
 
 !
 ! Initalize working arrays
 !
 
-  allocate( res(n), pk(n), zk(n) )
+  ! allocate( res(n), pk(n), zk(n) )
 
   factor = 0.0_dp
   pk = 0.0_dp
@@ -263,7 +255,7 @@ subroutine dpcg( n, nnz, ioffset, ja, a, diag, fi, rhs, resor, itr_max, tol_abs,
 !
   do i=1,n
     res(i) = rhs(i) 
-    do k = ioffset(i),ioffset(i+1)-1
+    do k = ia(i),ia(i+1)-1
       res(i) = res(i) -  a(k) * fi( ja(k) ) 
     enddo
   enddo
@@ -315,7 +307,7 @@ subroutine dpcg( n, nnz, ioffset, ja, a, diag, fi, rhs, resor, itr_max, tol_abs,
 !
   do i=1,n
     zk(i) = 0.0_dp 
-    do k = ioffset(i),ioffset(i+1)-1
+    do k = ia(i),ia(i+1)-1
       zk(i) = zk(i) + a(k) * pk( ja(k) ) 
     enddo
   enddo
@@ -362,14 +354,14 @@ subroutine dpcg( n, nnz, ioffset, ja, a, diag, fi, rhs, resor, itr_max, tol_abs,
   write(*,'(3a,1PE10.3,a,1PE10.3,a,I0)') '  PCG(Jacobi):  Solving for ',trim(chvar),', Initial residual = ',resor, &
   ', Final residual = ',resl/factor,', No Iterations ',itr_used
 
-  deallocate( res, pk, zk )
+  ! deallocate( res, pk, zk )
 
 end subroutine
 
 
 !***********************************************************************
 !
-subroutine iccg( n, nnz, ioffset, ja, a, diag, fi, rhs, resor, itr_max, tol_abs, tol_rel, chvar, verbose )
+subroutine iccg( n, nnz, ia, ja, a, diag, fi, rhs, resor, itr_max, tol_abs, tol_rel, chvar, verbose )
 !
 !***********************************************************************
 !
@@ -386,7 +378,7 @@ subroutine iccg( n, nnz, ioffset, ja, a, diag, fi, rhs, resor, itr_max, tol_abs,
 !
   integer, intent(in) :: n                              ! Number of unknowns, length of a solution vector
   integer, intent(in) :: nnz                            ! Number of non-zero elements in sparse matrix
-  integer, dimension(n+1), intent(in) :: ioffset        ! The offsets of each row in coef array
+  integer, dimension(n+1), intent(in) :: ia        ! The offsets of each row in coef array
   integer, dimension(nnz), intent(in) :: ja             ! Columns array
   real(dp), dimension(nnz), intent(in) :: a             ! Coefficient array
   integer, dimension(n), intent(in) :: diag             ! Position of diagonal elements in coeff. array
@@ -405,14 +397,12 @@ subroutine iccg( n, nnz, ioffset, ja, a, diag, fi, rhs, resor, itr_max, tol_abs,
   integer :: i, k, l, itr_used
   real(dp) :: res0, rsm, resl, factor
   real(dp) :: s0, sk, alf, bet, pkapk
-  real(dp), dimension(:), allocatable :: pk,zk,d
-  real(dp), dimension(:), allocatable :: res                         ! Residual vector
 
 !
 ! Initalize working arrays
 !
 
-  allocate( res(n), pk(n), zk(n), d(n) )
+  ! allocate( res(n), pk(n), zk(n), d(n) )
 
   factor = 0.0_dp
   pk = 0.0_dp
@@ -426,14 +416,13 @@ subroutine iccg( n, nnz, ioffset, ja, a, diag, fi, rhs, resor, itr_max, tol_abs,
 
   do i=1,n
     res(i) = rhs(i) 
-    do k = ioffset(i),ioffset(i+1)-1
+    do k = ia(i),ia(i+1)-1
       res(i) = res(i) -  a(k) * fi( ja(k) ) 
     enddo
   enddo
 
   ! L^1-norm of residual
   res0=sum( abs(res) )
-  ! res0 = sqrt( sum( (res**2)/dble(n)) )
 
     ! Initially converged solution
     if( res0.lt.tol_abs ) then
@@ -449,7 +438,7 @@ subroutine iccg( n, nnz, ioffset, ja, a, diag, fi, rhs, resor, itr_max, tol_abs,
 !
   do i=1,n
     d(i) = a( diag(i) )
-    do k = ioffset(i), diag(i)-1
+    do k = ia(i), diag(i)-1
       d(i) = d(i) - a( k )**2 * d( ja( k )) 
     end do
     d(i) =  1.0_dp / d(i)
@@ -468,7 +457,7 @@ subroutine iccg( n, nnz, ioffset, ja, a, diag, fi, rhs, resor, itr_max, tol_abs,
 !
   do i=1,n
     zk(i) = res(i)
-    do k = ioffset(i), diag(i)-1
+    do k = ia(i), diag(i)-1
       zk(i) = zk(i) -  a( k ) * zk( ja( k ))
     end do
     zk(i) = zk(i)*d(i)
@@ -479,7 +468,7 @@ subroutine iccg( n, nnz, ioffset, ja, a, diag, fi, rhs, resor, itr_max, tol_abs,
 ! Backward substitution
 !
   do i=n,1,-1
-    do k = diag(i)+1, ioffset(i+1)-1
+    do k = diag(i)+1, ia(i+1)-1
       zk(i) = zk(i) - a( k ) * zk( ja( k ))
     end do
     zk(i) = zk(i)*d(i)
@@ -503,7 +492,7 @@ subroutine iccg( n, nnz, ioffset, ja, a, diag, fi, rhs, resor, itr_max, tol_abs,
 !
   do i=1,n
     zk(i) = 0.0_dp 
-    do k = ioffset(i),ioffset(i+1)-1
+    do k = ia(i),ia(i+1)-1
       zk(i) = zk(i) + a(k) * pk( ja(k) ) 
     enddo
   enddo
@@ -551,12 +540,12 @@ subroutine iccg( n, nnz, ioffset, ja, a, diag, fi, rhs, resor, itr_max, tol_abs,
   write(*,'(3a,1PE10.3,a,1PE10.3,a,I0)') '  PCG(IC0):  Solving for ',trim( chvar ), &
   ', Initial residual = ',resor,', Final residual = ',resl/factor,', No Iterations ',itr_used
 
-  deallocate( res, pk, zk, d )
+  ! deallocate( res, pk, zk, d )
 
 end subroutine
 
 
-subroutine bicgstab( n, nnz, ioffset, ja, a, diag, fi, rhs, resor, itr_max, tol_abs, tol_rel, chvar, verbose )
+subroutine bicgstab( n, nnz, ia, ja, a, diag, fi, rhs, resor, itr_max, tol_abs, tol_rel, chvar, verbose )
 !
 !***********************************************************************
 !
@@ -573,7 +562,7 @@ subroutine bicgstab( n, nnz, ioffset, ja, a, diag, fi, rhs, resor, itr_max, tol_
 !
   integer, intent(in) :: n                              ! Number of unknowns, length of a solution vector
   integer, intent(in) :: nnz                            ! Number of non-zero elements in sparse matrix
-  integer, dimension(n+1), intent(in) :: ioffset        ! The offsets of each row in coef array
+  integer, dimension(n+1), intent(in) :: ia        ! The offsets of each row in coef array
   integer, dimension(nnz), intent(in) :: ja             ! Columns array
   real(dp), dimension(nnz), intent(in) :: a             ! Coefficient array
   integer, dimension(n), intent(in) :: diag             ! Position of diagonal elements in coeff. array
@@ -592,11 +581,9 @@ subroutine bicgstab( n, nnz, ioffset, ja, a, diag, fi, rhs, resor, itr_max, tol_
   integer :: i, k, l, itr_used
   real(dp) :: res0, rsm, resl, factor
   real(dp) :: alf, beto, gam, bet, om, ukreso
-  real(dp), dimension(:), allocatable :: reso,pk,uk,zk,vk,d
-  real(dp), dimension(:), allocatable :: res                 ! Residual vector
 
 
-  allocate( res(n), reso(n), pk(n), uk(n), zk(n), vk(n), d(n) )
+  ! allocate( res(n), reso(n), pk(n), uk(n), zk(n), vk(n), d(n) )
 
 !
 ! Calculate initial residual vector and the norm
@@ -604,14 +591,13 @@ subroutine bicgstab( n, nnz, ioffset, ja, a, diag, fi, rhs, resor, itr_max, tol_
 
   do i=1,n
     res(i) = rhs(i) 
-    do k = ioffset(i),ioffset(i+1)-1
+    do k = ia(i),ia(i+1)-1
       res(i) = res(i) -  a(k) * fi( ja(k) ) 
     enddo
   enddo
 
   ! L1-norm of residual
   res0=sum(abs(res))
-  ! res0 = sqrt( sum( (res**2)/dble(n)) )
 
     if(res0.lt.tol_abs) then
       write(*,'(3a,1PE10.3,a,1PE10.3,a)') '  BiCGStab(ILU(0)):  Solving for ',trim(chvar), &
@@ -626,8 +612,8 @@ subroutine bicgstab( n, nnz, ioffset, ja, a, diag, fi, rhs, resor, itr_max, tol_
 !
   do i=1,n
     d(i) = a( diag(i) )
-    do k = ioffset(i), diag(i)-1
-      do l = diag( ja(k) ), ioffset( ja( k )+1 )-1
+    do k = ia(i), diag(i)-1
+      do l = diag( ja(k) ), ia( ja( k )+1 )-1
         ! kolona u kojoj je trenutni dijagonalni element je i
         ! kada je pronadje izlazi sa poslednjom vrednosti l indeksa:
         if ( ja( l ) == i ) exit 
@@ -677,7 +663,7 @@ subroutine bicgstab( n, nnz, ioffset, ja, a, diag, fi, rhs, resor, itr_max, tol_
 !
   do i=1,n
     zk(i) = pk(i)
-    do k = ioffset(i), diag(i)-1
+    do k = ia(i), diag(i)-1
       zk(i) = zk(i) -  a( k ) * zk( ja( k ))
     end do
     zk(i) = zk(i)*d(i)
@@ -690,7 +676,7 @@ subroutine bicgstab( n, nnz, ioffset, ja, a, diag, fi, rhs, resor, itr_max, tol_
 ! Backward substitution
 !
   do i=n,1,-1
-    do k = diag(i)+1, ioffset(i+1)-1
+    do k = diag(i)+1, ia(i+1)-1
       zk(i) = zk(i) - a( k ) * zk( ja( k ))
     end do
     zk(i) = zk(i)*d(i)
@@ -702,7 +688,7 @@ subroutine bicgstab( n, nnz, ioffset, ja, a, diag, fi, rhs, resor, itr_max, tol_
 !
   do i=1,n
     uk(i) = 0.0_dp
-    do k = ioffset(i),ioffset(i+1)-1
+    do k = ia(i),ia(i+1)-1
       uk(i) = uk(i) +  a(k) * zk( ja(k) ) 
     enddo
   enddo
@@ -727,7 +713,7 @@ subroutine bicgstab( n, nnz, ioffset, ja, a, diag, fi, rhs, resor, itr_max, tol_
 !
   do i=1,n
     zk(i) = res(i)
-    do k = ioffset(i), diag(i)-1
+    do k = ia(i), diag(i)-1
       zk(i) = zk(i) -  a( k ) * zk( ja( k ) )
     end do
     zk(i) = zk(i)*d(i)
@@ -739,7 +725,7 @@ subroutine bicgstab( n, nnz, ioffset, ja, a, diag, fi, rhs, resor, itr_max, tol_
 ! Backward substitution
 !
   do i=n,1,-1
-    do k = diag(i)+1, ioffset(i+1)-1
+    do k = diag(i)+1, ia(i+1)-1
       zk(i) = zk(i) - a( k ) * zk( ja( k ) )
     end do
     zk(i) = zk(i)*d(i)
@@ -750,7 +736,7 @@ subroutine bicgstab( n, nnz, ioffset, ja, a, diag, fi, rhs, resor, itr_max, tol_
 !
   do i=1,n
     vk(i) = 0.0_dp
-    do k = ioffset(i),ioffset(i+1)-1
+    do k = ia(i),ia(i+1)-1
       vk(i) = vk(i) +  a(k) * zk( ja(k) ) 
     enddo
   enddo  
@@ -795,7 +781,7 @@ subroutine bicgstab( n, nnz, ioffset, ja, a, diag, fi, rhs, resor, itr_max, tol_
   write(*,'(3a,1PE10.3,a,1PE10.3,a,I0)') '  BiCGStab(ILU(0)):  Solving for ',trim(chvar), &
   ', Initial residual = ',resor,', Final residual = ',resl/factor,', No Iterations ',itr_used
 
-  deallocate( res, reso, pk, uk, zk, vk, d )
+  ! deallocate( res, reso, pk, uk, zk, vk, d )
 
 end subroutine
 
@@ -874,7 +860,7 @@ subroutine pmgmres_ilu ( n, nz_num, ia, ja, a, ua, x, rhs, resor, itr_max, mr, &
 !
 !    Input, real ( kind = 8 ) A(NZ_NUM), the matrix values.
 !
-!    Input, integer ( kind = 4 ) AU(N), integer pointer to the matrix values at
+!    Input, integer ( kind = 4 ) UА(N), integer pointer to the matrix values at
 !    diagonal.
 !
 !    Input/output, real ( kind = 8 ) X(N); on input, an approximation to
@@ -927,10 +913,10 @@ subroutine pmgmres_ilu ( n, nz_num, ia, ja, a, ua, x, rhs, resor, itr_max, mr, &
   integer ( kind = 4 ), intent(in) :: ja(nz_num)
   integer ( kind = 4 ) k
   integer ( kind = 4 ) k_copy
-  real ( kind = 8 ) l(ia(n+1)+1)
+  real ( kind = 8 ),dimension(:), allocatable ::  l
   real ( kind = 8 ) mu
-  real ( kind = 8 ) r(n)
-  real ( kind = 8 ) rho
+  real ( kind = 8 ), dimension(:), allocatable :: r
+  real ( kind = 8 ) rho, resl
   real ( kind = 8 ), intent(out) :: resor
   real ( kind = 8 ) factor
   real ( kind = 8 ) rho_tol
@@ -939,7 +925,7 @@ subroutine pmgmres_ilu ( n, nz_num, ia, ja, a, ua, x, rhs, resor, itr_max, mr, &
   real ( kind = 8 ), intent(in) :: tol_abs
   real ( kind = 8 ), intent(in) :: tol_rel
   integer ( kind = 4 ), intent(in) :: ua(n)
-  real ( kind = 8 ) v(n,mr+1)
+  real ( kind = 8 ), dimension(:,:), allocatable :: v
   logical verbose
   real ( kind = 8 ), intent(inout) :: x(n)
   real ( kind = 8 ) y(mr+1)
@@ -949,6 +935,8 @@ subroutine pmgmres_ilu ( n, nz_num, ia, ja, a, ua, x, rhs, resor, itr_max, mr, &
   rho_tol = 0. ! To eliminate 'uninitialized' warning.
   k_copy = 0   ! To eliminate 'uninitialized' warning.
   factor = 0.
+
+  allocate(r(n), v(n,mr+1), l(ia(n+1)+1))
 
   ! NOTE: In our case the elements are already aranged
   ! call rearrange_cr ( n, nz_num, ia, ja, a )
@@ -968,26 +956,18 @@ subroutine pmgmres_ilu ( n, nz_num, ia, ja, a, ua, x, rhs, resor, itr_max, mr, &
     !   enddo
     ! enddo
 
-    do i=1,n
-      r(i) = rhs(i) - sum( a( ia(i) : (ia(i+1)-1) ) * x( ja( ia(i) : (ia(i+1)-1) ) ) )
-    end do
-
-    ! call ax_cr ( n, nz_num, ia, ja, a, x, r )
-    ! r(1:n) = rhs(1:n) - r(1:n)
-
-    ! ! rho = sqrt ( dot_product ( r, r ) )
-    rho = sum ( abs ( r ) )
+    call ax_cr ( n, nz_num, ia, ja, a, x, r )
+    r(1:n) = rhs(1:n) - r(1:n)
 
     if ( itr == 1 ) then
 
-      ! Normalization factor for scaled residuals
-      factor = sum( abs( a( ua(1:n) ) * x(1:n) )) + 1e-20
+      resor = sum ( abs ( r ) )
 
-      resor = rho / factor
-
-      rho_tol = rho * tol_rel
+      rho_tol = resor * tol_rel
 
     endif
+
+    rho = sqrt ( dot_product ( r, r ) )
 
     if ( verbose ) then
       write ( *, '(a,i4,a,g14.6)' ) '  ITR = ', itr, '  Residual = ', rho
@@ -1048,15 +1028,15 @@ subroutine pmgmres_ilu ( n, nz_num, ia, ja, a, ua, x, rhs, resor, itr_max, mr, &
       h(k+1,k) = 0.0D+00
       call mult_givens ( c(k), s(k), k, g )
 
-      rho = abs ( g(k+1) )
+      resl = abs ( g(k+1) )
 
       itr_used = itr_used + 1
 
       if ( verbose ) then
-        write ( *, '(a,i4,a,g14.6)' ) '  K = ', k, '  Residual = ', rho
+        write ( *, '(a,i4,a,g14.6)' ) '  K = ', k, '  Residual = ', resl
       end if
 
-      if ( rho <= rho_tol .or. rho <= tol_abs ) then
+      if ( resl/resor <= rho_tol .or. resl <= tol_abs ) then
         exit mr_loop
       end if
 
@@ -1074,7 +1054,7 @@ subroutine pmgmres_ilu ( n, nz_num, ia, ja, a, ua, x, rhs, resor, itr_max, mr, &
       x(i) = x(i) + dot_product ( v(i,1:k+1), y(1:k+1) )
     end do
 
-    if ( rho <= rho_tol .or. rho <= tol_abs ) then
+    if ( resl/resor <= rho_tol .or. resl <= tol_abs ) then
       exit iter_loop
     end if
 
@@ -1084,13 +1064,14 @@ subroutine pmgmres_ilu ( n, nz_num, ia, ja, a, ua, x, rhs, resor, itr_max, mr, &
     write ( *, '(a)' ) ' '
     write ( *, '(a)' ) 'PMGMRES_ILU_CR:'
     write ( *, '(a,i6)' ) '  Iterations = ', itr_used
-    write ( *, '(a,g14.6)' ) '  Final residual = ', rho
+    write ( *, '(a,g14.6)' ) '  Final residual = ', resl
   end if
 
   ! Write linear solver report:
   write(*,'(a,i0,3a,1PE10.3,a,1PE10.3,a,I0)') '  PMGMRES_ILU(',mr,'):  Solving for ',trim(chvar), &
-  ', Initial residual = ',resor,', Final residual = ',rho/factor,', No Iterations ',itr_used
+  ', Initial residual = ',resor,', Final residual = ',resl,', No Iterations ',itr_used
 
+  deallocate(r, v, l)
 
   return
 end
