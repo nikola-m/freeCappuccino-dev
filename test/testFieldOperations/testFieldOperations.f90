@@ -1,4 +1,5 @@
   program testFieldOperation
+  use types
   use utils
   use geometry
   use tensorFields
@@ -9,6 +10,7 @@
   implicit none
 
   integer :: i
+  real(dp) :: alpha  = 3.14_dp
 
 ! Locals
   !integer :: ierr
@@ -58,25 +60,25 @@ vec2 = volVectorField("Vector2", &
 !
   phi = vec1*vec2
 
-  write(*,'(a)') ' Dot product of two vectors:'
+  write(*,'(a)') ' Dot product of two vector fields:'
   write(*,'(e13.6)') phi%mag(1:5)
-  write(*,'(a)') ' '
+  write(*,'(a)') ' ...'
 
 !
 ! Test cross product of two vector fields
 !
   resVec = vec1.x.vec2
 
-  write(*,'(a)') ' Cross product of two vectrors '
-  write(*,'(3(e13.6,1x))') resVec%x(1:3),resVec%y(1:3),resVec%z(1:3)
-  write(*,'(a)') ' '
+  write(*,'(a)') ' Cross product of two vector fields:'
+  write(*,'(3(e13.6,1x))') resVec%x(1:5),resVec%y(1:5),resVec%z(1:5)
+  write(*,'(a)') ' ...'
 
 !
 ! Tensor product of two vector fields
 !
   T = vec1.o.vec2
 
-  write(*,'(a)') ' Tensor product of two vectors: '
+  write(*,'(a)') ' Tensor product of two vector fields at a field point: '
   write(*,'(3(e13.6,1x))') T%xx(5),T%xy(5),T%xz(5)
   write(*,'(3(e13.6,1x))') T%yx(5),T%yy(5),T%yz(5)
   write(*,'(3(e13.6,1x))') T%zx(5),T%zy(5),T%zz(5)
@@ -87,7 +89,7 @@ vec2 = volVectorField("Vector2", &
 !
   T = .dev.T
 
-  write(*,'(a)') ' Deviatoric part of that tensor (at one point): '
+  write(*,'(a)') ' Deviatoric part of that tensor: '
   write(*,'(3(e13.6,1x))') T%xx(5),T%xy(5),T%xz(5)
   write(*,'(3(e13.6,1x))') T%yx(5),T%yy(5),T%yz(5)
   write(*,'(3(e13.6,1x))') T%zx(5),T%zy(5),T%zz(5)
@@ -95,15 +97,28 @@ vec2 = volVectorField("Vector2", &
 
   !...curl of a derived tensor field
 
-  resVec = .curl.(3.14_dp*T+T)
+  resVec = .curl.(alpha*T+T)
 
   ! ...set field name for vtk output file name:
   resVec % field_name = 'CurlField'
 
-  write(*,'(a)') ' ...curl of a derived tensor field '
+  write(*,'(a)') 'curl using a Hodge dual - uses derived tensor field as input '
   write(*,'(1x,a)') resVec%field_name
-  write(*,'(3(e15.8,1x))') resVec%x(1:3),resVec%y(1:3),resVec%z(1:3)
+  write(*,'(3(e15.8,1x))') resVec%x(1:2),resVec%y(1:20),resVec%z(1:20)
+  write(*,'(a)') ' ...'
+
+!
+! Now test vector identities: divergence of the curl is zero
+!
+
+  phi = fvxDiv( resVec )
+
+  write(*,'(a)') ' Divergence of a curl is zero'
+   do i=1,40
+    write(*,'(i0,1x,e15.8)') i,phi%mag(i)
+   enddo
   write(*,'(a)') ' '
+
 !
 ! Magnitude squared of a tensor field
 !
@@ -133,8 +148,8 @@ vec2 = volVectorField("Vector2", &
   ! resVec%field_name = 'gradient_field'
 
   write(*,'(a)') ' Magnitude of a linear field'
-  write(*,'(e15.8)') psi%mag(1:400)
-  write(*,'(a)') ' '
+  write(*,'(e15.8)') psi%mag(1:20)
+  write(*,'(a)') ' ...\n'
   write(*,'(a)') ' Gradient of a scalar field - fvx operation: '
   write(*,'(1x,a)') resVec%field_name
   do i=1,400
@@ -166,7 +181,7 @@ vec2 = volVectorField("Vector2", &
   vec3%z( 1:numCells ) = zc(1:numCells)
 
   D = Grad( vec3 )
-  T = .dev.(.symm.(D.o.D))
+  T = .dev.(.symm.(D*D))
 
   write(*,'(a)') ' Traceless symmetric part of the square of the velocity gradient tensor D (at one point): '
   do i=1,20
@@ -189,24 +204,14 @@ vec2 = volVectorField("Vector2", &
 ! if we suppose that velocity gradient tensor is stored in D.
 !
   ! D = Grad( vec1 )
-  ! psi = 0.5_dp *( .sq.(.tr.D)  - .tr.( D.o.D ) )
+  ! psi = 0.5_dp *( .sq.(.tr.D)  - .tr.( D*D ) )
   ! write(*,'(a)') ' Q criteria'
   ! do i=1,20
   !   write(*,'(e15.8)') psi%mag(i)
   ! enddo
   ! write(*,'(a)') ' '
 
-!
-! Now test vector identities: divergence of the curl is zero
-!
 
-  ! phi = fvxDiv( .curl.( ... ) )
-
-  ! write(*,'(a)') ' Divergence of a curl is zero'
-  !  do i=1,400
-  !   write(*,'(i0,1x,e15.8)') i,phi%mag(i)
-  !  enddo
-  ! write(*,'(a)') ' '
 
 !
 !  > Terminate.

@@ -13,10 +13,10 @@
 #  Thanks for using freeCappuccino.
 #
 # Make 'cappuccino' CFD solver:
-make execut=bin/cappuccino makefile_dir=src/cappuccino LDFLAGS=-O2\ -Wall LDLIBS=-llapack 
+make execut=bin/cappuccino makefile_dir=src/cappuccino LDFLAGS=-O3\ -cpp -DLIS -DLAPACK -Wall LDLIBS=-llapack -llis -fopenmp
 #
 # Make Field Operations test:
-make execut=test/testFieldOperations/testFieldOperations makefile_dir=test/testFieldOperations LDFLAGS=-O2\ -Wall LDLIBS=-llapack
+make execut=test/testFieldOperations/testFieldOperations makefile_dir=test/testFieldOperations LDFLAGS=-O2\ -cpp -Wall -DLAPACK LDLIBS=-llapack
 
 # Make Decomposition application:
 make execut=bin/decomposition makefile_dir=applications/Decomposition LDFLAGS=-O2\ -Wall LDLIBS=

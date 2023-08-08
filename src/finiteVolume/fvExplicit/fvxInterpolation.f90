@@ -7,9 +7,12 @@ module fvxInterpolation
 !  Module contains procedures for explicit manipulation of discrete tensor fields based on 
 !  finite volume computations and integral theorems (e.g. Gauss) of vector calculus.
 !  Discrete tensor fields are defined on a given finite volume mesh.
-!  That means we are expecting discrete volume/surface scalar/vector/tensor fields.
+!
 !  Included operations are:
-!  fvxInterpolation (vol<Scalar/Vector/Tensor>Field -> surface<Scalar/Vector/Tensor>Field)
+!  fvxInterpolation 
+!  
+!  Input -> Output:
+!  vol<Scalar/Vector/Tensor>Field -> surface<Scalar/Vector/Tensor>Field)
 !
 !  Author: Nikola Mirkov
 !  This is a part of freeCappuccino. 
@@ -21,8 +24,7 @@ module fvxInterpolation
 
  implicit none
 
-  ! The inerpolations that we do for e.g. divergence is hardcoded here
-  ! Recommended schemes are: 'central', 'cds', 'cdscorr'
+  ! Interpolation type: 'central' (uses gradients of variable), 'cds' (simple linear interpolation)
   character(len=10), parameter :: interpolation_scheme = 'central' 
 
   interface fvxInterpolate
@@ -34,7 +36,62 @@ module fvxInterpolation
 
  contains
 
+
 function fvxInterpolateScalar(phi) result(psi)
+!
+! Description:
+!  Creates surfaceScalarField from volScalarField by linear interpolation.
+! Usage:
+!   [type(surfaceScalarField)] psi = fvxInterpolate ( [type(volScalarField)] phi )
+!
+
+  implicit none
+
+  type(volScalarField), intent(in) :: phi
+!
+! > Result
+!
+  type(surfaceScalarField) :: psi
+!
+! > Local
+!
+  integer :: i,ijp,ijn,ijb,iface
+
+
+  psi = new_surfaceScalarField( numFaces )
+
+  psi%field_name = 'interpolated_field'
+
+  
+  !
+  ! > Inner faces contribution
+  !
+  do i=1,numInnerFaces
+
+    ijp = owner(i)
+    ijn = neighbour(i)
+
+    psi%mag (i) = face_value_cds(ijp, ijn, facint(i), phi%mag)
+
+  enddo
+
+  !
+  ! > Boundary faces contribution
+  !
+
+  do i=1,numBoundaryFaces
+
+    iface = numInnerFaces + i
+    ijb = numCells + i
+
+    psi%mag(iface) = phi%mag(ijb)
+
+  enddo
+
+end function fvxInterpolateScalar
+
+
+function fvxInterpolateScalar2(phi) result(psi)
 !
 ! Description:
 !  Creates surfaceScalarField from volScalarField by linear interpolation.
@@ -57,36 +114,136 @@ function fvxInterpolateScalar(phi) result(psi)
 
   integer :: i,ijp,ijn,ijb,iface
 
-!+-----------------------------------------------------------------------------+
 
   psi = new_surfaceScalarField( numFaces )
 
   psi%field_name = 'interpolated_field'
 
-    ! Calculate cell-centered gradient
-    dU = Grad( phi )
+  ! Calculate cell-centered gradient
+  dU = Grad( phi )
 
-  ! Interpolate to face
+  !
+  ! > Inner faces contribution
+  !
+  do i=1,numInnerFaces
 
-    ! Inner face
-    do i=1,numInnerFaces
-      ijp = owner(i)
-      ijn = neighbour(i)
-      psi%mag (i) = face_value( ijp, ijn, xf(i), yf(i), zf(i), facint(i), phi%mag(i), dU%x, dU%y, dU%z )
-    enddo
+    ijp = owner(i)
+    ijn = neighbour(i)
 
-    ! Contribution from boundaries
-    do i=1,numBoundaryFaces
-      iface = numInnerFaces + i
-      ijb = numCells + i
-      psi%mag(iface) = phi%mag(ijb)
-    enddo
+    psi%mag (i) = face_value(ijp, ijn, xf(i), yf(i), zf(i), facint(i), phi%mag, dU%x, dU%y, dU%z)
 
-end function fvxInterpolateScalar
+  enddo
+
+  !
+  ! > Boundary faces contribution
+  !
+
+  do i=1,numBoundaryFaces
+
+    iface = numInnerFaces + i
+    ijb = numCells + i
+
+    psi%mag(iface) = phi%mag(ijb)
+
+  enddo
+
+end function fvxInterpolateScalar2
 
 
 
 function fvxInterpolateVector(U) result(psi)
+!
+! Description:
+!  Creates surfaceVectorField from volVectorField by linear interpolation.
+! Usage:
+!   [type(surfaceVectorField)] psi = fvxInterpolate ( [type(volVectorField)] U )
+!
+
+  implicit none
+
+  type(volVectorField), intent(in) :: U
+!
+! > Result
+!
+  type(surfaceVectorField) :: psi
+!
+! > Locals
+!  
+  integer :: i,ijp,ijn,ijb,iface
+
+!+-----------------------------------------------------------------------------+
+
+  psi = new_surfaceVectorField( numFaces )
+
+  psi%field_name = 'interpolated_field'
+
+
+  ! Interpolate X-component to faces
+
+  !
+  ! > Inner faces contribution
+  !
+  do i=1,numInnerFaces
+    ijp = owner(i)
+    ijn = neighbour(i)
+    psi%x (i) = face_value_cds(ijp, ijn, facint(i), U%x)
+  enddo
+
+  !
+  ! > Boundary faces contribution
+  !
+  do i=1,numBoundaryFaces
+    iface = numInnerFaces + i
+    ijb = numCells + i
+    psi%x (iface) = U%x(ijb)
+  enddo
+
+
+  ! Interpolate Y-component to faces
+
+  !
+  ! > Inner faces contribution
+  !
+  do i=1,numInnerFaces
+    ijp = owner(i)
+    ijn = neighbour(i)
+    psi%y (i) = face_value_cds(ijp, ijn, facint(i), U%y)
+  enddo
+
+  !
+  ! > Boundary faces contribution
+  !
+  do i=1,numBoundaryFaces
+    iface = numInnerFaces + i
+    ijb = numCells + i
+    psi%y(iface) = U%y(ijb)
+  enddo
+
+
+  ! Interpolate Z-component to faces
+
+  !
+  ! > Inner faces contribution
+  !
+  do i=1,numInnerFaces
+    ijp = owner(i)
+    ijn = neighbour(i)
+    psi%z (i) = face_value_cds(ijp, ijn, facint(i), U%z)
+  enddo
+
+  !
+  ! > Boundary faces contribution
+  !
+  do i=1,numBoundaryFaces
+    iface = numInnerFaces + i
+    ijb = numCells + i
+    psi%z(iface) = U%z(ijb)
+  enddo
+
+end function fvxInterpolateVector
+
+
+function fvxInterpolateVector2(U) result(psi)
 !
 ! Description:
 !  Creates surfaceVectorField from volVectorField by linear interpolation.
@@ -175,7 +332,7 @@ function fvxInterpolateVector(U) result(psi)
     psi%z(iface) = U%z(ijb)
   enddo
 
-end function fvxInterpolateVector
+end function fvxInterpolateVector2
 
 
 !***********************************************************************
@@ -195,16 +352,16 @@ function face_value(ijp,ijn,xf,yf,zf,lambda,u,dUdx,dUdy,dUdz) result(ue)
   real(dp), dimension(numTotal) :: u
   real(dp), dimension(numCells) :: dUdx,dUdy,dUdz
 
-  if (interpolation_scheme == 'cdscorr') then 
-    ue = face_value_cds_corrected(ijp, ijn, xf, yf, zf, lambda, u, dUdx,dUdy,dUdz)  
+  select case( interpolation_scheme ) 
 
-  elseif (interpolation_scheme == 'central') then 
-    ue = face_value_central(ijp, ijn, xf, yf, zf, u, dUdx,dUdy,dUdz)
+    case ( 'cds' )
+      ue = face_value_cds(ijp,ijn, lambda, u) 
 
-  elseif (interpolation_scheme == 'cds') then 
-    ue = face_value_cds(ijp,ijn, lambda, u) 
+    case ( 'central' )
+      ue = face_value_central(ijp, ijn, xf, yf, zf, u, dUdx, dUdy, dUdz)
 
-  endif 
+  end select
+
 
 end function
 
@@ -228,14 +385,7 @@ end function
   real(dp) :: lambda
   real(dp), dimension(numTotal) :: fi
 
-  ! Locals
-  real(dp) :: fxn,fxp
-
-  ! Face interpolation factor
-  fxn=lambda 
-  fxp=1.0_dp-lambda
-
-  face_value = fi(ijp)*fxp+fi(ijn)*fxn
+  face_value = fi(ijp) + ( fi(ijn)-fi(ijp) )*lambda
 
   end function
 

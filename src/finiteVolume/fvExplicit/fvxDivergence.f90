@@ -7,11 +7,13 @@ module fvxDivergence
 !  Module contains procedures for explicit manipulation of discrete tensor fields based on 
 !  finite volume computations and integral theorems (e.g. Gauss) of vector calculus.
 !  Discrete tensor fields are defined on a given finite volume mesh.
-!  That means we are expecting discrete volume/surface scalar/vector/tensor fields.
+!
 !  Included operations are:
-!  fvxInterpolation (vol<Scalar/Vector/Tensor>Field -> surface<Scalar/Vector/Tensor>Field)
-!  fvxGrad         (vol<Scalar/Vector>Field ->vol<Vector/Tensor>Field)
-!  fvxDiv          (vol<Vector>Field ->vol<Scalar>Field) or (surface<Vector>Field ->vol<Scalar>Field)
+!  fvxDiv  
+!        
+!  Input -> Output:
+!  (vol<Vector>Field     -> vol<Scalar>Field) or 
+!  (surface<Vector>Field -> vol<Scalar>Field)
 !
 !  Author: Nikola Mirkov
 !  This is a part of freeCappuccino. 
@@ -21,19 +23,21 @@ module fvxDivergence
 use types
 use geometry
 use tensorFields
-use fvxInterpolation
+use fvxInterpolation, only: face_value, face_value_cds
 use fvxGradient, only : grad
 
 implicit none
 
 interface fvxDiv
   module procedure fvx_div_volVectorField
+  ! module procedure fvx_div_volVectorField2
   module procedure fvx_div_surfaceVectorField
 end interface
 
 public
 
 contains
+
 
 
 function fvx_div_volVectorField(U) result(phi)
@@ -58,9 +62,83 @@ function fvx_div_volVectorField(U) result(phi)
   integer :: i,ijp,ijn,ijb,iface
   real(dp) :: uf,vf,wf,dfxe
 
+
+  phi = new_volScalarField( numCells )
+
+  phi%field_name = 'divergence_field'
+
+  phi%mag = 0.0
+
+
+  !
+  ! > Inner faces contribution
+  !
+
+  inner_face_loop: do iface=1,numInnerFaces 
+
+    ijp = owner(i)
+    ijn = neighbour(i)
+
+    ! Value of the variable at cell-face center
+    uf = face_value_cds( ijp, ijn, facint(i), U%x)
+    vf = face_value_cds( ijp, ijn, facint(i), U%y)
+    wf = face_value_cds( ijp, ijn, facint(i), U%z)
+        
+    ! (interpolated mid-face value)x(area)
+    dfxe = uf*arx(i) + vf*ary(i) + wf*arz(i)
+
+    ! Accumulate contribution at cell center and neighbour.
+    phi%mag(ijp) = phi%mag(ijp) + dfxe
+    phi%mag(ijn) = phi%mag(ijn) - dfxe
+
+
+  enddo inner_face_loop
+
+
+  !
+  ! > Boundary faces contribution
+  !
+
+  boundary_face_loop: do i=1,numBoundaryFaces
+
+    iface = numInnerFaces + i
+    ijp = owner(iface)
+    ijb = numCells + i
+
+    dfxe = U%x(ijb)*arx(iface)+ U%y(ijb)*ary(iface) + U%z(ijb)*arz(iface) 
+
+    phi%mag(ijp) = phi%mag(ijp) + dfxe
+
+  enddo boundary_face_loop
+
+end function fvx_div_volVectorField
+
+
+
+function fvx_div_volVectorField2(U) result(phi)
+!
+! Description:
+!  Divergence of a volume vector field.
+! Usage:
+!    [type(volumeScalarField)] phi = fvxDiv( [type(volumeVectorField)] U )
+!
+
+  implicit none
+
+  type(volVectorField), intent(in) :: U
+!
+! > Result
+!
+  type(volScalarField) :: phi
+
+!
+! > Local
+!
+  integer :: i,ijp,ijn,ijb,iface
+  real(dp) :: uf,vf,wf,dfxe
+
   type(volTensorField) :: D
 
-!+-----------------------------------------------------------------------------+
 
   phi = new_volScalarField( numCells )
 
@@ -70,8 +148,12 @@ function fvx_div_volVectorField(U) result(phi)
 
   D = Grad( U )
 
-  ! Inner faces
-  do i=1,numInnerFaces
+  !
+  ! > Inner faces contribution
+  !
+
+  inner_face_loop: do iface=1,numInnerFaces 
+
     ijp = owner(i)
     ijn = neighbour(i)
 
@@ -84,22 +166,30 @@ function fvx_div_volVectorField(U) result(phi)
     dfxe = uf*arx(i) + vf*ary(i) + wf*arz(i)
 
     ! Accumulate contribution at cell center and neighbour.
-    phi%mag(ijp) = phi%mag(ijp)+dfxe
-    phi%mag(ijn) = phi%mag(ijn)-dfxe
-
-  enddo
+    phi%mag(ijp) = phi%mag(ijp) + dfxe
+    phi%mag(ijn) = phi%mag(ijn) - dfxe
 
 
-  ! Contribution from boundaries
-  do i=1,numBoundaryFaces
+  enddo inner_face_loop
+
+
+  !
+  ! > Boundary faces contribution
+  !
+
+  boundary_face_loop: do i=1,numBoundaryFaces
+
     iface = numInnerFaces + i
     ijp = owner(iface)
     ijb = numCells + i
-    dfxe = U%x(ijb)*arx(iface)+ U%y(ijb)*ary(iface) + U%z(ijb)*arz(iface) 
-    phi%mag(ijp) = phi%mag(ijp) + dfxe
-  enddo
 
-end function fvx_div_volVectorField
+    dfxe = U%x(ijb)*arx(iface)+ U%y(ijb)*ary(iface) + U%z(ijb)*arz(iface) 
+
+    phi%mag(ijp) = phi%mag(ijp) + dfxe
+
+  enddo boundary_face_loop
+
+end function fvx_div_volVectorField2
 
 
 function fvx_div_surfaceVectorField(U) result(phi)
@@ -138,7 +228,6 @@ function fvx_div_surfaceVectorField(U) result(phi)
 ! > Inner faces contribution
 !
   inner_face_loop: do iface=1,numInnerFaces 
-!+-----------------------------------------------------------------------------+
 
   icell = owner(iface)
   jcell = neighbour(iface)
@@ -150,7 +239,6 @@ function fvx_div_surfaceVectorField(U) result(phi)
   phi%mag (icell) = phi%mag (icell) + sfuf
   phi%mag (jcell) = phi%mag (jcell) - sfuf
 
-!+-----------------------------------------------------------------------------+
   enddo inner_face_loop
 
 !
@@ -158,7 +246,7 @@ function fvx_div_surfaceVectorField(U) result(phi)
 !
 
   boundary_face_loop: do i=1,numBoundaryFaces
-!+-----------------------------------------------------------------------------+    
+   
   iface = numInnerFaces + i
   icell = owner(iface)
   ijb = numCells + i
@@ -168,7 +256,6 @@ function fvx_div_surfaceVectorField(U) result(phi)
 
   phi%mag (icell) = phi%mag (icell) + sfuf
 
-!+-----------------------------------------------------------------------------+
   enddo boundary_face_loop
 
 
