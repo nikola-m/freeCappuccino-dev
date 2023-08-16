@@ -64,22 +64,22 @@ subroutine readfiles
   !------------------------------------------------
   ! [read statistics after first collection: ]
   !------------------------------------------------
-  if (ltransient) then
+  ! if (ltransient) then
 
-    call get_unit ( statistics_file )
+  !   call get_unit ( statistics_file )
 
-    open(unit=statistics_file,file='statistics')
+  !   open(unit=statistics_file,file='statistics')
 
-    rewind statistics_file
+  !   rewind statistics_file
 
-    read(statistics_file,*) n_sample
-    read(statistics_file,*) u_aver,v_aver,w_aver, &
-                            uu_aver,vv_aver,ww_aver, &
-                            uv_aver,uw_aver,vw_aver, &
-                            te_aver
-    close ( statistics_file )
+  !   read(statistics_file,*) n_sample
+  !   read(statistics_file,*) u_aver,v_aver,w_aver, &
+  !                           uu_aver,vv_aver,ww_aver, &
+  !                           uv_aver,uw_aver,vw_aver, &
+  !                           te_aver
+  !   close ( statistics_file )
 
-  endif
+  ! endif
 
   write ( *, '(a)' ) ' '
   write ( *, '(a)' ) '  Continuing simulaton from saved state - fields have been succesfully read! '

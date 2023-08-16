@@ -46,6 +46,10 @@ implicit none
   character(len=15) :: name,type,distribution
   real(dp) :: u0,v0,w0
 
+  integer :: numVals,k
+  real(dp) :: ic
+  real(dp), dimension(:), allocatable :: yi, ui, vi, wi 
+
   write(*,'(a)') ' ' 
   write(*,'(a)') '  Initializing internal field and boundaries (reading 0/'//trim(field_name)//' ):'
   write(*,'(a)') ' '
@@ -120,7 +124,34 @@ implicit none
                 u(ijb) = u0
                 v(ijb) = v0
                 w(ijb) = w0
-              end do        
+              end do   
+ 
+            ! When you have a sample of points (for now along y-axis which is assumed to span the inlet in 2D and 3D)
+            ! you can use this type of boundary condition, where values are linearly interpolated from sample distribution.
+            elseif(distribution =='interpolated') then
+              write(*,'(8x,a)') 'interpolated'
+              read(input_unit, *) numVals ! Number of entries for values that need to be interpolated
+              allocate(yi(0:numVals), ui(0:numVals), vi(0:numVals), wi(0:numVals))
+              yi(0)=0.; ui(0)=0.; vi(0) = 0.; wi(0) = 0. ! Zero velocity at zero ordinate
+              do i = 1, numVals
+                read(input_unit, *) yi(i), ui(i), vi(i), wi(i)
+              enddo
+              face_loop: do i=1,nfaces(ib)
+                ijb = iBndValueStart(ib) + i
+                iface = startFace(ib) + i
+                span_loop: do k=1,numVals ! Loop over interpolation points and find the interval where yf(iface) belongs
+                  if(yf(iface) > yi(k-1) .and. yf(iface) < yi(k)) then
+                    ic = (yf(iface) - yi(k-1))/(yi(k) - yi(k-1)) ! linear interpolation coefficient
+                    u(ijb) = ui(k-1) + ic*(ui(k) - ui(k-1))
+                    v(ijb) = vi(k-1) + ic*(vi(k) - vi(k-1))
+                    w(ijb) = wi(k-1) + ic*(wi(k) - wi(k-1))
+                    exit span_loop
+                  endif
+                enddo span_loop
+                write(*,'(8x,3e15.7)') u(ijb),v(ijb),w(ijb)
+              end do face_loop
+              deallocate(yi,ui,vi,wi)
+
             else ! nonuniform
               write(*,'(8x,a)') 'nonuniform'
               do i=1,nfaces(ib)
