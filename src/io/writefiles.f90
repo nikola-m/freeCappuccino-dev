@@ -127,6 +127,19 @@ subroutine writefiles
   ! call vtu_write_XML_scalar_field_node ( output_unit, 'mueff', uN )
   ! !#--
 
+  !#--
+  ! Write ensemble averaged velocity components values in nodes.
+  ! Interpolate to nodes using interpolation weights generated at init stage.
+  if(ltransient .and. lturb) then
+
+  call interpolate_to_nodes(u_aver, uN)
+  call interpolate_to_nodes(v_aver, vN)
+  call interpolate_to_nodes(w_aver, wN)
+  call vtu_write_XML_vector_field_node( output_unit, 'Uavg', uN, vN, wN )
+
+  endif
+  ! !#--
+
   deallocate( uN,vN, wN )
 
   do i=1,2! Lines where we close PointData tag and open CellData
