@@ -141,6 +141,8 @@ program cappuccino
 
       ! Courant number report:
       call CourantNo
+
+      ! call update_inlet_mapping
     
     endif 
 

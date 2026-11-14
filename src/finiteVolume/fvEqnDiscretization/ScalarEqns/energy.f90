@@ -463,8 +463,8 @@ subroutine calc_energy
       ! Faces trough periodic boundaries
       do i=1,nfaces(ib)
 
-        if = startFace(ib) + i
-        ijp = owner(if)
+        iface = startFace(ib) + i
+        ijp = owner(iface)
 
         iftwin = startFaceTwin(iPer) + i ! Where does the face data for twin start, looking at periodic boundary pair with index iPer.
         ijn = owner(iftwin)              ! Owner cell of the twin periodic face
@@ -474,16 +474,16 @@ subroutine calc_energy
 
         ! face flux scalar but for periodic boundaries - it will be recognized by arguments
         call facefluxsc( i, ijp, ijn, &
-                         xf(if), yf(if), zf(if), &
-                         arx(if), ary(if), arz(if), &
-                         flmass(if), gam, &
+                         xf(iface), yf(iface), zf(iface), &
+                         arx(iface), ary(iface), arz(iface), &
+                         flmass(iface), gam, &
                          T, dTdxi, dcoef, cap, can, suadd )
 
 
         ! > Off-diagonal elements:
 
         ! l is in interval [numInnerFaces+1, numInnerFaces+numPeriodic]
-        l = l + 1
+        l = numInnerFaces + i
 
         ! (icell,jcell) matrix element:
         k = icell_jcell_csr_index(l)
@@ -523,7 +523,7 @@ subroutine calc_energy
   ! Modify coefficients for Crank-Nicolson
   if (cn) then
 
-    a = 0.5_dp*a ! Doesn't affect the main diagonal because it's still zero.
+    a = 0.5_dp*a ! Doesn't affect the main diagonal because it's still zero. FIXME! Not true, we modify diagonals!
 
     do i = 1,numInnerFaces
       ijp = owner(i)

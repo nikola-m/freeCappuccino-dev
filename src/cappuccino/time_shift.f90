@@ -14,8 +14,8 @@ subroutine time_shift
     uooo = uoo 
     vooo = voo 
     wooo = woo 
-    flmassooo = flmassoo
-    pooo = poo
+    ! flmassooo = flmassoo
+    ! pooo = poo
   endif
 
   ! Transfer data from level n-1 to level n-2 for BDF3 or BDF2 time-stepping:

@@ -640,5 +640,118 @@ subroutine add_random_noise_to_field(Phi,percent)
 
 end subroutine
 
+
+subroutine update_inlet_mapping
+! This was used to recirculate to inlet a slice from the inside of the domain
+! so called mapping - we map back to inlet.
+! Hard coded here so it is an ad hoc thing used for Jovic-Driver BFS case.
+  use types
+  ! use parameters, only: densit
+  use geometry, only: numBoundaries,arx,ary,arz,startFace,iBndValueStart,nFaces,bctype
+  use variables, only: u,v,w,flmass,den
+  implicit none 
+
+  integer :: i, ib, iface, ijn
+  real(dp) :: flomas !, are, outare, flomas, uav
+
+  flomas = 0.
+
+  ! Initialize mass flow over inlet faces
+  do ib=1,numBoundaries  
+    if ( bctype(ib) == 'inlet' ) then
+
+    ! Veca mreza
+    u(startFace(ib)+1)=u(109)
+    v(startFace(ib)+1)=v(109)
+    u(startFace(ib)+2)=u(301)
+    v(startFace(ib)+2)=v(301)
+    u(startFace(ib)+3)=u(493)
+    v(startFace(ib)+3)=v(493)
+    u(startFace(ib)+4)=u(685)
+    v(startFace(ib)+4)=v(685)
+    u(startFace(ib)+5)=u(877)
+    v(startFace(ib)+5)=v(877)
+    u(startFace(ib)+6)=u(1069)
+    v(startFace(ib)+6)=v(1069)
+    u(startFace(ib)+7)=u(1261)
+    v(startFace(ib)+7)=v(1261)
+    u(startFace(ib)+8)=u(1453)
+    v(startFace(ib)+8)=v(1453)
+    u(startFace(ib)+9)=u(1645)
+    v(startFace(ib)+9)=v(1645)
+    u(startFace(ib)+10)=u(1837)
+    v(startFace(ib)+10)=v(1837)
+    u(startFace(ib)+11)=u(2029)
+    v(startFace(ib)+11)=v(2029)
+    u(startFace(ib)+12)=u(2221)
+    v(startFace(ib)+12)=v(2221)
+    u(startFace(ib)+13)=u(2413)
+    v(startFace(ib)+13)=v(2413)
+    u(startFace(ib)+14)=u(2605)
+    v(startFace(ib)+14)=v(2605)
+    u(startFace(ib)+15)=u(2797)
+    v(startFace(ib)+15)=v(2797)
+    u(startFace(ib)+16)=u(2989)
+    v(startFace(ib)+16)=v(2989)
+    u(startFace(ib)+17)=u(3181)
+    v(startFace(ib)+17)=v(3181)
+    u(startFace(ib)+18)=u(3373)
+    v(startFace(ib)+18)=v(3373)
+    u(startFace(ib)+19)=u(3565)
+    v(startFace(ib)+19)=v(3565)
+    u(startFace(ib)+20)=u(3757)
+    v(startFace(ib)+20)=v(3757)
+    u(startFace(ib)+21)=u(3949)
+    v(startFace(ib)+21)=v(3949)
+    u(startFace(ib)+22)=u(4141)
+    v(startFace(ib)+22)=v(4141)
+    u(startFace(ib)+23)=u(4333)
+    v(startFace(ib)+23)=v(4333)
+    u(startFace(ib)+24)=u(4525)
+    v(startFace(ib)+24)=v(4525)
+    u(startFace(ib)+25)=u(4717)
+    v(startFace(ib)+25)=v(4717)
+    u(startFace(ib)+26)=u(4909)
+    v(startFace(ib)+26)=v(4909)
+    u(startFace(ib)+27)=u(5101)
+    v(startFace(ib)+27)=v(5101)
+    u(startFace(ib)+28)=u(5293)
+    v(startFace(ib)+28)=v(5293)
+    u(startFace(ib)+29)=u(5485)
+    v(startFace(ib)+29)=v(5485)
+    u(startFace(ib)+30)=u(5677)
+    v(startFace(ib)+30)=v(5677)
+    u(startFace(ib)+31)=u(5869)
+    v(startFace(ib)+31)=v(5869)
+    u(startFace(ib)+32)=u(6061)
+    v(startFace(ib)+32)=v(6061)
+    u(startFace(ib)+33)=u(6253)
+    v(startFace(ib)+33)=v(6253)
+    u(startFace(ib)+34)=u(6445)
+    v(startFace(ib)+34)=v(6445)
+    u(startFace(ib)+35)=u(6637)
+    v(startFace(ib)+35)=v(6637)
+    u(startFace(ib)+36)=u(6829)
+    v(startFace(ib)+36)=v(6829)
+    u(startFace(ib)+37)=u(7021)
+    v(startFace(ib)+37)=v(7021)
+    u(startFace(ib)+38)=u(7213)
+    v(startFace(ib)+38)=v(7213)
+    u(startFace(ib)+39)=u(7405)
+    v(startFace(ib)+39)=v(7405)
+
+      do i=1,nfaces(ib)
+        iface = startFace(ib) + i
+        ijn = iBndValueStart(ib) + i
+
+        flmass(iface) = den(ijn)*(arx(iface)*u(ijn)+ary(iface)*v(ijn)+arz(iface)*w(ijn))
+
+        flomas = flomas - flmass(iface)         
+      end do
+    endif 
+  enddo
+
+
+end subroutine
     
 end module fieldManipulation

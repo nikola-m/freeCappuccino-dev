@@ -1200,7 +1200,7 @@ subroutine updateVelocityAtBoundary
 !     Local variables
 !
   integer :: i,ijp,ijb,ib,iface,iper
-  real(dp) :: Unmag,flowo
+  real(dp) :: Unmag,flowo, are2
 
   ! Update velocity components along outlet boundaries
   ! and correct mass flux to satisfy global mass conservation
@@ -1234,8 +1234,11 @@ subroutine updateVelocityAtBoundary
         ijp = owner(iface)
         ijb = iBndValueStart(ib) + i
 
-        ! Project velocity vector to face normal direction:
-        Unmag = u(ijp)*arx(iface)+v(ijp)*ary(iface)+w(ijp)*arz(iface)
+        ! Face area squared
+        are2 = arx(iface)**2+ary(iface)**2+arz(iface)**2
+
+        ! Project velocity vector to face normal direction and divide by are again:
+        Unmag = (u(ijp)*arx(iface)+v(ijp)*ary(iface)+w(ijp)*arz(iface))/are2
 
         U(ijb) = U(ijp)-Unmag*arx(iface)
         V(ijb) = V(ijp)-Unmag*ary(iface)
@@ -1288,6 +1291,7 @@ subroutine calc_wall_shear
   use parameters
   use geometry
   use variables
+  ! use statistics !!
 
   implicit none 
 
@@ -1317,10 +1321,18 @@ subroutine calc_wall_shear
         nyf = ary(iface)/are
         nzf = arz(iface)/are
 
+       
+        ! Note: I have commented out below the variant where we calculate tau and ypl from time-averaged values.
+        ! Maybe that should be a separate routine called when simulation is nonstationary...
+
         ! Velocity difference vector components
         upb = u(ijp)-u(ijb)
         vpb = v(ijp)-v(ijb)
         wpb = w(ijp)-w(ijb)
+        ! ! Velocity difference vector components
+        ! upb = u_aver(ijp)
+        ! vpb = v_aver(ijp)
+        ! wpb = w_aver(ijp)
 
         vsol = max(viscos,visw(iWall))*srdw(iWall)
 
@@ -1328,6 +1340,9 @@ subroutine calc_wall_shear
         fshearx = vsol * ( (u(ijb)-u(ijp))*(1.-nxf**2) + vpb*nyf*nxf                  + wpb*nzf*nxf )
         fsheary = vsol * ( upb*nxf*nyf                 + (v(ijb)-v(ijp))*(1.-nyf**2)  + wpb*nzf*nyf )
         fshearz = vsol * ( upb*nxf*nzf                 + vpb*nyf*nzf                  + (w(ijb)-w(ijp))*(1.-nzf**2) )
+        ! fshearx = vsol * ( (u(ijb)-u_aver(ijp))*(1.-nxf**2) + vpb*nyf*nxf                  + wpb*nzf*nxf )
+        ! fsheary = vsol * ( upb*nxf*nyf                 + (v(ijb)-v_aver(ijp))*(1.-nyf**2)  + wpb*nzf*nyf )
+        ! fshearz = vsol * ( upb*nxf*nzf                 + vpb*nyf*nzf                  + (w(ijb)-w_aver(ijp))*(1.-nzf**2) )
 
         tau(iWall) = sqrt(fshearx**2+fsheary**2+fshearz**2)/are
 
@@ -1347,7 +1362,7 @@ subroutine calc_wall_shear
       ! do i=1,nfaces(ib)
       !   iface = startFace(ib) + i
       !   iWall = iWall + 1       
-      !   write(*,*) rhoref*xf(iFace)*Uref/viscos, tau(iWall) / (0.5*rhoref*uref**2)
+      !   write(*,*) xf(iFace), rhoref*xf(iFace)*Uref/viscos, tau(iWall) / (0.5*rhoref*uref**2)
       ! enddo
 
 

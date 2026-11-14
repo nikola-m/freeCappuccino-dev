@@ -94,6 +94,8 @@ subroutine modify_viscosity_vreman_sgs
 
   musgs = den * Cvsq* Vol**r23 * musgs
 
+  ! musgs = den * Cvsq* Vol/0.0098_dp * musgs ! A Hack for Jovic and Driver BFS in 2D
+
   urf = TurbModel%urfVis
 
 

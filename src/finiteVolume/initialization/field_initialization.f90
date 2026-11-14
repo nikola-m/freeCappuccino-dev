@@ -223,6 +223,10 @@ implicit none
   character(len=80) :: key,field_type
   character(len=15) :: name,type,distribution
   real(dp) :: t0
+
+  integer :: numVals,k
+  real(dp) :: ic
+  real(dp), dimension(:), allocatable :: yi, Ti
  
   write(*,'(a)') ' '
   write(*,'(a)') '  Initializing internal field and boundaries (reading 0/'//trim(field_name)//' ):'
@@ -296,7 +300,32 @@ implicit none
               do i=1,nfaces(ib)
                 ijb = iBndValueStart(ib) + i
                 T(ijb) = t0
-              end do        
+              end do 
+
+            ! When you have a sample of points (for now along y-axis which is assumed to span the inlet in 2D and 3D)
+            ! you can use this type of boundary condition, where values are linearly interpolated from sample distribution.
+            elseif(distribution =='interpolated') then
+              write(*,'(8x,a)') 'interpolated'
+              read(input_unit, *) numVals ! Number of entries for values that need to be interpolated
+              allocate(yi(0:numVals), Ti(0:numVals))
+              yi(0)=0.; Ti(0)=0. ! Zero at zero ordinate? This should be read...
+              do i = 1, numVals
+                read(input_unit, *) yi(i), Ti(i)
+              enddo
+              face_loop: do i=1,nfaces(ib)
+                ijb = iBndValueStart(ib) + i
+                iface = startFace(ib) + i
+                span_loop: do k=1,numVals ! Loop over interpolation points and find the interval where yf(iface) belongs
+                  if(yf(iface) > yi(k-1) .and. yf(iface) < yi(k)) then
+                    ic = (yf(iface) - yi(k-1))/(yi(k) - yi(k-1)) ! linear interpolation coefficient
+                    T(ijb) = Ti(k-1) + ic*(Ti(k) - Ti(k-1))
+                    exit span_loop
+                  endif
+                enddo span_loop
+                write(*,'(8x,3e15.7)') T(ijb)
+              end do face_loop
+              deallocate(yi,Ti)
+
             else ! nonuniform
               write(*,'(8x,a,3e15.7)') 'nonuniform'
               do i=1,nfaces(ib)

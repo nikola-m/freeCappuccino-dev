@@ -130,14 +130,16 @@ subroutine writefiles
   !#--
   ! Write ensemble averaged velocity components values in nodes.
   ! Interpolate to nodes using interpolation weights generated at init stage.
-  if(ltransient .and. lturb) then
+  ! if(ltransient .and. lturb) then
 
-  call interpolate_to_nodes(u_aver, uN)
-  call interpolate_to_nodes(v_aver, vN)
-  call interpolate_to_nodes(w_aver, wN)
-  call vtu_write_XML_vector_field_node( output_unit, 'Uavg', uN, vN, wN )
+  ! uN = 0.; vN = 0.; wN = 0.
 
-  endif
+  ! call interpolate_to_nodes(u_aver, uN)
+  ! call interpolate_to_nodes(v_aver, vN)
+  ! call interpolate_to_nodes(w_aver, wN)
+  ! call vtu_write_XML_vector_field_node( output_unit, 'Uavg', uN, vN, wN )
+
+  ! endif
   ! !#--
 
   deallocate( uN,vN, wN )
@@ -153,6 +155,8 @@ subroutine writefiles
 !
 
   call vtu_write_XML_vector_field( output_unit, 'U', u, v, w )
+
+  if(ltransient .and. lturb) call vtu_write_XML_vector_field( output_unit, 'Uavg', u_aver, v_aver, w_aver )
 
   if( calcEpot ) call vtu_write_XML_vector_field( output_unit, 'uxB', curix, curiy, curiz )
 
