@@ -19,7 +19,7 @@ subroutine writefiles
   use output
   use utils, only: i4_to_s_left
   use temperature, only: calct
-  use energy, only: calcen
+  use energy_equation, only: calcen
   ! use concentration, only: calccon
   use TurbModelData
   use rheology

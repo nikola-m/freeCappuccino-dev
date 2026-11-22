@@ -5,7 +5,9 @@
 # 1. Source files
 
 # Directory containing the main makefile, used by "VPATH":
-makefile_dir = src/cappuccino
+makefile_dir := src/cappuccino
+BUILD_DIR    := build
+BIN_DIR      := bin
 
 # Write paths relative to makefile_dir, separated by blanks (do not
 # include ${makefile_dir} in the list):
@@ -31,7 +33,7 @@ sources := $(shell cat ${makefile_dir}/files)
 # Or, if all the source files have the same suffix, more simply:
 objects := $(sources:.f=.o)
 
-execut = bin/cappuccino
+execut = $(BIN_DIR)/cappuccino
 
 # 3. Compiler-dependent part
 
@@ -43,7 +45,7 @@ FC = gfortran
 # add -DLAPACK to define Lapack library flag;
 # The -cpp flag is here because of C style preprocessor directives.
 #LDFLAGS = -O3 -cpp -DLAPACK -DLIS -Wall
-LDFLAGS = -O3 -cpp -Wall
+LDFLAGS = -O3 -cpp -Wall -J$(BUILD_DIR) -I$(BUILD_DIR)
 
 # Lapack is used for LSTSQ_QR gradients, LIS may be used for linear systems.
 # If you don't use either LAPACK or LIS don't link these libraries below.
@@ -64,13 +66,24 @@ LDLIBS =
 .DELETE_ON_ERROR:
 .PHONY: all clean
 
+
 all: ${execut}
 
-${execut}: ${objects}
+${execut}: ${objects} | $(BUILD_DIR) $(BIN_DIR)
 	$(FC) $(LDFLAGS) $^ $(LDLIBS) -o $@
 
+# ------------------------------------------------------------------------------
+# Directory creation
+# ------------------------------------------------------------------------------
+$(BUILD_DIR):
+	mkdir -p $(BUILD_DIR)
+
+$(BIN_DIR):
+	mkdir -p $(BIN_DIR)
+	
 clean:
-	rm -f ${execut} *mod
+	rm -f ${execut} 
+	rm -rf $(BUILD_DIR)
 
 clobber:
 	rm -f *mod

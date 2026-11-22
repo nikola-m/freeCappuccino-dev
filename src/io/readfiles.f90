@@ -12,72 +12,72 @@ subroutine readfiles
 
   implicit none  
 
-  integer :: restart_unit, statistics_file
+  integer :: file_unit
 
 !
 !***********************************************************************
 !
 
-  call get_unit( restart_unit )
-  open(unit=restart_unit,file=restart_file,form='unformatted')
-  rewind restart_unit
+  call get_unit( file_unit )
+  open(unit=file_unit,file=restart_file,form='unformatted')
+  rewind file_unit
 
-    read(restart_unit) itime,time
-      if(const_mflux) read(restart_unit) gradpcmf
-    read(restart_unit) flmass
-    read(restart_unit) u
-    read(restart_unit) v
-    read(restart_unit) w
-    read(restart_unit) p
-    read(restart_unit) te
-    read(restart_unit) ed
-    read(restart_unit) t
-    ! read(restart_unit) con
-    read(restart_unit) vis
-    read(restart_unit) visw    
-    ! read(restart_unit) uu
-    ! read(restart_unit) vv
-    ! read(restart_unit) ww
-    ! read(restart_unit) uv
-    ! read(restart_unit) uw
-    ! read(restart_unit) vw
-    read(restart_unit) uo
-    read(restart_unit) vo
-    read(restart_unit) wo
-    read(restart_unit) teo
-    read(restart_unit) edo
-    read(restart_unit) to
-    ! read(restart_unit) varto
-    ! read(restart_unit) cono
-    ! read(restart_unit) vart
-    ! read(restart_unit) edd
-    ! read(restart_unit) ret
-    ! read(restart_unit) den
-    ! read(restart_unit) utt
-    ! read(restart_unit) vtt
-    ! read(restart_unit) wtt
+    read(file_unit) itime,time
+      if(const_mflux) read(file_unit) gradpcmf
+    read(file_unit) flmass
+    read(file_unit) u
+    read(file_unit) v
+    read(file_unit) w
+    read(file_unit) p
+    read(file_unit) te
+    read(file_unit) ed
+    read(file_unit) t
+    ! read(file_unit) con
+    read(file_unit) vis
+    read(file_unit) visw    
+    ! read(file_unit) uu
+    ! read(file_unit) vv
+    ! read(file_unit) ww
+    ! read(file_unit) uv
+    ! read(file_unit) uw
+    ! read(file_unit) vw
+    read(file_unit) uo
+    read(file_unit) vo
+    read(file_unit) wo
+    read(file_unit) teo
+    read(file_unit) edo
+    read(file_unit) to
+    ! read(file_unit) varto
+    ! read(file_unit) cono
+    ! read(file_unit) vart
+    ! read(file_unit) edd
+    ! read(file_unit) ret
+    ! read(file_unit) den
+    ! read(file_unit) utt
+    ! read(file_unit) vtt
+    ! read(file_unit) wtt
 
-  rewind restart_unit
+  rewind file_unit
   
-  close (restart_unit)
+  close (file_unit)
 
   !------------------------------------------------
   ! [read statistics after first collection: ]
   !------------------------------------------------
   ! if (ltransient) then
 
-  !   call get_unit ( statistics_file )
+  !   call get_unit ( file_unit )
 
-  !   open(unit=statistics_file,file='statistics')
+  !   open(unit=file_unit,file='statistics')
 
-  !   rewind statistics_file
+  !   rewind file_unit
 
-  !   read(statistics_file,*) n_sample
-  !   read(statistics_file,*) u_aver,v_aver,w_aver, &
+  !   read(file_unit,*) n_sample
+  !   read(file_unit,*) u_aver,v_aver,w_aver, &
   !                           uu_aver,vv_aver,ww_aver, &
   !                           uv_aver,uw_aver,vw_aver, &
   !                           te_aver
-  !   close ( statistics_file )
+  !   close ( file_unit )
 
   ! endif
 

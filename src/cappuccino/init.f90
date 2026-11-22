@@ -24,7 +24,7 @@ subroutine init
   use field_initialization
   use output
   use temperature, only: calcT
-  use energy, only: calcEn
+  use energy_equation, only: calcEn
   use TurbModelData
   use mhd
   use wall_distance
@@ -294,7 +294,7 @@ subroutine init
 !
 ! > Set matrix with geometric coefficients for Least-squares gradient reconstruction.
 !
-  if (lstsq .or. lstsq_qr .or. lstsq_dm) call create_lsq_grad_matrix
+  if (lstsq .or. lstsq_qr .or. lstsq_dm .or. lstsq_fw) call create_lsq_grad_matrix
   
 !
 ! > Create data structures for LIS solver (for pressure/pressure-correction).

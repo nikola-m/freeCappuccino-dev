@@ -8,12 +8,21 @@ subroutine read_input_file
 !
   use types
   use parameters
-  use gradients, only: lstsq, lstsq_qr, lstsq_dm, gauss, node_gauss, limiter
+  use gradients, only: lstsq, lstsq_qr, lstsq_dm, lstsq_fw, gauss, node_gauss, limiter
   use velocity, only: calcU, urfU, gdsU, cSchemeU, dSchemeU, nrelaxU, lSolverU, maxiterU, tolAbsU, tolRelU
   use pressure, only: calcP, urfP, lSolverP, maxiterP, tolAbsP, tolRelP
   use nablap, only: pscheme
+  use implicit_bc_compressible, only: cplbc_name, cplbc_kind, cplbc_p0, cplbc_T0, cplbc_mdot, cplbc_dirx, cplbc_diry, &
+                                      cplbc_dirz, cplbc_urf
+  use coupled_pU, only: coupled, cpl_maxit, cpl_restart, cpl_tolRel, cpl_tolAbs, cpl_urfP, cpl_rebuild, cpl_contScale, &
+                        cpl_rhoBlend, cpl_pseudoCFL, cpl_cflRamp, &
+                        cpl_sutherland, cpl_Tref, cpl_Ssuth, &
+                        amg_verbose, amg_smoother, amg_cycle, amg_theta, amg_coarse_size, amg_nu1, amg_nu2, amg_ccf
   use temperature
-  use energy
+  use energy_equation, only: calcEn, urfEn, gdsEn, cSchemeEn, limiterEn, dSchemeEn, nrelaxEn, lSolverEn, maxiterEn, &
+                             tolAbsEn, tolRelEn, sigtEn, solveEnthalpy, solveInternalEnergy, solveTotalEnergy, &
+                             solveTotalEnthalpy, addViscDiss, conservativeEn, cpModel, cp_const, cp_Tref, cp_poly, &
+                             nasa_lo, nasa_hi, nasa_R, shomate, shomate_M, sutherland, mu_Tref, mu_S
   use concentration
   use mhd
   use TurbModelData, only: TurbModel,set_turb_scalar_solution_flags
@@ -35,6 +44,7 @@ subroutine read_input_file
         title, &              ! Descriptive name of the case which will be written in monitor file.                             
         mesh_format, &        ! Mesh format 'nativeMesh' for native polyMesh format or 'foamMesh' for OpenFOAM polyMesh.
         lread, &              ! Read restart file - continue simulation from saved state?  True/False.
+        lwrite,&              ! Control writing of the certain outut files. True/False.
         ltest, &              ! Verbosity for linear solver convergence (for troubleshooting) True/False. 
         !
         ! Approximation details for velocity field.
@@ -107,10 +117,22 @@ subroutine read_input_file
         tolAbsEn, &           ! Absolute residual level.
         tolRelEn, &           ! Relative drop in residual to exit linear solver.
         sigtEn, &             ! sigma_t
-        solveTotalEnergy, &   !@ What we solve here - default is total energy, change it 
-        solveInternalEnergy, &!@ in input.nml file.
+        solveTotalEnthalpy, & !@ What we solve here - default is total enthalpy, change it
+        solveTotalEnergy, &   !@ in input.nml file (priority: enthalpy, internal energy, total energy, total enthalpy).
+        solveInternalEnergy, &!@
         solveEnthalpy, &      !@
-        addViscDiss, &        ! Add viscous dissipation term? T/F
+        addViscDiss, &        ! Add viscous terms (dissipation / work of viscous stresses)? T/F
+        limiterEn, &          ! Limiter of the MUSCL scheme: none, vanLeer, minmod, superbee, vanAlbada.
+        conservativeEn, &     ! Conservative form of the unsteady and convective terms? T/F
+        cpModel, &            ! Specific heat model: constant, polynomial, nasa, shomate.
+        cp_const, &           ! Specific heat at constant pressure [J/kgK] (cpModel = constant).
+        cp_Tref, &            ! Reference temperature of the enthalpy [K].
+        cp_poly, &            ! Polynomial cp = c0 + c1 T + c2 T^2 + c3 T^3.
+        nasa_lo, nasa_hi, &   ! NASA 7-coefficient polynomials (T < 1000 K, T >= 1000 K).
+        nasa_R, &             ! Specific gas constant of the NASA polynomials.
+        shomate, shomate_M, & ! Shomate equation coefficients A..F, molar mass [kg/mol].
+        sutherland, &         ! Sutherland viscosity law (also cpl_sutherland of the coupled solver).
+        mu_Tref, mu_S, &      ! Sutherland reference temperature and temperature S [K].
         !
         ! Physical model: Buoyancy 
         !
@@ -175,6 +197,7 @@ subroutine read_input_file
         lstsq, &              !@ |Gradient approximation, chose ONE: Unweighted Least-Square gradient approximation, or...
         lstsq_qr, &           !@ |Least square gradients based on thin QR decomposition, or...
         lstsq_dm, &           !@ |Distance-square weighted version of Least-Square Gradient, or...
+        lstsq_fw, &           !@ |Distance-square weighted LSQ with precomputed face weights (any cell shape), or...
         node_gauss, &         !@ |Node based Gauss gradient using pseudolaplacian interpolation, or...
         gauss, &              !@ |Cell based Gauss gradient with simple linear interpolation.
         limiter, &            ! Gradient limiter - used for all fields
@@ -187,6 +210,38 @@ subroutine read_input_file
         ncorr, &              ! Number of PISO corrections - only relevant for PISO.
         npcor, &              ! Number of iterations for pressure/pressure correction equation, i.e. Number of Nonorthogonal corrections.
         pRefCell, &           ! Reference cell for setting pressure level (since we have pure Neumann problem)
+        !
+        ! Block-coupled pressure-velocity solver and block AMG (used if coupled=T)
+        !
+        coupled, &            !# |Block-coupled p-U solver instead of SIMPLE/PISO, True/False.
+        cpl_maxit, &          ! Max. no. of FGMRES iterations per outer iteration.
+        cpl_restart, &        ! FGMRES restart length.
+        cpl_tolRel, &         ! Relative residual reduction of the linear solver per outer iteration.
+        cpl_tolAbs, &         ! Absolute residual level of the linear solver.
+        cpl_urfP, &           ! Under-relaxation of the pressure update (1 = none).
+        cpl_rebuild, &        ! Rebuild AMG aggregates every cpl_rebuild outer iterations.
+        cpl_contScale, &      ! Scaling of the continuity rows.
+        cpl_rhoBlend, &       ! All speeds: weight of the deferred central density correction (0 = upwind density).
+        cpl_pseudoCFL, &      ! All speeds: pseudo-time CFL in the continuity equation (0 = off).
+        cpl_cflRamp, &        ! All speeds: iterations of the geometric ramp of the pseudo CFL from 1 to cpl_pseudoCFL.
+        cpl_sutherland, &     ! All speeds: Sutherland viscosity law (viscos = value at cpl_Tref).
+        cpl_Tref, &           ! All speeds: Sutherland reference temperature.
+        cpl_Ssuth, &          ! All speeds: Sutherland temperature S [K].
+        cplbc_name, &         ! All speeds: patch names with a compressible boundary condition (implicit_bc_compressible).
+        cplbc_kind, &         ! Kinds: compinlet, massflow, totalpressure, stagnation, riemann, compoutlet, open.
+        cplbc_p0, &           ! Total pressure (static pressure for compoutlet/open if > 0) [Pa].
+        cplbc_T0, &           ! Total temperature [K].
+        cplbc_mdot, &         ! Mass flow rate through the patch [kg/s] (massflow).
+        cplbc_dirx, cplbc_diry, cplbc_dirz, & ! Inflow direction (default: opposite to the patch normal).
+        cplbc_urf, &          ! Under-relaxation of the boundary pressure update.
+        amg_smoother, &       ! AMG smoother: 'ilu0' or 'gs'.
+        amg_cycle, &          ! AMG cycle: 1=V, 2=W.
+        amg_theta, &          ! AMG strength-of-connection threshold.
+        amg_coarse_size, &    ! AMG: size (cells) of the coarsest level solved by dense LU.
+        amg_nu1, &            ! AMG: pre-smoothing sweeps.
+        amg_nu2, &            ! AMG: post-smoothing sweeps.
+        amg_ccf, &            ! AMG: coarse-grid correction factor.
+        amg_verbose, &        ! AMG: print hierarchy information (0/1).
         tolerance, &          ! Lower tolerance bound for outer (SIMPLE/PISO) iterations
         !
         ! Simulation run details

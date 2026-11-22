@@ -20,7 +20,7 @@ Curve Loop(1) = {1, 2, 3, 4};
 //+
 Plane Surface(1) = {1};
 //+
-Transfinite Curve {1, 2, 3, 4} = 40 Using Bump 0.2;
+Transfinite Curve {1, 2, 3, 4} = 128 Using Bump 0.2;
 //+
 Transfinite Surface {1};
 Recombine Surface {1};

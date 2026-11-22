@@ -12,7 +12,7 @@ subroutine write_restart_files
 
   implicit none
 
-  integer :: restart_unit, statistics_file
+  integer :: file_unit
 
 !
 !***********************************************************************
@@ -21,66 +21,66 @@ subroutine write_restart_files
 !--------------------------------------------------------------
 !    [ Writing restart file]
 !--------------------------------------------------------------
-  call get_unit ( restart_unit )
+  call get_unit ( file_unit )
 
-  open(unit=restart_unit,file=restart_file,form='unformatted')
-  rewind restart_unit
+  open(unit=file_unit,file=restart_file,form='unformatted')
+  rewind file_unit
 
-    write(restart_unit) itime,time
-      if(const_mflux) write(restart_unit) gradpcmf
-    write(restart_unit) flmass
-    write(restart_unit) u
-    write(restart_unit) v
-    write(restart_unit) w
-    write(restart_unit) p
-    write(restart_unit) te
-    write(restart_unit) ed
-    write(restart_unit) t
-    ! write(restart_unit) con
-    write(restart_unit) vis
-    write(restart_unit) visw    
-    ! write(restart_unit) uu
-    ! write(restart_unit) vv
-    ! write(restart_unit) ww
-    ! write(restart_unit) uv
-    ! write(restart_unit) uw
-    ! write(restart_unit) vw
-    write(restart_unit) uo
-    write(restart_unit) vo
-    write(restart_unit) wo
-    write(restart_unit) teo
-    write(restart_unit) edo
-    write(restart_unit) to
-    ! write(restart_unit) varto
-    ! write(restart_unit) cono
-    ! write(restart_unit) alph
-    ! write(restart_unit) vart
-    ! write(restart_unit) edd
-    ! write(restart_unit) ret
-    ! write(restart_unit) den
-    ! write(restart_unit) utt
-    ! write(restart_unit) vtt
-    ! write(restart_unit) wtt
+    write(file_unit) itime,time
+      if(const_mflux) write(file_unit) gradpcmf
+    write(file_unit) flmass
+    write(file_unit) u
+    write(file_unit) v
+    write(file_unit) w
+    write(file_unit) p
+    write(file_unit) te
+    write(file_unit) ed
+    write(file_unit) t
+    ! write(file_unit) con
+    write(file_unit) vis
+    write(file_unit) visw    
+    ! write(file_unit) uu
+    ! write(file_unit) vv
+    ! write(file_unit) ww
+    ! write(file_unit) uv
+    ! write(file_unit) uw
+    ! write(file_unit) vw
+    write(file_unit) uo
+    write(file_unit) vo
+    write(file_unit) wo
+    write(file_unit) teo
+    write(file_unit) edo
+    write(file_unit) to
+    ! write(file_unit) varto
+    ! write(file_unit) cono
+    ! write(file_unit) alph
+    ! write(file_unit) vart
+    ! write(file_unit) edd
+    ! write(file_unit) ret
+    ! write(file_unit) den
+    ! write(file_unit) utt
+    ! write(file_unit) vtt
+    ! write(file_unit) wtt
 
-  rewind restart_unit
-  close (restart_unit)
+  rewind file_unit
+  close (file_unit)
 
 !--------------------------------------------------------------
 !    [ Writing of the statistics restart file]
 !--------------------------------------------------------------
   if (ltransient) then
 
-    call get_unit ( statistics_file )
+    call get_unit ( file_unit )
 
-    open(unit=statistics_file,file='statistics')
-    rewind statistics_file
+    open(unit=file_unit,file='statistics')
+    rewind file_unit
 
-    write(statistics_file,*) n_sample
-    write(statistics_file,*) u_aver,v_aver,w_aver, &
+    write(file_unit,*) n_sample
+    write(file_unit,*) u_aver,v_aver,w_aver, &
                              uu_aver,vv_aver,ww_aver, &
                              uv_aver,uw_aver,vw_aver,te_aver, &
                              te_aver
-    close (statistics_file)
+    close (file_unit)
 
   endif
 

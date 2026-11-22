@@ -68,12 +68,13 @@ program cappuccino
   use velocity
   use pressure
   use temperature
-  use energy
+  use energy_equation, only: calc_energy, calcEn
   use concentration
   use mhd
   use rheology
   use statistics
   use monitors
+  use coupled_pU, only: coupled, calc_coupled_pU
   use timescale
 #ifdef LIS
   use LIS_linear_solvers, only: lis_destroy_solver
@@ -157,16 +158,25 @@ program cappuccino
 
       !--- Sequential equation solution ------------------------------------------------------------
 
-      ! Calculate velocities.
-      if(calcU) call calcuvw  
+      if ( coupled ) then
 
-      ! Pressure-velocity coupling. Two options: SIMPLE and PISO
-      if(calcP) then
+        ! Block-coupled pressure-velocity solver: momentum and continuity solved simultaneously.
+        call calc_coupled_pU
 
-        if(SIMPLE)   call calcp_simple
-        if(PISO)     call calcp_piso
+      else
 
-      endif 
+        ! Calculate velocities.
+        if(calcU) call calcuvw  
+
+        ! Pressure-velocity coupling. Two options: SIMPLE and PISO
+        if(calcP) then
+
+          if(SIMPLE)   call calcp_simple
+          if(PISO)     call calcp_piso
+
+        endif 
+
+      endif
 
       ! Non-Newtonian fluid - modification of modify_viscosity
       if( calcVis ) call modifyViscosityNonNewtonianFluid
@@ -176,7 +186,8 @@ program cappuccino
 
       ! Temperature or Total energy/Internal energy/Enhtalpy as energy variables
       if( calcT )   call calculate_temperature
-      if( calcEn )  call calc_energy
+      ! The all-speeds coupled solver always solves the energy equation (total enthalpy by default)
+      if( calcEn .or. ( coupled .and. compressible ) ) call calc_energy
       
       ! Concentration of the passive scalar
       if( calcCon )  call calculate_concentration_field

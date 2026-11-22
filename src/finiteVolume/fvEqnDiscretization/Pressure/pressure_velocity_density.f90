@@ -140,8 +140,8 @@ subroutine pressure_velocity_density_coupling
 
     end do
 
-    ! If simulation uses least-squares gradinets call this to get conservative pressure correction gradients.
-    if ( lstsq_qr .or. lstsq_dm .or. lstsq_qr ) call grad(pp,dPdxi,'gauss_corrected')
+    ! If simulation uses least-squares gradients call this to get conservative pressure correction gradients.
+    if ( lstsq .or. lstsq_qr .or. lstsq_dm .or. lstsq_fw ) call grad(pp,dPdxi,'gauss_corrected')
 
     ! Reference pressure correction - p'
     ppref = pp(pRefCell)

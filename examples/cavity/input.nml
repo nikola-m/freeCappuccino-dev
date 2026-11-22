@@ -5,7 +5,7 @@
               ltest = F                      ! Verbosity for linear solver convergence (for troubleshooting) True/False. 
 !
               calcU = T             ! Activate Velocity field caculation? True/False.
-               urfU = 0.8, 0.8, 0.8 ! Under-relaxation factor for momentum eq
+               urfU = 0.7, 0.7, 0.7 ! Under-relaxation factor for momentum eq
                gdsU = 1.0           ! gamma-deferred correction parameter for velocity
            cSchemeU = 'central'         ! Convection scheme for momentun eq
            dSchemeU = 'uncorrected'    ! Difussion scheme for momentum eq
@@ -19,7 +19,7 @@
               calcP = T             ! Activate Pressure field caculation? True/False.
                urfP = 0.3           ! Under-relaxation factor for pressure
            lSolverP = 'iccg'        ! Linear algebraic solver for pressure/pressure correction (For LIS e.g. '-i cg -p jacobi -maxiter 80')
-           maxiterP = 20            ! Max no of iterations for pressure/pressure correction
+           maxiterP = 50            ! Max no of iterations for pressure/pressure correction
             tolAbsP = 1e-15         ! Absolute tolerance level for residual for pressure/pressure correction
             tolRelP = 0.025           ! Relative tolerance level for residual for pressure/pressure correction  
 !
@@ -50,6 +50,7 @@
 !   
              SIMPLE = T       !# |Pressure-velocity coupling method - SIMPLE, or...
                PISO = F       !# |Pressure-velocity coupling method - PISO.
+            COUPLED = F       !# |Pressure-velocity block-coupled with AMG-FMGRES solver.
               ncorr = 1       !# |Number of PISO corrections - only relevant for PISO.
               npcor = 1       ! Number of iterations for pressure/pressure correction equation - Number of Nonorthogonal corrections.  
            pRefCell = 1       ! Reference cell for setting pressure level (since we have pure Neumann problem)
@@ -57,8 +58,8 @@
 !
 ! Simulation run details
 !
-            NUMSTEP = 500     ! Total number of timesteps.      
+            NUMSTEP = 2000    ! Total number of timesteps.      
            TIMESTEP = 1.0     ! Timestep size  - also known as dt.
-             NZAPIS = 500     ! Program writes output files every NZAPIS timesteps. 
+             NZAPIS = 1000    ! Program writes output files every NZAPIS timesteps. 
               MAXIT = 1       ! Number of iterations in SIMPLE/PISO sequential equation solution loop.
 /

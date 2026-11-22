@@ -20,11 +20,11 @@ subroutine continuityErrors
   su = 0.0_dp
 
   ! Inner faces                                               
-  do i=1,numInnerFaces                                                    
-    ijp = owner(i)
-    ijn = neighbour(i)
-    su(ijp) = su(ijp)-flmass(ijp)
-    su(ijn) = su(ijn)+flmass(ijp)
+  do iface=1,numInnerFaces                                                    
+    ijp = owner(iface)
+    ijn = neighbour(iface)
+    su(ijp) = su(ijp)-flmass(iface)
+    su(ijn) = su(ijn)+flmass(iface)
   enddo  
 
 

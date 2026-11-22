@@ -22,9 +22,9 @@ Edit _polyMesh/boundary_ file to set boundary types to:
 
 ```
 # bcName bcType nFaces startFace
-wall-top wall 39 2964
-walls wall 117 3003
-front-back empty 3042 3120
+wall-top wall 127 32004
+walls wall 381 32131
+front-back empty 32258 32512
 ```
 
 Mesh conversion utility will also create template files for initial conditions in '0' folder. We will open files and edit them:

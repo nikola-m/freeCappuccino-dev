@@ -17,6 +17,7 @@ fvxGradient.f90
 scalar_fluxes.f90
 LIS_linear_solvers.f90
 linear_solvers.f90
+block_amg.f90
 updateBoundary.f90
 temperature.f90
 energy.f90
@@ -51,6 +52,9 @@ bpres.f90
 nablap.f90
 velocity.f90
 pressure.f90
+allspeeds.f90
+implicit_bc_compressible.f90
+coupled_pU.f90
 calcstress.f90
 calc_strain_and_vorticity.f90
 CourantNo.f90

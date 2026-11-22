@@ -5,7 +5,7 @@ subroutine time_shift
   use variables
   use concentration, only: calcCon
   use temperature, only: calcT
-  use energy, only: calcEn
+  use energy_equation, only: calcEn
 
   implicit none
 

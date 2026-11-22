@@ -126,9 +126,9 @@ subroutine facefluxmass(i, ijp, ijn, xf, yf, zf, arx, ary, arz, lambda, cap, can
 
 
   !+Interpolate pressure gradients to cell face center
-  dpxi = ( dPdxi(1,ijn)*fxp + dPdxi(1,ijp)*fxn ) * xpn
-  dpyi = ( dPdxi(2,ijn)*fxp + dPdxi(2,ijp)*fxn ) * ypn
-  dpzi = ( dPdxi(3,ijn)*fxp + dPdxi(3,ijp)*fxn ) * zpn
+  dpxi = ( dPdxi(1,ijn)*fxn + dPdxi(1,ijp)*fxp ) * xpn
+  dpyi = ( dPdxi(2,ijn)*fxn + dPdxi(2,ijp)*fxp ) * ypn
+  dpzi = ( dPdxi(3,ijn)*fxn + dPdxi(3,ijp)*fxp ) * zpn
 
   !+Face centered pressure gradient along cell-face normal
 
@@ -238,9 +238,9 @@ subroutine facefluxmass2(i, ijp, ijn, arx, ary, arz, lambda, cap, can, fluxmass)
   ! vi = ( v(ijp)*Apv(ijn)+v(ijn)*Apv(ijp) ) / Kj
   ! wi = ( w(ijp)*Apw(ijn)+w(ijn)*Apw(ijp) ) / Kj
 
-  dpxi = ( dPdxi(1,ijn)*fxp + dPdxi(1,ijp)*fxn ) * xpn
-  dpyi = ( dPdxi(2,ijn)*fxp + dPdxi(2,ijp)*fxn ) * ypn
-  dpzi = ( dPdxi(3,ijn)*fxp + dPdxi(3,ijp)*fxn ) * zpn
+  dpxi = ( dPdxi(1,ijn)*fxn + dPdxi(1,ijp)*fxp ) * xpn
+  dpyi = ( dPdxi(2,ijn)*fxn + dPdxi(2,ijp)*fxp ) * ypn
+  dpzi = ( dPdxi(3,ijn)*fxn + dPdxi(3,ijp)*fxp ) * zpn
 
   ! MASS FLUX via Rhie-Chow Interpolation
   fluxmass = dene*(ui*arx+vi*ary+wi*arz) + cap*(p(ijn)-p(ijp)-dpxi-dpyi-dpzi)
@@ -373,9 +373,9 @@ subroutine facefluxmass2_periodic(i, ijp, ijn, xf, yf, zf, arx, ary, arz, lambda
   vi = ( v(ijp)*Apv(ijn)+v(ijn)*Apv(ijp) ) / Kj
   wi = ( w(ijp)*Apw(ijn)+w(ijn)*Apw(ijp) ) / Kj
 
-  dpxi = ( dPdxi(1,ijn)*fxp + dPdxi(1,ijp)*fxn ) * xpn
-  dpyi = ( dPdxi(2,ijn)*fxp + dPdxi(2,ijp)*fxn ) * ypn
-  dpzi = ( dPdxi(3,ijn)*fxp + dPdxi(3,ijp)*fxn ) * zpn
+  dpxi = ( dPdxi(1,ijn)*fxn + dPdxi(1,ijp)*fxp ) * xpn
+  dpyi = ( dPdxi(2,ijn)*fxn + dPdxi(2,ijp)*fxp ) * ypn
+  dpzi = ( dPdxi(3,ijn)*fxn + dPdxi(3,ijp)*fxp ) * zpn
 
   ! MASS FLUX via Rhie-Chow Interpolation
   fluxmass = dene*(ui*arx+vi*ary+wi*arz) + cap*(p(ijn)-p(ijp)-dpxi-dpyi-dpzi)

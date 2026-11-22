@@ -10,9 +10,11 @@ use sparse_matrix, only: ia,ja,diag
 implicit none
 
 logical :: lstsq, lstsq_qr, lstsq_dm, gauss, node_gauss  ! Gradient discretization approach
+logical :: lstsq_fw = .false.   ! Weighted LSQ with precomputed face weights (any cell shape)
 character(len=20) :: limiter  ! Gradient limiter. Options: none, Barth-Jespersen, Venkatakrishnan, R3, multidimensional
 
-real(dp),dimension(:,:), allocatable ::  Dmat      !  d(6,nxyz) - when using bn, or dm version of the subroutine
+real(dp),dimension(:,:), allocatable ::  Dmat      !  Dmat(6,numCells): unique entries (11,12,13,22,23,33) of the inverse of the symmetric LSQ matrix
+real(dp),dimension(:,:), allocatable ::  lsq_cp, lsq_cn, lsq_cb  ! lstsq_fw: face weights for owner, neighbour, boundary face
 real(dp),dimension(:,:,:), allocatable ::  D       !  when using qr version of the subroutine size(3,6,nxyz)!
 
 real(dp), parameter :: small = 1e-20
@@ -34,8 +36,8 @@ end interface
 
 private
 
-public :: lstsq, lstsq_qr, lstsq_dm, gauss, node_gauss, limiter
-public :: grad, grad_gauss, sngrad, create_lsq_grad_matrix
+public :: lstsq, lstsq_qr, lstsq_dm, lstsq_fw, gauss, node_gauss, limiter
+public :: grad, grad_gauss, grad_gauss_corrected, sngrad, create_lsq_grad_matrix
 
 
 
@@ -54,7 +56,7 @@ implicit none
 
   if( lstsq .or. lstsq_dm ) then
 
-    allocate( Dmat(9,numCells), stat=ierr ) 
+    allocate( Dmat(6,numCells), stat=ierr ) 
       if(ierr /= 0)write(*,*)"allocation error: Dmat"
 
   elseif( lstsq_qr ) then
@@ -96,6 +98,10 @@ subroutine create_lsq_grad_matrix
 
     call create_matrix_lsq_dm
 
+  elseif (lstsq_fw) then 
+
+    call create_lsq_face_weights
+
   endif 
 
 end subroutine
@@ -126,6 +132,10 @@ implicit none
   elseif (lstsq_dm) then 
 
     call grad_lsq_dm(phi,dPhidxi)
+
+  elseif (lstsq_fw) then 
+
+    call grad_lsq_fw(phi,dPhidxi)
 
   elseif ( node_gauss ) then
 
@@ -197,6 +207,12 @@ subroutine grad_vector_field(U,V,W,dUdxi,dVdxi,dWdxi)
     call grad_lsq_dm(V,dVdxi)
     call grad_lsq_dm(W,dWdxi)
 
+  elseif (lstsq_fw) then 
+
+    call grad_lsq_fw(U,dUdxi)
+    call grad_lsq_fw(V,dVdxi)
+    call grad_lsq_fw(W,dWdxi)
+
   elseif ( node_gauss ) then
 
     call grad_node_based_gauss(u,dUdxi)
@@ -234,9 +250,10 @@ implicit none
   real(dp), dimension(numTotal), intent(in) :: phi
   real(dp), dimension(3,numTotal), intent(inout) :: dPhidxi
   character( len=* ), intent(in) :: option
-  character( len=* ), intent(in) :: option_limiter
+  character( len=* ), intent(in), optional :: option_limiter  ! default: no limiting
 
-  dPhidxi = 0.0_dp
+  ! 'gauss_corrected' starts from the gradient that is passed in
+  if ( option /= 'gauss_corrected' ) dPhidxi = 0.0_dp
   
   if ( option == 'lsq' ) then 
 
@@ -250,15 +267,25 @@ implicit none
 
     call grad_lsq_dm(phi,dPhidxi)
 
+  elseif ( option == 'lsq_fw' ) then
+
+    call grad_lsq_fw(phi,dPhidxi)
+
   elseif ( option == 'gauss' ) then
 
     call grad_gauss(phi,dPhidxi)
+
+  elseif ( option == 'gauss_corrected' ) then
+
+    call grad_gauss_corrected(phi,dPhidxi)
 
   endif 
 
   !
   ! Gradient limiter:
   !
+  if ( .not. present(option_limiter) ) return
+
   select case ( option_limiter ) 
 
     case( 'Barth-Jespersen' )
@@ -311,11 +338,12 @@ subroutine slope_limiter_Barth_Jespersen(phi, dPhidxi)
   real(dp) :: slopelimit
   real(dp) :: delta_face
   real(dp) :: phi_max,phi_min,r
-  real(dp) :: fimax,fimin,deltamax,deltamin
+  ! real(dp) :: fimax,fimin
+  real(dp) :: deltamax,deltamin
 
 
-  fimin = minval(phi(1:numCells))
-  fimax = maxval(phi(1:numCells))
+  !fimin = minval(phi(1:numCells))
+  !fimax = maxval(phi(1:numCells))
 
   do inp = 1, numCells
 
@@ -328,12 +356,11 @@ subroutine slope_limiter_Barth_Jespersen(phi, dPhidxi)
 
     do k=ia(inp)+1, ia(inp+1)-1
       phi_max = max( phi_max, phi(ja(k)) )
-      phi_min = min( phi_max, phi(ja(k)) )      
+      phi_min = min( phi_min, phi(ja(k)) )      
     enddo
 
-
-    deltamax = fimax - phi(inp)
-    deltamin = fimin - phi(inp)
+    deltamax = phi_max - phi(inp)
+    deltamin = phi_min - phi(inp)
 
     slopelimit = 1.0_dp
 
@@ -374,73 +401,85 @@ subroutine slope_limiter_Venkatakrishnan(phi, dPhidxi)
 !
 !***********************************************************************
 !
-!     Calculates slope limiter and appiies to scalar gradient:
+!     Calculates slope limiter and applies it to the scalar gradient:
 !     Venkatakrishnan slope limiter:
 !
 !    AIAA-93-0880, On the accuracy of limiters and convergence
 !    to steady state solutions, V.Venkatakrishnan, 1993
 !
+!     Differences to the previous version:
+!     - bounds are the LOCAL extrema over the cell and its neighbours
+!       (the old code used global field extrema, so it practically never
+!       limited, and computed the local ones without using them),
+!     - the smooth form with eps^2 is used, so the limiter is differentiable
+!       near extrema (better iterative convergence),
+!     - eps^2 = (K*h/L)^3 * (phi_max-phi_min)^2 with h = vol^(1/3) and
+!       L^3 = total volume: invariant to units and to the size of the
+!       domain. The old absolute threshold |delta|<1e-6 is gone,
+!     - face value is estimated at the midpoint of the line P-N.
+!
+!     K is a tuning constant; larger K limits less (more accurate, less
+!     monotone). K=0.01..0.2 are recommended values by Wang (https://doi.org/10.2514/6.1996-2091)
+!
 !***********************************************************************
 !
-
   implicit none
 
-  ! Input
-  real(dp),dimension(numTotal) :: phi
-  real(dp),dimension(3,numTotal) :: dPhidxi
+  real(dp), dimension(numTotal) :: phi
+  real(dp), dimension(3,numTotal) :: dPhidxi
 
+  real(dp), parameter :: K = 0.01_dp ! values in the range [0.01 .. 0.2_dp]
 
-  ! Locals
-  integer :: inp,ijp,ijn,k
-  real(dp) :: phi_p
-  real(dp) :: slopelimit
-  real(dp) :: delta_face
-  real(dp) :: phi_max,phi_min,r
-  real(dp) :: fimax,fimin,deltamax,deltamin
-
+  integer  :: inp, ijn, k_nb
+  real(dp) :: phi_p, phi_max, phi_min
+  real(dp) :: fimax, fimin, range, voltot
+  real(dp) :: d1, d2, eps2, philim, slopelimit
 
   fimin = minval(phi(1:numCells))
   fimax = maxval(phi(1:numCells))
+  range = fimax - fimin
+
+  ! Uniform field: nothing to limit
+  if ( range <= 0.0_dp ) return
+
+  voltot = sum( vol(1:numCells) )
 
   do inp = 1, numCells
 
-    ! Values at cell center:
-    phi_p = phi(inp)
+    phi_p   = phi(inp)
+    phi_max = phi_p
+    phi_min = phi_p
 
-    ! max and min values over current cell and neighbors
-    phi_max = phi(ja( ia(inp) ))
-    phi_min = phi(ja( ia(inp) ))
-
-    do k=ia(inp)+1, ia(inp+1)-1
-      phi_max = max( phi_max, phi(ja(k)) )
-      phi_min = min( phi_max, phi(ja(k)) )      
+    do k_nb = ia(inp), ia(inp+1)-1
+      phi_max = max( phi_max, phi(ja(k_nb)) )
+      phi_min = min( phi_min, phi(ja(k_nb)) )
     enddo
 
-
-    deltamax = fimax - phi(inp)
-    deltamin = fimin - phi(inp)
+    eps2 = (K**3) * ( vol(inp)/voltot ) * range**2
 
     slopelimit = 1.0_dp
 
-    do k=ia(inp), ia(inp+1)-1
+    do k_nb = ia(inp), ia(inp+1)-1
 
-      if (k == diag(inp)) cycle
-   
-      ijp = inp
-      ijn = ja(k)
+      if ( k_nb == diag(inp) ) cycle
+      ijn = ja(k_nb)
 
-      delta_face=dPhidxi(1,ijp)*(xc(ijn)-xc(ijp))+dPhidxi(2,ijp)*(yc(ijn)-yc(ijp))+dPhidxi(3,ijp)*(zc(ijn)-zc(ijp)) 
+      ! Unlimited change of phi from the centre to the face (midpoint)
+      d2 = 0.5_dp*( dPhidxi(1,inp)*(xc(ijn)-xc(inp)) &
+                  + dPhidxi(2,inp)*(yc(ijn)-yc(inp)) &
+                  + dPhidxi(3,inp)*(zc(ijn)-zc(inp)) )
 
+      ! Allowed change towards the local maximum / minimum
+      if ( d2 > 0.0_dp ) then
+        d1 = phi_max - phi_p
+      else
+        d1 = phi_min - phi_p
+      endif
 
-     if( abs(delta_face) < 1.e-6 )then
-       r = 1.0_dp
-     else if( delta_face > 0.0 )then
-       r = deltamax/delta_face
-     else
-       r = deltamin/delta_face
-     endif
+      ! (d1^2+eps2)*d2 + 2*d2^2*d1 over d2*(d1^2+2*d2^2+d1*d2+eps2); d2 cancels
+      philim = ( d1*d1 + eps2 + 2.0_dp*d1*d2 ) / ( d1*d1 + 2.0_dp*d2*d2 + d1*d2 + eps2 )
 
-     slopelimit = min( slopelimit , (r**2+2.0*r)/(r**2+r+2.0) )
+      slopelimit = min( slopelimit, philim )
 
     enddo
 
@@ -478,11 +517,12 @@ subroutine slope_limiter_r345(phi, dPhidxi)
   real(dp) :: slopelimit
   real(dp) :: delta_face
   real(dp) :: phi_max,phi_min,r
-  real(dp) :: fimax,fimin,deltamax,deltamin
+  ! real(dp) :: fimax,fimin
+  real(dp) :: deltamax,deltamin
 
 
-  fimin = minval(phi(1:numCells))
-  fimax = maxval(phi(1:numCells))
+  ! fimin = minval(phi(1:numCells))
+  ! fimax = maxval(phi(1:numCells))
 
   do inp = 1, numCells
 
@@ -495,12 +535,12 @@ subroutine slope_limiter_r345(phi, dPhidxi)
 
     do k=ia(inp)+1, ia(inp+1)-1
       phi_max = max( phi_max, phi(ja(k)) )
-      phi_min = min( phi_max, phi(ja(k)) )      
+      phi_min = min( phi_min, phi(ja(k)) )      
     enddo
 
 
-    deltamax = fimax - phi(inp)
-    deltamin = fimin - phi(inp)
+    deltamax = phi_max - phi(inp)
+    deltamin = phi_min - phi(inp)
 
     slopelimit = 1.0_dp
 
@@ -657,6 +697,341 @@ end subroutine
 
 
 
+!***********************************************************************
+!
+subroutine invert_sym3( a )
+!
+!***********************************************************************
+!
+!  Purpose:
+!    In-place (pseudo-)inverse of a symmetric positive semi-definite 3x3
+!    matrix stored as a(1:6) = (a11,a12,a13,a22,a23,a33).
+!
+!  Method:
+!    1. Diagonal (Jacobi) equilibration M = S*A*S, S = diag(1/sqrt(a_ii)).
+!       M has unit diagonal, so the result no longer depends on cell size,
+!       units or aspect ratio, and no absolute 'small' number is needed.
+!    2. Eigen-decomposition of M by cyclic Jacobi rotations. Accurate even
+!       for tiny eigenvalues and needs only a few sweeps for a 3x3 matrix.
+!    3. Eigenvalues below rank_tol*max(eigenvalue) are discarded (rank-
+!       revealing generalised inverse). A cell whose stencil does not span
+!       all three directions (2D meshes, collapsed cells) therefore gets a
+!       finite answer instead of 1e+20: the gradient component along an
+!       undetermined coordinate axis is exactly zero, and the components
+!       that the stencil does determine are still reproduced exactly.
+!       (If the degenerate direction is not a coordinate axis the
+!       undetermined component is bounded but arbitrary, since this is not
+!       the minimum-norm solution.)
+!    4. A^+ = S * V * diag(1/lambda) * V^T * S
+!
+!  It is called once per cell at start-up, so its cost is irrelevant.
+!
+!***********************************************************************
+!
+  implicit none
+
+  real(dp), intent(inout) :: a(6)
+
+  real(dp), parameter :: rank_tol = 1.0e-8_dp
+  integer,  parameter :: ip(3) = (/ 1, 1, 2 /)
+  integer,  parameter :: iq(3) = (/ 2, 3, 3 /)
+
+  real(dp) :: s(3), m(3,3), v(3,3), jr(3,3), lam(3), linv(3)
+  real(dp) :: theta, t, c, sn, off, lmax
+  integer  :: sweep, k, p, q
+
+  ! 1) Equilibrate. A zero diagonal means no stencil extent in that direction.
+  s = 0.0_dp
+  if ( a(1) > 0.0_dp ) s(1) = 1.0_dp/sqrt(a(1))
+  if ( a(4) > 0.0_dp ) s(2) = 1.0_dp/sqrt(a(4))
+  if ( a(6) > 0.0_dp ) s(3) = 1.0_dp/sqrt(a(6))
+
+  m(1,1) = a(1)*s(1)*s(1)
+  m(1,2) = a(2)*s(1)*s(2)
+  m(1,3) = a(3)*s(1)*s(3)
+  m(2,2) = a(4)*s(2)*s(2)
+  m(2,3) = a(5)*s(2)*s(3)
+  m(3,3) = a(6)*s(3)*s(3)
+  m(2,1) = m(1,2)
+  m(3,1) = m(1,3)
+  m(3,2) = m(2,3)
+
+  ! 2) Cyclic Jacobi eigenvalue iteration
+  v = 0.0_dp
+  v(1,1) = 1.0_dp
+  v(2,2) = 1.0_dp
+  v(3,3) = 1.0_dp
+
+  do sweep = 1, 16
+
+    off = abs(m(1,2)) + abs(m(1,3)) + abs(m(2,3))
+    if ( off < 1.0e-15_dp ) exit
+
+    do k = 1, 3
+      p = ip(k)
+      q = iq(k)
+      if ( abs(m(p,q)) < 1.0e-300_dp ) cycle
+
+      theta = ( m(q,q) - m(p,p) ) / ( 2.0_dp*m(p,q) )
+      if ( abs(theta) > 1.0e150_dp ) then
+        t = 0.5_dp/theta
+      else
+        t = sign(1.0_dp,theta) / ( abs(theta) + sqrt(theta*theta + 1.0_dp) )
+      endif
+      c  = 1.0_dp/sqrt(t*t + 1.0_dp)
+      sn = t*c
+
+      jr = 0.0_dp
+      jr(1,1) = 1.0_dp
+      jr(2,2) = 1.0_dp
+      jr(3,3) = 1.0_dp
+      jr(p,p) = c
+      jr(q,q) = c
+      jr(p,q) = sn
+      jr(q,p) = -sn
+
+      m = matmul( transpose(jr), matmul(m,jr) )
+      v = matmul( v, jr )
+    enddo
+
+  enddo
+
+  ! 3) Pseudo-inverse of the eigenvalues
+  do k = 1, 3
+    lam(k) = m(k,k)
+  enddo
+  lmax = maxval(lam)
+
+  linv = 0.0_dp
+  do k = 1, 3
+    if ( lmax > 0.0_dp .and. lam(k) > rank_tol*lmax ) linv(k) = 1.0_dp/lam(k)
+  enddo
+
+  ! 4) Undo equilibration and store the 6 unique entries
+  do q = 1, 3
+    do p = 1, 3
+      m(p,q) = sum( v(p,:)*linv(:)*v(q,:) )
+    enddo
+  enddo
+
+  a(1) = s(1)*s(1)*m(1,1)
+  a(2) = s(1)*s(2)*m(1,2)
+  a(3) = s(1)*s(3)*m(1,3)
+  a(4) = s(2)*s(2)*m(2,2)
+  a(5) = s(2)*s(3)*m(2,3)
+  a(6) = s(3)*s(3)*m(3,3)
+
+end subroutine
+
+
+
+!***********************************************************************
+!
+subroutine grad_gauss_corrected(u,dudxi)
+!
+!***********************************************************************
+!
+!   Purpose:
+!     Gauss gradient with non-orthogonality (skewness) correction.
+!
+!   Description:
+!     The face value is the linear interpolate between cell centres, taken
+!     at the point where the line P-N crosses the face plane, corrected to
+!     the face centroid with a gradient that is interpolated to that point
+!     from the INCOMING gradient:
+!
+!       phi_f = phi_lin + grad_i . (x_f - x_i)
+!
+!     On entry dudxi must hold an initial gradient (e.g. from a least-squares
+!     routine); on exit it holds the corrected, conservative Gauss gradient.
+!     Port of the routine of the same name in fvxGradient.f90.
+!
+!***********************************************************************
+!
+  implicit none
+
+  real(dp), dimension(numTotal), intent(in)      :: u
+  real(dp), dimension(3,numTotal), intent(inout) :: dudxi
+
+  integer  :: i, ijp, ijn, ijb, iface
+  real(dp) :: fxn, fxp, xi, yi, zi, gx, gy, gz, fie, volr
+  real(dp), dimension(:,:), allocatable :: g0
+
+  allocate( g0(3,numCells) )
+  g0 = dudxi(:,1:numCells)
+
+  dudxi = 0.0_dp
+
+  do i = 1, numInnerFaces
+
+    ijp = owner(i)
+    ijn = neighbour(i)
+
+    fxn = facint(i)
+    fxp = 1.0_dp - fxn
+
+    ! Point on the line P-N where the linear interpolation is exact
+    xi = xc(ijp)*fxp + xc(ijn)*fxn
+    yi = yc(ijp)*fxp + yc(ijn)*fxn
+    zi = zc(ijp)*fxp + zc(ijn)*fxn
+
+    gx = g0(1,ijp)*fxp + g0(1,ijn)*fxn
+    gy = g0(2,ijp)*fxp + g0(2,ijn)*fxn
+    gz = g0(3,ijp)*fxp + g0(3,ijn)*fxn
+
+    fie = u(ijp)*fxp + u(ijn)*fxn + gx*(xf(i)-xi) + gy*(yf(i)-yi) + gz*(zf(i)-zi)
+
+    dudxi(1,ijp) = dudxi(1,ijp) + fie*arx(i)
+    dudxi(2,ijp) = dudxi(2,ijp) + fie*ary(i)
+    dudxi(3,ijp) = dudxi(3,ijp) + fie*arz(i)
+
+    dudxi(1,ijn) = dudxi(1,ijn) - fie*arx(i)
+    dudxi(2,ijn) = dudxi(2,ijn) - fie*ary(i)
+    dudxi(3,ijn) = dudxi(3,ijn) - fie*arz(i)
+
+  enddo
+
+  do i = 1, numBoundaryFaces
+    iface = numInnerFaces + i
+    ijp = owner(iface)
+    ijb = numCells + i
+    call gradbc( arx(iface), ary(iface), arz(iface), u(ijb), dudxi(1,ijp), dudxi(2,ijp), dudxi(3,ijp) )
+  enddo
+
+  do ijp = 1, numCells
+    volr = 1.0_dp/vol(ijp)
+    dudxi(:,ijp) = dudxi(:,ijp)*volr
+  enddo
+
+  deallocate( g0 )
+
+end subroutine
+
+
+
+!***********************************************************************
+!
+subroutine create_lsq_face_weights
+!
+!***********************************************************************
+!
+!  Purpose:
+!    Precompute, for every face, the vectors that turn a difference of the
+!    field across the face into a contribution to the weighted least-squares
+!    gradient of the adjacent cells:
+!
+!        grad(phi)_P = sum_f  c_f * ( phi_N(f) - phi_P )
+!        c_f = w_f * Ainv_P * d_f,   w_f = 1/|d_f|^2,   d_f = x_N - x_P
+!
+!    Ainv_P is the inverse LSQ matrix of cell P (see invert_sym3).
+!    Boundary faces use the face centre as the 'neighbour' position.
+!
+!  Why:
+!    At run time the gradient is only a sweep over faces: no per-cell
+!    solve and no dependence on the number of faces of a cell, so it is
+!    valid for any polyhedral cell (unlike the QR variant, which is
+!    dimensioned for 6 neighbours). Results equal those of lstsq_dm.
+!
+!***********************************************************************
+!
+  implicit none
+
+  integer  :: i, ijp, ijn, iface, ierr
+  real(dp) :: w, Dx, Dy, Dz
+  logical  :: had_dmat
+
+  allocate( lsq_cp(3,numInnerFaces), lsq_cn(3,numInnerFaces), &
+            lsq_cb(3,numBoundaryFaces), stat=ierr )
+  if (ierr /= 0) write(*,*) "allocation error: lsq face weights"
+
+  ! Reuse the weighted LSQ matrix builder; it leaves the inverse in Dmat.
+  had_dmat = allocated(Dmat)
+  if (.not. had_dmat) allocate( Dmat(6,numCells), stat=ierr )
+  call create_matrix_lsq_dm
+
+  do i = 1, numInnerFaces
+
+    ijp = owner(i)
+    ijn = neighbour(i)
+
+    Dx = xc(ijn)-xc(ijp)
+    Dy = yc(ijn)-yc(ijp)
+    Dz = zc(ijn)-zc(ijp)
+    w  = 1.0_dp/(Dx*Dx + Dy*Dy + Dz*Dz)
+
+    lsq_cp(1,i) = w*( Dmat(1,ijp)*Dx + Dmat(2,ijp)*Dy + Dmat(3,ijp)*Dz )
+    lsq_cp(2,i) = w*( Dmat(2,ijp)*Dx + Dmat(4,ijp)*Dy + Dmat(5,ijp)*Dz )
+    lsq_cp(3,i) = w*( Dmat(3,ijp)*Dx + Dmat(5,ijp)*Dy + Dmat(6,ijp)*Dz )
+
+    ! Neighbour sees offset -d and difference (phi_P - phi_N): same product
+    ! d*(phi_N-phi_P), but with its own inverse matrix.
+    lsq_cn(1,i) = w*( Dmat(1,ijn)*Dx + Dmat(2,ijn)*Dy + Dmat(3,ijn)*Dz )
+    lsq_cn(2,i) = w*( Dmat(2,ijn)*Dx + Dmat(4,ijn)*Dy + Dmat(5,ijn)*Dz )
+    lsq_cn(3,i) = w*( Dmat(3,ijn)*Dx + Dmat(5,ijn)*Dy + Dmat(6,ijn)*Dz )
+
+  enddo
+
+  do i = 1, numBoundaryFaces
+
+    iface = numInnerFaces + i
+    ijp = owner(iface)
+
+    Dx = xf(iface)-xc(ijp)
+    Dy = yf(iface)-yc(ijp)
+    Dz = zf(iface)-zc(ijp)
+    w  = 1.0_dp/(Dx*Dx + Dy*Dy + Dz*Dz)
+
+    lsq_cb(1,i) = w*( Dmat(1,ijp)*Dx + Dmat(2,ijp)*Dy + Dmat(3,ijp)*Dz )
+    lsq_cb(2,i) = w*( Dmat(2,ijp)*Dx + Dmat(4,ijp)*Dy + Dmat(5,ijp)*Dz )
+    lsq_cb(3,i) = w*( Dmat(3,ijp)*Dx + Dmat(5,ijp)*Dy + Dmat(6,ijp)*Dz )
+
+  enddo
+
+  if (.not. had_dmat) deallocate( Dmat )
+
+end subroutine
+
+
+!***********************************************************************
+!
+subroutine grad_lsq_fw(Phi,dPhidxi)
+!
+!***********************************************************************
+!
+!  Weighted least-squares gradient using precomputed face weights
+!  (see create_lsq_face_weights).
+!
+!***********************************************************************
+!
+  implicit none
+
+  real(dp), dimension(numTotal), intent(in)      :: Phi
+  real(dp), dimension(3,numTotal), intent(inout) :: dPhidxi
+
+  integer  :: i, ijp, ijn, iface
+  real(dp) :: delta
+
+  dPhidxi = 0.0_dp
+
+  do i = 1, numInnerFaces
+    ijp = owner(i)
+    ijn = neighbour(i)
+    delta = Phi(ijn)-Phi(ijp)
+    dPhidxi(:,ijp) = dPhidxi(:,ijp) + lsq_cp(:,i)*delta
+    dPhidxi(:,ijn) = dPhidxi(:,ijn) + lsq_cn(:,i)*delta
+  enddo
+
+  do i = 1, numBoundaryFaces
+    iface = numInnerFaces + i
+    ijp = owner(iface)
+    ijn = numCells + i
+    dPhidxi(:,ijp) = dPhidxi(:,ijp) + lsq_cb(:,i)*( Phi(ijn)-Phi(ijp) )
+  enddo
+
+end subroutine
+
+
+
 subroutine create_matrix_lsq
 !
 !***********************************************************************
@@ -681,7 +1056,6 @@ subroutine create_matrix_lsq
   integer :: i,ijp,ijn,inp,iface
 
   real(dp) :: Dx,Dy,Dz
-  real(dp) :: d11,d12,d13,d21,d22,d23,d31,d32,d33,tmp
 !
 !***********************************************************************
 !
@@ -742,39 +1116,11 @@ subroutine create_matrix_lsq
   end do
 
 
-  ! Prepare for storage - loop over cells:
-  do inp=1,numCells 
-
-    ! Copy from Coefficient matrix 
-    D11 = Dmat(1,inp)
-    D12 = Dmat(2,inp)
-    D13 = Dmat(3,inp)
-
-    D22 = Dmat(4,inp)
-    D23 = Dmat(5,inp)
-    D33 = Dmat(6,inp)
-
-    ! Symmetric part
-    D21 = D12
-    D31 = D13
-    D32 = D23
-
-    ! Denominator used troughout
-    tmp = 1./(d11*d22*d33 - d11*d23*d32 - d12*d21*d33 + d12*d23*d31 + d13*d21*d32 - d13*d22*d31 + small)
-
-    Dmat(1,inp) = (d22*d33 - d23*d32) * tmp
-    Dmat(2,inp) = (d21*d33 - d23*d31) * tmp
-    Dmat(3,inp) = (d21*d32 - d22*d31) * tmp
-
-    Dmat(4,inp) = (d11*d33 - d13*d31) * tmp
-    Dmat(5,inp) = (d12*d33 - d13*d32) * tmp
-    Dmat(6,inp) = (d11*d32 - d12*d31) * tmp
-
-    Dmat(7,inp) = (d12*d23 - d13*d22) * tmp
-    Dmat(8,inp) = (d11*d23 - d13*d21) * tmp
-    Dmat(9,inp) = (d11*d22 - d12*d21) * tmp
-
-  enddo  
+  ! Invert the symmetric 3x3 matrix of every cell once and store its 6 unique
+  ! entries. See invert_sym3 for how scaling and rank-deficiency are treated.
+  do inp=1,numCells
+    call invert_sym3( Dmat(1:6,inp) )
+  enddo
 
 end subroutine
 
@@ -883,9 +1229,10 @@ subroutine grad_lsq(Phi,dPhidxi)
     b2 = dPhidxi(2,inp)
     b3 = dPhidxi(3,inp)
             
-    dPhidxi(1,inp) = b1*Dmat(1,inp) - b2*Dmat(2,inp) +  b3*Dmat(3,inp) 
-    dPhidxi(2,inp) = b1*Dmat(4,inp) - b2*Dmat(5,inp) -  b3*Dmat(6,inp) 
-    dPhidxi(3,inp) = b1*Dmat(7,inp) - b2*Dmat(8,inp) +  b3*Dmat(9,inp) 
+    ! Dmat holds the symmetric inverse as (11,12,13,22,23,33):
+    dPhidxi(1,inp) = Dmat(1,inp)*b1 + Dmat(2,inp)*b2 + Dmat(3,inp)*b3
+    dPhidxi(2,inp) = Dmat(2,inp)*b1 + Dmat(4,inp)*b2 + Dmat(5,inp)*b3
+    dPhidxi(3,inp) = Dmat(3,inp)*b1 + Dmat(5,inp)*b2 + Dmat(6,inp)*b3
 
   enddo 
 
@@ -931,8 +1278,8 @@ subroutine create_matrix_lsq_qr
 
 #ifndef LAPACK
 
-  REAL(dp), DIMENSION(m,n) :: R
-  REAL(dp), DIMENSION(m,m) :: Q
+  ! REAL(dp), DIMENSION(m,n) :: R
+  REAL(dp), DIMENSION(m,n) :: Q1
   REAL(dp), DIMENSION(n,n) :: R1
   REAL(dp), DIMENSION(n,m) :: Q1t
 
@@ -1005,12 +1352,12 @@ subroutine create_matrix_lsq_qr
   ! 1) Decompose A=QR using Householder
   ! call householder_qr(Dtmp, m, n, Q, R)
   ! 2) Decompose A=QR using Gram-Schmidt
-  call mgs_qr(Dtmp, m, n, Q, R)
+  call mgs_qr(Dtmp, m, n, Q1, R1)
 
-  Q = transpose(Q)
-  Q1t = Q(1:n,1:m)      ! NOTE: A=Q1R1 is so-called 'thin QR factorization' - see Golub & Van Loan
+  Q1t = transpose(Q1)
+  ! Q1t = Q(1:n,1:m)      ! NOTE: A=Q1R1 is so-called 'thin QR factorization' - see Golub & Van Loan
                         ! Here Q1 is actually Q1^T a transpose of Q1(thin Q - Q with m-n column stripped off)
-  R1 = R(1:n,1:n)       ! our Q1 is thin transpose of original Q.
+  ! R1 = R(1:n,1:n)       ! our Q1 is thin transpose of original Q.
   R1 = inv(R1)          ! inv is a function in matrix_module, now works only for 3x3 matrices.
   Q1t  = matmul(R1,Q1t) ! this is actually R^(-1)*Q^T - a matrix of size n x m.
   D(:,:,INP) = Q1t      ! Store it for later.
@@ -1184,8 +1531,6 @@ subroutine create_matrix_lsq_dm
   integer :: i,ijp,ijn,inp,iface
   real(dp) :: w
   real(dp) :: Dx,Dy,Dz
-  real(dp) :: d11,d12,d13,d21,d22,d23,d31,d32,d33
-  real(dp) :: tmp
 !
 !***********************************************************************
 !
@@ -1290,39 +1635,11 @@ subroutine create_matrix_lsq_dm
   end do
 
 
-  ! Prepare for storage:
-  do inp=1,numCells 
-
-    ! Copy from Coefficient matrix 
-    D11 = Dmat(1,inp)
-    D12 = Dmat(2,inp)
-    D13 = Dmat(3,inp)
-
-    D22 = Dmat(4,inp)
-    D23 = Dmat(5,inp)
-    D33 = Dmat(6,inp)
-
-    ! Symmetric part
-    D21 = D12
-    D31 = D13
-    D32 = D23
-
-    ! Denominator used troughout
-    tmp = 1./(d11*d22*d33 - d11*d23*d32 - d12*d21*d33 + d12*d23*d31 + d13*d21*d32 - d13*d22*d31 + small)
-
-    Dmat(1,inp) = (d22*d33 - d23*d32) * tmp
-    Dmat(2,inp) = (d21*d33 - d23*d31) * tmp
-    Dmat(3,inp) = (d21*d32 - d22*d31) * tmp
-
-    Dmat(4,inp) = (d11*d33 - d13*d31) * tmp
-    Dmat(5,inp) = (d12*d33 - d13*d32) * tmp
-    Dmat(6,inp) = (d11*d32 - d12*d31) * tmp
-
-    Dmat(7,inp) = (d12*d23 - d13*d22) * tmp
-    Dmat(8,inp) = (d11*d23 - d13*d21) * tmp
-    Dmat(9,inp) = (d11*d22 - d12*d21) * tmp
-
-  enddo  
+  ! Invert the symmetric 3x3 matrix of every cell once and store its 6 unique
+  ! entries. See invert_sym3 for how scaling and rank-deficiency are treated.
+  do inp=1,numCells
+    call invert_sym3( Dmat(1:6,inp) )
+  enddo
 
   
 end subroutine
@@ -1456,7 +1773,7 @@ subroutine grad_lsq_dm(Phi,dPhidxi)
     ijn = numCells+i
 
     w = ( Phi(ijn)-Phi(ijp) ) &
-       /( (xf(i)-xc(ijp))**2+(yf(i)-yc(ijp))**2+(zf(i)-zc(ijp))**2 )
+       /( (xf(iface)-xc(ijp))**2+(yf(iface)-yc(ijp))**2+(zf(iface)-zc(ijp))**2 )
 
     Dx = w*(xf(iface)-xc(ijp)) 
     Dy = w*(yf(iface)-yc(ijp))
@@ -1476,9 +1793,10 @@ subroutine grad_lsq_dm(Phi,dPhidxi)
     b2 = dPhidxi(2,inp)
     b3 = dPhidxi(3,inp)
             
-    dPhidxi(1,inp) = b1*Dmat(1,inp) - b2*Dmat(2,inp) +  b3*Dmat(3,inp) 
-    dPhidxi(2,inp) = b1*Dmat(4,inp) - b2*Dmat(5,inp) -  b3*Dmat(6,inp) 
-    dPhidxi(3,inp) = b1*Dmat(7,inp) - b2*Dmat(8,inp) +  b3*Dmat(9,inp) 
+    ! Dmat holds the symmetric inverse as (11,12,13,22,23,33):
+    dPhidxi(1,inp) = Dmat(1,inp)*b1 + Dmat(2,inp)*b2 + Dmat(3,inp)*b3
+    dPhidxi(2,inp) = Dmat(2,inp)*b1 + Dmat(4,inp)*b2 + Dmat(5,inp)*b3
+    dPhidxi(3,inp) = Dmat(3,inp)*b1 + Dmat(5,inp)*b2 + Dmat(6,inp)*b3
 
   enddo 
 

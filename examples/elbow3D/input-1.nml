@@ -16,7 +16,7 @@
            maxiterU = 5             ! Max no of iterations for linear U-V-W equations
             tolAbsU = 1e-13         ! Absolute tolerance level for residual for linear U-V-W equations
             tolRelU = 0.01          ! Relative tolerance level for residual for linear U-V-W equations
-            pscheme = 'weighted'
+           pscheme = 'weighted'
         !
         ! Approximation details for pressure/pressure correction.
         !
@@ -30,8 +30,8 @@
         ! Physical model: Viscous flows - Laminar/Turbulent, Activation and model details.
         !
           TurbModel = 'k_epsilon_rlzb'         ! Turbulence model - defined by string code.   
-          TurbModel%Scalar(1)%gds = 0.0
-          TurbModel%Scalar(2)%gds = 0.0
+          TurbModel%Scalar(1)%gds = 1.0
+          TurbModel%Scalar(2)%gds = 1.0
         !
         ! Physical model: Heat transfer, Temperature as energy equation, Activation and model details.
         !
@@ -82,16 +82,18 @@
               lstsq = F           !@ |Gradient approximation, chose ONE: Unweighted Least-Square gradient approximation, or...
            lstsq_qr = F           !@ |Least square gradients based on thin QR decomposition, or...
            lstsq_dm = F           !@ |Distance-square weighted version of Least-Square Gradient, or...
+           lstsq_fw = F           !@ |Face weighted version of Least-Square Gradient, or...
               gauss = T           !@ |Cell based Gauss gradient with simple linear interpolation.
-              nigrad = 1
+              node_gauss = F
             limiter = 'Barth-Jespersen'     ! Gradient limiter - default for all gradients
         !
         ! Solution method: pressure-velocity coupling
         !    
              SIMPLE = T       !# |Pressure-velocity coupling method - SIMPLE, or...
                PISO = F       !# |Pressure-velocity coupling method - PISO.
+            COUPLED = F
               ncorr = 1       ! Number of PISO corrections - only relevant for PISO.
-              npcor = 1       ! Number of iterations for pressure/pressure correction equation - Number of Nonorthogonal corrections.  
+              npcor = 2       ! Number of iterations for pressure/pressure correction equation - Number of Nonorthogonal corrections.  
            pRefCell = 1                     ! Reference cell for setting pressure level (since we have pure Neumann problem)
           tolerance = 1e-5    ! Desired level of convergence for SIMPLE iterations.
         !

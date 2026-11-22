@@ -38,7 +38,7 @@ module velocity
   
   private 
 
-  public :: calcuvw, updateVelocityAtBoundary, calc_wall_shear
+  public :: calcuvw, calcuvw_assemble, updateVelocityAtBoundary, calc_wall_shear
   public :: calcU, urfU, gdsU, cSchemeU, dSchemeU, nrelaxU, lSolverU, maxiterU, tolAbsU, tolRelU ! params
 
 
@@ -47,11 +47,19 @@ contains
 
 
 
-subroutine calcuvw
+subroutine calcuvw_assemble(pressure_implicit)
 !
 !  Purpose: 
 !
-!    Assembles and solves discrete momentum equations.
+!    Assembles discrete momentum equations (convection, diffusion, sources, BCs, unsteady term)
+!    up to the point where the main diagonal would be formed and the linear systems solved.
+!    Used by calcuvw (segregated solution) and by the block-coupled p-U solver.
+!
+!  Parameters:
+!
+!    pressure_implicit - if .true. the explicit pressure-gradient source is NOT put into su,sv,sw,
+!                        because the coupled solver treats the pressure gradient implicitly.
+!
 !
 !  Discussion:
 !
@@ -92,6 +100,8 @@ subroutine calcuvw
   
   implicit none
 
+  logical, intent(in) :: pressure_implicit
+
 
 !
 ! Local variables
@@ -101,7 +111,6 @@ subroutine calcuvw
   integer :: iWall, iSym, iPer      
   real(dp) :: apotime, heat
   real(dp) :: sup, svp, swp
-  real(dp) :: sum_off_diagonal_terms
   real(dp) :: cp, cb        ! Temp. for eq. coeficients
   real(dp) :: cap, can      ! Temp. for eq. coeficients
   real(dp) :: cf            ! Diffusion coefficient
@@ -111,7 +120,6 @@ subroutine calcuvw
   real(dp) :: vsol          ! Diffusion coefficient (II)
   real(dp) :: Upb, Vpb, Wpb ! Velocity difference
   real(dp) :: viss
-  real(dp) :: urfr,urfm
 
   ! logical :: ScndOrderWallBC_Model = .false.
   ! real(dp) :: FdUi,FdVi,FdWi! Diffusive flux auxiliary
@@ -171,6 +179,13 @@ subroutine calcuvw
   ! Calc pressure gradient and (as a side effect-for better or for worse),
   ! su,sv,sw source vectors are filled with -Sum(pfSf.i), i=x,y,z.
   call gradp_and_sources(p)
+
+  ! Block-coupled solver: pressure gradient is implicit in the matrix, remove explicit part.
+  if ( pressure_implicit ) then
+    su = 0.0_dp
+    sv = 0.0_dp
+    sw = 0.0_dp
+  endif
 
 
   ! Update values of Lorentz force vector components in MHD case.
@@ -335,7 +350,7 @@ subroutine calcuvw
         ijp = owner(iface)
         ijb = iBndValueStart(ib) + i
 
-        call facefluxuvw_bnd( ijp, ijb, &
+        call facefluxuvw_boundary( ijp, ijb, &
                               xf(iface), yf(iface), zf(iface), &
                               arx(iface), ary(iface), arz(iface), &
                               flmass(iface), &
@@ -376,7 +391,7 @@ subroutine calcuvw
         ! dpb . nf
         dpb = (xf(iface)-xc(ijp))*nxf + (yf(iface)-yc(ijp))*nyf + (zf(iface)-zc(ijp))*nzf
 
-        cf = 2*vis(inp)*are/dpb
+        cf = 2*vis(ijp)*are/dpb
 
         su(ijp) = su(ijp)-cf*nxf*(nyf*v(ijp)+nzf*w(ijp))
         sv(ijp) = sv(ijp)-cf*nyf*(nxf*u(ijp)+nzf*w(ijp))
@@ -570,9 +585,105 @@ subroutine calcuvw
   endif
 
 
-  ! ! If flow is compressible add 2/3*mu*div(U) source - NOTE: rethink this, maybe add to pressure above
-  ! if (compressible) p(1:numCells) = p(1:numCells) + twothirds*vis(1:numCells)*explDiv( U, V, W )*vol(1:numCells)
+  ! If the flow is compressible add the bulk part of the viscous stress, -2/3 grad( mu div(U) ), as explicit source.
+  if ( compressible ) call add_bulk_viscous_term
 
+
+end subroutine calcuvw_assemble
+
+
+
+subroutine add_bulk_viscous_term
+!
+!  Purpose:
+!    Compressible flow: viscous stress tensor  tau = mu ( grad U + grad U^T ) - 2/3 mu div(U) I.
+!    The first part is in the momentum equation (implicit diffusion + explicit transpose part), here we add the
+!    second part, - 2/3 grad( mu div(U) ), integrated over the cell volume with Gauss theorem:
+!
+!        - 2/3 sum_f  mu_f (div U)_f  S_f
+!
+!    (div U)_f is the linearly interpolated cell-centre divergence, on boundary faces the divergence of the owner cell
+!    and the boundary viscosity are used. The term is explicit (lagged velocity gradients). Empty and periodic faces are
+!    skipped. Added to su, sv, sw.
+!
+  use types
+  use parameters
+  use geometry
+  use sparse_matrix
+  use variables
+
+  implicit none
+
+  integer :: i, ib, ijp, ijn, ijb, iface
+  real(dp) :: lam, muf, divf, f
+  real(dp), dimension(:), allocatable :: divU
+
+  allocate( divU(numCells) )
+  divU = dUdxi(1,1:numCells) + dVdxi(2,1:numCells) + dWdxi(3,1:numCells)
+
+  ! Inner faces
+  do i = 1,numInnerFaces
+    ijp = owner(i)
+    ijn = neighbour(i)
+    lam = facint(i)
+    muf  = vis(ijp) + ( vis(ijn)-vis(ijp) )*lam
+    divf = divU(ijp) + ( divU(ijn)-divU(ijp) )*lam
+    f = -twothirds*muf*divf
+    su(ijp) = su(ijp) + f*arx(i)
+    sv(ijp) = sv(ijp) + f*ary(i)
+    sw(ijp) = sw(ijp) + f*arz(i)
+    su(ijn) = su(ijn) - f*arx(i)
+    sv(ijn) = sv(ijn) - f*ary(i)
+    sw(ijn) = sw(ijn) - f*arz(i)
+  enddo
+
+  ! Boundary faces
+  do ib=1,numBoundaries
+    if ( bctype(ib) == 'empty' .or. bctype(ib) == 'periodic' ) cycle
+    do i=1,nfaces(ib)
+      iface = startFace(ib) + i
+      ijp = owner(iface)
+      ijb = iBndValueStart(ib) + i
+      f = -twothirds*vis(ijb)*divU(ijp)
+      su(ijp) = su(ijp) + f*arx(iface)
+      sv(ijp) = sv(ijp) + f*ary(iface)
+      sw(ijp) = sw(ijp) + f*arz(iface)
+    enddo
+  enddo
+
+  deallocate( divU )
+
+end subroutine add_bulk_viscous_term
+
+
+
+subroutine calcuvw
+!
+!  Purpose: 
+!
+!    Assembles and solves discrete momentum equations.
+!
+!  Discussion:
+!
+!    Made for seqential solution method such as SIMPLE or PISO.
+!    Assembly is done in calcuvw_assemble, here we form the main diagonal,
+!    apply under-relaxation and solve for u, v and w.
+!
+  use types
+  use parameters
+  use geometry
+  use sparse_matrix
+  use variables
+  use linear_solvers
+
+  implicit none
+
+  integer :: i, inp, ijp, ijn, k
+  real(dp) :: apotime
+  real(dp) :: sum_off_diagonal_terms
+  real(dp) :: urfr,urfm
+
+  call calcuvw_assemble(.false.)
 
 !
 ! Assemble and solve system for U component of velocity
@@ -879,7 +990,7 @@ end subroutine
 
 
 
-subroutine facefluxuvw_bnd(ijp, ijb, xf, yf, zf, arx, ary, arz, flomass, cap, can, sup, svp, swp)
+subroutine facefluxuvw_boundary(ijp, ijb, xf, yf, zf, arx, ary, arz, flomass, cap, can, sup, svp, swp)
 !
 !
 ! Facefluxuvw routine used for inlet and outlet boundaries. 

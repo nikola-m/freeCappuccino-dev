@@ -9,7 +9,7 @@ subroutine create_fields
   use variables
   use statistics
   use temperature, only: calct
-  use energy, only: calcen
+  use energy_equation, only: calcen
   use concentration, only: calccon
   use sparse_matrix, only: nnz,h,rU,rV,rW
   use linear_solvers, only: res,reso,pk,zk,d,uk,vk 
