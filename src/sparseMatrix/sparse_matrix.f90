@@ -213,6 +213,7 @@ subroutine create_CSR_matrix
 ! > Allocate array for sparse matrix element values (matrix is in CSR format).
 !
   allocate( a(nnz) )
+  a = 0.0_dp   ! Must not be left uninitialized: row sums with the diagonal subtracted are used in assembly.
 
 !
 ! > Source vectors
