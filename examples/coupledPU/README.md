@@ -195,8 +195,15 @@ cd naca                                   # edit input-allspeeds.nml if wanted (
 python3 ../postairfoil.py . restart --cp cp.dat      # Cd, Cl, x_sep, Cp(x), Cf(x)
 ```
 
-`mkairfoil.py` builds an O-grid (finite trailing-edge base, `--te`), writes the case (far field: upstream half `inlet`, downstream half
-`pressure`; `--farfield riemann|riemann-in|riemann-out|open|compoutlet` selects the boundary condition kinds) and also `input-incomp.nml` (same flow, incompressible solver) for low-Mach comparisons (`--M 0.02`).
+`mkairfoil.py` builds a **C-grid** by default (sharp trailing edge, wake cut at y = 0 as an inner interface; `--nt` surface cells, `--nw` cells in each
+half of the wake, `--nr` radial cells; `--tespace` = trailing-edge clustering) or, with `--grid o`, the older O-grid (finite trailing-edge base, `--te`).
+The O-grid has a fan of rays behind the trailing edge (non-orthogonality 60 deg, aspect ratio 400, volume ratio 300 there); the C-grid does not
+(non-orthogonality max 20 deg, mean 4 deg, skewness < 0.15, neighbour volume ratio < 1.9, no negative Jacobian; check any case with
+`python3 meshquality.py <case> [--plot q.png --zoom 0.8 1.4 -0.2 0.2]`).  Far field: C-grid `far-in` (front half circle, `inlet`) and `far-out`
+(top/bottom aft part and the outlet, `pressure`); `--farfield riemann|riemann-in|riemann-out|open|compoutlet` selects the boundary condition kinds.
+It also writes `input-incomp.nml` (same flow, incompressible solver) for low-Mach comparisons (`--M 0.02`).  The generated namelists use
+`amg_smoother = 'gs'`: with the default block ILU(0) smoother FGMRES(AMG) stalled (no residual reduction) on the larger C-grid matrices.
+For the C-grid the default pseudo-time CFL is 10 with a 200-iteration ramp (CFL 200 and 20 diverge on it).
 
 ### Validation done during development
 
@@ -210,6 +217,13 @@ python3 ../postairfoil.py . restart --cp cp.dat      # Cd, Cl, x_sep, Cp(x), Cf(
   1e-3 .. 5e-4), i.e. approaching the reference from above, +5 % on the finest mesh; the separation bubble of the reference is not produced
   (the wall-adjacent tangential velocity goes to zero at x/c = 0.95 but does not reverse). The reference uses a sharp trailing edge,
   Sutherland's law, and a far-field vortex correction; our airfoil has a 6e-4 thick base.
+* C-grid, NACA 0012, M = 0.5, Re = 5000 (same reference): Cd = 0.0568 / 0.0568 / 0.0544 (22k cells nw 60, 34k cells, 32k cells nw 120), pressure part
+  0.0238 .. 0.0217, friction part 0.0330 .. 0.0327, x_sep 0.80 .. 0.89, i.e. Cd within -2 % .. +2 % of the reference (O-grid: +7 % on 19k cells) and the friction
+  part within 1 %.  **Caveat:** the residual does not converge on the C-grid (L1 residual of u stays ~1e3 for 10000 pseudo-steps, the incompressible and
+  M = 0.02 O-grid cases converge to 1e-9); restarting shows the near wake at x/c = 1.4-1.5 still changing by tens of m/s, and Cd and x_sep wander
+  by about +-2 % and +-0.05 between states.  The sharp-trailing-edge wake is resolved well enough to show an unsteady (shedding-like) behaviour
+  that the steady pseudo-time march does not settle; the reference gets a steady solution.  Forces are therefore only good to about 2-3 %; a
+  time-accurate run with averaging would be the proper way to compare.  Cd was also not sensitive to `--farfield riemann` (residual plateau identical).
 * NACA 0012, M = 0.8, Re = 500, alpha = 10 deg (reference Cl = 0.436, Cd = 0.275, x_sep = 0.362): the solver converges (pseudo CFL 30 with ramp)
   to a steady transonic solution (max Mach 1.2), but the forces are not in agreement with the reference (Cl about 0.59, Cd about 0.32); neither the domain size (R = 20 or
   40) nor the viscosity law changes this. Mesh refinement does not close the gap either: 121x56 / 161x76 / 201x96 give Cd = 0.352 / 0.336 / 0.327 and
