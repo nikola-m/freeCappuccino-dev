@@ -16,6 +16,8 @@ cavity3d  lid-driven cube
 """
 import argparse, os, sys, math
 import numpy as np
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from vtkmesh import write_vtk_templates
 
 
 def tanh_stretch(n, s):
@@ -107,6 +109,8 @@ def write_native(root, mesh, patch_list):
     ncells = max(owner)
     with open(os.path.join(pm, 'size'), 'w') as f:
         f.write('%d\n%d\n%d\n%d\n%d\n' % (len(pts), ncells, n_inner, nfaces - n_inner, nfaces))
+    # ParaView templates vtk/mesh/mesh_0_0.vtu, mesh_<ib>_0.vtp needed by the VTK writer of the solver
+    write_vtk_templates(root)
     return dict(ncells=ncells, n_inner=n_inner, nfaces=nfaces)
 
 

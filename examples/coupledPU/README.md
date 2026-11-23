@@ -68,8 +68,11 @@ cd cav64
 python3 ../read_restart.py restart-coupled 64 64        # centreline u vs Ghia et al., Re=100
 ```
 
-(The VTK writer needs a mesh template `vtk/mesh/mesh_0_0.vtu`, see the other examples; the generated cases do not have one, so the
-program stops with a Fortran runtime error in `writefiles` *after* the restart file has been written. The results are in the restart file.)
+All case generators (`mkcase.py`, `mkcouette.py`, `mkairfoil.py`, `mknozzle.py`) write the ParaView mesh templates the VTK writer needs
+(`vtk/mesh/mesh_0_0.vtu` and `mesh_<ib>_0.vtp` for every boundary region `ib` in the order of `polyMesh/boundary`), so the solver writes
+`vtk/<step>/*.vtu`, `vtk/<step>/boundary/<patch>.vtp` and `vtk/boundary_<step>.vtm` for ParaView. `vtkmesh.py` builds them from `polyMesh`
+(the cell connectivity that the native format lacks is reconstructed from `faces`, `owner`, `neighbour`; hexahedral cells only) and can also be
+run on an existing case: `python3 vtkmesh.py <case>`.
 
 ### AMG stand-alone test
 
