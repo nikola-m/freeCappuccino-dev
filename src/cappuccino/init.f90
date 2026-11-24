@@ -27,6 +27,7 @@ subroutine init
   use energy_equation, only: calcEn
   use TurbModelData
   use mhd
+  use clsvof, only: twoPhase, clsvof_init
   use wall_distance
   use node_interpolation
 
@@ -308,6 +309,11 @@ subroutine init
 !
 
   if (lturb) call wall_distance_poisson
+
+!
+! > Two-phase flow: interface initialization (volume fraction, level set), density, viscosity, forces.
+!
+  if( twoPhase ) call clsvof_init
 
 
 end subroutine

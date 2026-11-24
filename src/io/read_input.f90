@@ -30,6 +30,9 @@ subroutine read_input_file
                       muplastic, muzero, muinfty, lamtime, acy,&    
                       calcVis, urfVis, non_newtonian_model
   use monitors
+  use clsvof, only: twoPhase, cl_rho1, cl_rho2, cl_mu1, cl_mu2, cl_sigma, cl_eps, cl_band, cl_nReinit, cl_cfl, cl_fmin, &
+                    cl_ab2, cl_harmonic, cl_ic, cl_inside, cl_center, cl_radius, cl_flow, cl_vel, cl_omega, cl_vcenter, &
+                    cl_T, cl_inflowF
   use timescale, only: autotime, lenscale_option
 
 
@@ -257,6 +260,30 @@ subroutine read_input_file
         !
         const_mflux, &        !mdot | Do we have constant mass flow in the domain True/False.
         magUbar, &            !mdot | Target bulk velocity for constant mass flow situation.
+        !
+        ! Two-phase flow: CLSVOF (coupled level set and volume of fluid) method
+        !
+        twoPhase, &           ! Activate the two-phase solver (clsvof module) True/False.
+        cl_rho1, cl_rho2, &   ! Densities of phase 1 (vof=1, lsf>0) and phase 2 [kg/m3].
+        cl_mu1, cl_mu2, &     ! Dynamic viscosities of phase 1 and phase 2 [Pa s].
+        cl_sigma, &           ! Surface tension coefficient [N/m].
+        cl_eps, &             ! Half-width of the smoothed Heaviside function in cell sizes.
+        cl_band, &            ! Half-width of the narrow band with the distance function [cells].
+        cl_nReinit, &         ! Sweeps of PDE reinitialization of the level set outside of the narrow band.
+        cl_cfl, &             ! Max Courant number of one substep of interface advection.
+        cl_fmin, &            ! Volume fractions below cl_fmin (above 1-cl_fmin) are treated as 0 (1).
+        cl_ab2, &             ! Adams-Bashforth extrapolation of the volume flux used for the advection.
+        cl_harmonic, &        ! Harmonic mixing of viscosities.
+        cl_ic, &              ! Initial interface: sphere, cylinder, plane.
+        cl_inside, &          ! Phase inside of the sphere/cylinder: 1 (drop) or 2 (bubble).
+        cl_center, &          ! Center of the initial sphere/cylinder (x,y,z).
+        cl_radius, &          ! Radius of the initial sphere/cylinder.
+        cl_flow, &            ! solve, or prescribed flow for advection tests: translate, rotate, vortex.
+        cl_vel, &             ! Velocity of the translation test.
+        cl_omega, &           ! Angular velocity of the rotation test.
+        cl_vcenter, &         ! Center of the rotation test (x,y).
+        cl_T, &               ! Period of the reversing vortex test.
+        cl_inflowF, &         ! Volume fraction entering by open boundaries (advection tests only).
         !
         ! Reference values for reporting forces, fluxes, and coefficients.
         !

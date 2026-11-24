@@ -24,6 +24,7 @@ subroutine writefiles
   use TurbModelData
   use rheology
   use mhd
+  use clsvof, only: twoPhase, vof, lsf, kappa
   use velocity, only: calc_wall_shear
   use node_interpolation, only: interpolate_to_nodes
 
@@ -180,6 +181,13 @@ subroutine writefiles
 
   if( calcEpot ) call vtu_write_XML_scalar_field ( output_unit, 'Epot', Epot )
 
+  if( twoPhase ) then
+    call vtu_write_XML_scalar_field ( output_unit, 'vof', vof )
+    call vtu_write_XML_scalar_field ( output_unit, 'lsf', lsf )
+    call vtu_write_XML_scalar_field ( output_unit, 'kappa', kappa )
+    call vtu_write_XML_scalar_field ( output_unit, 'rho', den )
+  endif
+
 
 !
 ! > Mesh data
@@ -293,6 +301,11 @@ subroutine writefiles
     if( calcEn ) call vtu_write_XML_scalar_field_boundary ( output_unit, 'Energy', t, istart, iend )
 
     if( calcEpot ) call vtu_write_XML_scalar_field_boundary ( output_unit, 'Epot', Epot, istart, iend )
+
+    if( twoPhase ) then
+      call vtu_write_XML_scalar_field_boundary ( output_unit, 'vof', vof, istart, iend )
+      call vtu_write_XML_scalar_field_boundary ( output_unit, 'lsf', lsf, istart, iend )
+    endif
 
 
 

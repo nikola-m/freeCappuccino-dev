@@ -67,6 +67,8 @@ program cappuccino
   use sparse_matrix
   use velocity
   use pressure
+  use clsvof, only: twoPhase, clsvof_advance, clsvof_monitor
+  use twophase_pressure, only: calcp_twophase
   use temperature
   use energy_equation, only: calc_energy, calcEn
   use concentration
@@ -143,6 +145,9 @@ program cappuccino
       ! Courant number report:
       call CourantNo
 
+      ! Two-phase flow: advance the interface to the new time level, set density, viscosity and forces.
+      if( twoPhase ) call clsvof_advance
+
       ! call update_inlet_mapping
     
     endif 
@@ -171,8 +176,12 @@ program cappuccino
         ! Pressure-velocity coupling. Two options: SIMPLE and PISO
         if(calcP) then
 
-          if(SIMPLE)   call calcp_simple
-          if(PISO)     call calcp_piso
+          if( twoPhase ) then
+            call calcp_twophase
+          else
+            if(SIMPLE)   call calcp_simple
+            if(PISO)     call calcp_piso
+          endif
 
         endif 
 
@@ -227,6 +236,8 @@ program cappuccino
 
           !  Observe change in values during simulation
           call log_monitored_values
+
+          if( twoPhase ) call clsvof_monitor
 
           ! Write values at monitoring points
           ! call writehistory

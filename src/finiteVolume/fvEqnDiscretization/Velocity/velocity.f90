@@ -97,6 +97,7 @@ subroutine calcuvw_assemble(pressure_implicit)
   use nablap
   use mhd
   use fieldManipulation, only: explDiv
+  use clsvof, only: twoPhase, fst
   
   implicit none
 
@@ -220,6 +221,15 @@ subroutine calcuvw_assemble(pressure_implicit)
       sv(inp) = sv(inp) - gravy*heat
       sw(inp) = sw(inp) - gravz*heat
 
+    endif
+
+    !
+    ! Two-phase flow: surface tension (CSF) and gravity force (clsvof module)
+    !
+    if( twoPhase ) then
+      su(inp) = su(inp) + fst(1,inp)*vol(inp)
+      sv(inp) = sv(inp) + fst(2,inp)*vol(inp)
+      sw(inp) = sw(inp) + fst(3,inp)*vol(inp)
     endif
 
     !

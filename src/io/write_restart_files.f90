@@ -9,6 +9,7 @@ subroutine write_restart_files
   use geometry
   use variables
   use statistics
+  use clsvof, only: twoPhase, clsvof_write_restart
 
   implicit none
 
@@ -83,6 +84,8 @@ subroutine write_restart_files
     close (file_unit)
 
   endif
+
+  if( twoPhase ) call clsvof_write_restart
 
   write(6,'(a)') ' '
   write(6,'(a)') ' =*=*= Simulation restart files have been written! =*=*='
