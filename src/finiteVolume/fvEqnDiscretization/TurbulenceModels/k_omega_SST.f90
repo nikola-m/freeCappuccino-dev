@@ -53,6 +53,7 @@ module k_omega_SST
   public :: LowRe
   public :: modify_viscosity_k_omega_sst
   public :: modify_viscosity_inlet_k_omega_sst
+  public :: modify_mu_eff ! Eddy viscosity with automatic wall treatment - reused by the transition model
 
 contains
 

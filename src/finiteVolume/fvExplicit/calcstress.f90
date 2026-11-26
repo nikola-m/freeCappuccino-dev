@@ -9,7 +9,10 @@ subroutine calcstress
 !
 ! For Explicit Algebraic Reynolds Stress Models-EARSM we add anisotropy
 !
-! \tau_{ij} = 2 \mu_t S_{ij} - 2/3 \rho k \delta_{ij} + \rho k a_{ij}
+! \tau_{ij} = 2 \mu_t S_{ij} - 2/3 \rho k \delta_{ij} - \rho k a_{ij}
+!
+! where a_{ij} is the anisotropy in excess of the Boussinesq one (a^{ex}_{ij} in the TMR notation),
+! the sign is the one used by asm_stress_terms (the momentum source).
 !
 !***********************************************************************
 !
@@ -58,13 +61,13 @@ subroutine calcstress
     ! EARSM constitutive equation - add anisotropy tensor
     if (lasm) then
 
-      uu(inp) = uu(inp) + den(inp)*te(inp)*aij(1,inp)
-      vv(inp) = vv(inp) + den(inp)*te(inp)*aij(4,inp)
-      ww(inp) = ww(inp) + den(inp)*te(inp)*aij(6,inp)
+      uu(inp) = uu(inp) - den(inp)*te(inp)*aij(1,inp)
+      vv(inp) = vv(inp) - den(inp)*te(inp)*aij(4,inp)
+      ww(inp) = ww(inp) - den(inp)*te(inp)*aij(6,inp)
 
-      uv(inp) = uv(inp) + den(inp)*te(inp)*aij(2,inp)
-      uw(inp) = uw(inp) + den(inp)*te(inp)*aij(3,inp)
-      vw(inp) = vw(inp) + den(inp)*te(inp)*aij(5,inp)
+      uv(inp) = uv(inp) - den(inp)*te(inp)*aij(2,inp)
+      uw(inp) = uw(inp) - den(inp)*te(inp)*aij(3,inp)
+      vw(inp) = vw(inp) - den(inp)*te(inp)*aij(5,inp)
 
     endif
 

@@ -98,6 +98,7 @@ subroutine calcuvw_assemble(pressure_implicit)
   use mhd
   use fieldManipulation, only: explDiv
   use clsvof, only: twoPhase, fst
+  use moving_mesh, only: vol_unsteady
   
   implicit none
 
@@ -253,8 +254,9 @@ subroutine calcuvw_assemble(pressure_implicit)
       if( bdf .or. cn ) then
       !
       ! Backward differentiation formula of 1st order.
+      ! (On a moving mesh the old volume is used, see moving_mesh module.)
       !
-        apotime = den(inp)*vol(inp)/timestep
+        apotime = den(inp)*vol_unsteady(inp)/timestep
 
         ! RHS vector contribution
         su(inp) = su(inp) + apotime*uo(inp)
@@ -506,86 +508,14 @@ subroutine calcuvw_assemble(pressure_implicit)
 
       enddo
 
-      ! *** Another way to implement wall bc - based on the code of Gabriel Usera's (Uruguay) caffa3dmbri code.
-
-      ! do i=1,nfaces(ib)
-
-      !   iface = startFace(ib) + i
-      !   ijp = owner(iface)
-      !   ijb = iBndValueStart(ib) + i
-
-      !   viss = viscos ! viskoznost interolirana na boundary face
-      !   if(lturb.and.ypl(i).gt.ctrans) viss=visw(i)
-      
-      !   cf=viss*srdw(i) ! cf v.s. vsol -> cf is calculated using normal distance in srdw!
-
-      !   ! Face area 
-      !   are = sqrt(arx(iface)**2+ary(iface)**2+arz(iface)**2)
-
-      !   ! Face normals
-      !   nxf = arx(iface)/are
-      !   nyf = ary(iface)/are
-      !   nzf = arz(iface)/are
-
-      !   ! Dist from cc of owner cell to cf @boundary, cannot expect dpb to be normal to boundary face in general
-      !   dpb = sqrt( (xc(ijp)-xf(iface))**2 + (yc(ijp)-yf(iface))**2 + (zc(ijp)-zf(iface))**2 )
-
-      !   ! Diffusion coef. 
-      !   vsol = viss*are/dpb
-
-      !   ! Velocity difference vector components
-      !   upb = u(ijp)-u(ijb)
-      !   vpb = v(ijp)-v(ijb)
-      !   wpb = w(ijp)-w(ijb)
-
-      !   ! Velocity difference vector projected to wall face normal.
-      !   vnp = upb*nxf+vpb*nyf+wpb*nzf
-
-      !   ! Velocity difference in tangential direction.
-      !   utp = upb-vnp*nxf
-      !   vtp = vpb-vnp*nyf
-      !   wtp = wpb-vnp*nzf
-
-      !   if (ScndOrderWallBC_Model) then
-
-      !     ! Eksplicitna difuzija
-      !     FdUi=viss*((dUdxi(1,ijp)+dUdxi(1,ijp))*nxf+(dUdxi(2,ijp)+dVdxi(1,ijp))*nyf+(dUdxi(3,ijp)+dWdxi(1,ijp))*nzf)
-      !     FdVi=viss*((dVdxi(1,ijp)+dUdxi(2,ijp))*nxf+(dVdxi(2,ijp)+dVdxi(2,ijp))*nyf+(dVdxi(3,ijp)+dWdxi(2,ijp))*nzf)
-      !     FdWi=viss*((dWdxi(1,ijp)+dUdxi(3,ijp))*nxf+(dWdxi(2,ijp)+dVdxi(3,ijp))*nyf+(dWdxi(3,ijp)+dWdxi(3,ijp))*nzf)
-      !     ! Projektujes eksplicitnu difuziju na nomalu
-      !     FdNe = FdUi*nxf + FdVi*nyf + FdWi*nzf
-      !     ! oduzmes od eksplicitne difuzije onu komponentu duz normale
-      !     FdUi = FdUi-FdNe*nxf
-      !     FdVi = FdVi-FdNe*nyf
-      !     FdWi = FdWi-FdNe*nzf
-
-      !     spu(ijp) = spu(ijp) + vsol
-      !     spv(ijp) = spv(ijp) + vsol
-      !     sp(ijp)  = sp(ijp)  + vsol
-
-      !     Su(ijp) = Su(ijp)+Vsol*U(ijp)-(2*cf*Utp+FdUi*Are)
-      !     Sv(ijp) = Sv(ijp)+Vsol*V(ijp)-(2*cf*Vtp+FdVi*Are)
-      !     Sw(ijp) = Sw(ijp)+Vsol*W(ijp)-(2*cf*Wtp+FdWi*Are)
-
-      !   else
-
-      !     spu(ijp) = spu(ijp) + vsol
-      !     spv(ijp) = spv(ijp) + vsol
-      !     sp(ijp)  = sp(ijp)  + vsol
-
-      !     su(ijp) = su(ijp) + vsol*u(ijp) - cf*utp
-      !     sv(ijp) = sv(ijp) + vsol*v(ijp) - cf*vtp
-      !     sw(ijp) = sw(ijp) + vsol*w(ijp) - cf*wtp
-
-      !   endif
-
-      ! enddo
-
 
     endif 
 
   enddo
 
+
+  ! Non-Boussinesq Reynolds stresses (EASM, full RSM): add the difference to the eddy-viscosity stress used above.
+  if ( lasm ) call asm_stress_terms
 
   ! For PISO, we need to save only EXPLICIT TERMS OF CONVECTION AND DIFFUSION.
   if (piso) then

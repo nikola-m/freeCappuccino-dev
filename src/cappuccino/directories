@@ -2,6 +2,7 @@ src/finiteVolume/boundary
 src/finiteVolume/fluxes
 src/finiteVolume/fvEqnDiscretization/Velocity
 src/finiteVolume/fvEqnDiscretization/Pressure
+src/finiteVolume/fvEqnDiscretization/SimpleAllSpeeds
 src/finiteVolume/fvEqnDiscretization/TwoPhase
 src/finiteVolume/fvEqnDiscretization/ScalarEqns
 src/finiteVolume/fvEqnDiscretization/TurbulenceModels

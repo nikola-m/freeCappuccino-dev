@@ -355,6 +355,7 @@ subroutine create_fields
     if (lasm) then
       allocate( aij(6,numCells), stat=ierr )
       if(ierr /= 0)write(*,*)"allocation error: aij" 
+      aij = 0.0_dp
     endif
 
   endif 

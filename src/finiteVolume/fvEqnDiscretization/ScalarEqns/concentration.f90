@@ -41,6 +41,7 @@ subroutine calculate_concentration_field
   use sparse_matrix
   use gradients
   use linear_solvers
+  use moving_mesh, only: vol_unsteady
   
   implicit none
 
@@ -79,7 +80,7 @@ subroutine calculate_concentration_field
     ! UNSTEADY TERM
     if (ltransient) then
 
-      apotime = den(inp)*vol(inp)/timestep
+      apotime = den(inp)*vol_unsteady(inp)/timestep ! old volume on a moving mesh
 
       if( bdf .or. cn ) then
         su(inp) = su(inp) + apotime*Cono(inp)

@@ -3,150 +3,92 @@
 subroutine asm_stress_terms
 !
 !***********************************************************************
-!  Calculates the additional terms for momentum equations
-!  and ads them to SU, SV, SW rhs. vectors.
+!  Extra momentum source for turbulence models whose Reynolds stress is NOT the
+!  Boussinesq one (explicit algebraic stress models, full Reynolds stress models).
 !
-! "Including nonlinear turbulence models like EASM is not simply a matter
-!  of computing \mu_t alone. One must also insure that the turbulent stress
-!  terms \tau_{ij} are computed appropriately to include the additional 
-!  nonlinear components in the Navier-Stokes equations."
-!  Source: https://turbmodels.larc.nasa.gov/easmko.html
+!  The momentum equation of the code diffuses momentum with the effective viscosity
 !
-!  Ovo je dodatak koji uvodimo jer u fluksevima za momentum koristimo 
-!  muEff*( gradU + (gradU)T ), a kada konstitutivna relacija
-!  za Rejnoldsove stress tenzore nije EVM (Boussinesq-ova eddy viscosity hypotesis).
-!  onda razliku moramo da dodamo kao source for the momentum eqn.
+!        div( (mu + mut) (grad U + grad U^T) )
 !
+!  (implicit part + explicit transpose part, see facefluxuvw). The turbulence model gives a stress
+!
+!        T_ij = -rho <u_i' u_j'>  =  2 mut S_ij - 2/3 rho k delta_ij - rho k a_ij
+!
+!  where 'aij' (stored in variables, 6 components: xx,xy,xz,yy,yz,zz) is the anisotropy in EXCESS of the
+!  Boussinesq one - 'a^(ex)' in the Turbulence Modeling Resource notation (https://turbmodels.larc.nasa.gov/easmko.html):
+!  "Including nonlinear turbulence models like EASM is not simply a matter of computing mut alone. One must also
+!  insure that the turbulent stress terms are computed appropriately to include the additional nonlinear components
+!  in the Navier-Stokes equations."
+!
+!  The isotropic part -2/3 rho k delta_ij is absorbed in the pressure, so the difference we have to add as an
+!  explicit source on the right hand side is
+!
+!        E_ij = T_ij - 2 mut S_ij + 2/3 rho k delta_ij = - rho k a_ij ,     su_i += sum_f ( E_ij )_f S_j .
+!
+!  For a full Reynolds stress model the 'mut' is only an artificial viscosity (stabilises the coupling of
+!  stresses and velocities), and the same formula holds with  a_ij = ( <u_i u_j>/k - 2/3 delta_ij ) + 2 mut S_ij/(rho k).
+!
+!  Face values: linear interpolation of cell values with facint (weight of the neighbour cell). At inlet, outlet
+!  and pressure boundaries the owner cell value is used; walls and symmetry planes are left to the wall treatment.
 !
 !***********************************************************************
   use types
-  use parameters, only: viscos
-  use geometry, only: numInnerFaces,facint,arx,ary,arz,owner,neighbour
+  use geometry, only: numInnerFaces,numBoundaries,bctype,nfaces,startFace,facint,arx,ary,arz,owner,neighbour
   use sparse_matrix, only: su,sv,sw
-  use variables, only: den,vis,uu,uv,uw,vv,vw,ww,dudxi,dvdxi,dwdxi
+  use variables, only: den,te,aij
 
   implicit none
-!
-!***********************************************************************
-!
 
-!
-! Local variables
-!
-  integer :: i, ijp, ijn
-  real(dp) :: mutN, mutP
-  real(dp) :: term1i, term2i,term3i
-  real(dp) :: fxp, fxn
+  integer :: i, ib, iface, ijp, ijn
+  real(dp) :: lam
+  real(dp) :: exx, exy, exz, eyy, eyz, ezz
+  real(dp) :: fx, fy, fz
 
-!-------------------------------------------------------
-!     [U-VELOCITY COMPONENT: ]
-!
-!     TERM1 is \rho*tau_{1,1} + 2*dUdx*\mu_t
-!     where: 
-!       \mu_t = \mu_eff - \mu_molecular,
-!       tau_{1,i} - first row of Reynolds stress tensor
-!
-!     TERM2 is \rho*tau_{1,2} + \mu_t*(dUdy+DVdx)
-!
-!     TERM3 is \rho*tau_{1,3} + \mu_t*(dUdz+DWdx)
-!
-!     Find divergence of (-rho*tau_ij-2*mut*S_ij)
-!     that is the difference of the explicit Reynolds sress
-!     and the one which we used implicitely in momentum diffussion.
-!     Since we used Boussinesq assumption for momentum diffusion 
-!     implicitely, we must add the differece to the RHS of momentum eqn.
-!
-!     Apply divergence usually by interpolating to face, dotting 
-!     with face area normal vector and sum over faces.
-!
-!     Minus that belongs to Reynolds stresses term in momenutm
-!     equation, - rho*tau_ij, goes in front of the bracket
-!     and inside the '-' in front of eddy-viscosity terms turns into '+'.
-!       _____________________________
-!     -( \rho*tau_{1,j} + 2*mut*S_ij )_f*Sf_j; j=1,2,3.
-!-------------------------------------------------------
+  do i=1,numInnerFaces
+    ijp = owner(i)
+    ijn = neighbour(i)
+    lam = facint(i)
 
-do i=1,numInnerFaces
-  ijp = owner(i)
-  ijn = neighbour(i)
+    exx = -( (1.0_dp-lam)*den(ijp)*te(ijp)*aij(1,ijp) + lam*den(ijn)*te(ijn)*aij(1,ijn) )
+    exy = -( (1.0_dp-lam)*den(ijp)*te(ijp)*aij(2,ijp) + lam*den(ijn)*te(ijn)*aij(2,ijn) )
+    exz = -( (1.0_dp-lam)*den(ijp)*te(ijp)*aij(3,ijp) + lam*den(ijn)*te(ijn)*aij(3,ijn) )
+    eyy = -( (1.0_dp-lam)*den(ijp)*te(ijp)*aij(4,ijp) + lam*den(ijn)*te(ijn)*aij(4,ijn) )
+    eyz = -( (1.0_dp-lam)*den(ijp)*te(ijp)*aij(5,ijp) + lam*den(ijn)*te(ijn)*aij(5,ijn) )
+    ezz = -( (1.0_dp-lam)*den(ijp)*te(ijp)*aij(6,ijp) + lam*den(ijn)*te(ijn)*aij(6,ijn) )
 
-  fxn = facint(ijp)
-  fxp = 1.0_dp-facint(ijp)
+    fx = exx*arx(i) + exy*ary(i) + exz*arz(i)
+    fy = exy*arx(i) + eyy*ary(i) + eyz*arz(i)
+    fz = exz*arx(i) + eyz*ary(i) + ezz*arz(i)
 
-  mutN = vis(ijn)-viscos
-  mutP = vis(ijp)-viscos
+    su(ijp) = su(ijp) + fx
+    sv(ijp) = sv(ijp) + fy
+    sw(ijp) = sw(ijp) + fz
 
-        ! Interpolate term1:
-        term1i = ( den(ijn)*uu(ijn) + mutN*(dudxi(1,ijn)+dudxi(1,ijn)) )*fxn+ &
-                 ( den(ijp)*uu(ijp) + mutP*(dudxi(1,ijp)+dudxi(1,ijp)) )*fxp
+    su(ijn) = su(ijn) - fx
+    sv(ijn) = sv(ijn) - fy
+    sw(ijn) = sw(ijn) - fz
+  enddo
 
-        ! Interpolate term2:
-        term2i = ( den(ijn)*uv(ijn) + mutN*(dudxi(2,ijn)+dvdxi(1,ijn)) )*fxn+ &
-                 ( den(ijp)*uv(ijp) + mutP*(dudxi(2,ijp)+dvdxi(1,ijp)) )*fxp
+  do ib=1,numBoundaries
 
-        ! Interpolate term3:
-        term3i = ( den(ijn)*uw(ijn) + mutN*(dudxi(3,ijn)+dwdxi(1,ijn)) )*fxn+ &
-                 ( den(ijp)*uw(ijp) + mutP*(dudxi(3,ijp)+dwdxi(1,ijp)) )*fxp
+    if ( bctype(ib) /= 'inlet' .and. bctype(ib) /= 'outlet' .and. bctype(ib) /= 'pressure' ) cycle
 
-        su(ijp) = su(ijp) - ( term1i*arx(i) + term2i*ary(i) + term3i*arz(i) )
-        su(ijn) = su(ijn) + ( term1i*arx(i) + term2i*ary(i) + term3i*arz(i) )
-enddo
+    do i=1,nfaces(ib)
+      iface = startFace(ib) + i
+      ijp = owner(iface)
 
+      exx = -den(ijp)*te(ijp)*aij(1,ijp)
+      exy = -den(ijp)*te(ijp)*aij(2,ijp)
+      exz = -den(ijp)*te(ijp)*aij(3,ijp)
+      eyy = -den(ijp)*te(ijp)*aij(4,ijp)
+      eyz = -den(ijp)*te(ijp)*aij(5,ijp)
+      ezz = -den(ijp)*te(ijp)*aij(6,ijp)
 
-!...sada isto za V komponentu
-do i=1,numInnerFaces
-  ijp = owner(i)
-  ijn = neighbour(i)
+      su(ijp) = su(ijp) + exx*arx(iface) + exy*ary(iface) + exz*arz(iface)
+      sv(ijp) = sv(ijp) + exy*arx(iface) + eyy*ary(iface) + eyz*arz(iface)
+      sw(ijp) = sw(ijp) + exz*arx(iface) + eyz*ary(iface) + ezz*arz(iface)
+    enddo
 
-  fxn = facint(ijp)
-  fxp = 1.0_dp-facint(ijp)
-
-  mutN = vis(ijn)-viscos
-  mutP = vis(ijp)-viscos
-
-        ! Interpolate term1:
-        term1i = ( den(ijn)*uv(ijn) + mutN*(dvdxi(1,ijn)+dudxi(2,ijn)) )*fxn+ &
-                 ( den(ijp)*uv(ijp) + mutP*(dvdxi(1,ijp)+dudxi(2,ijp)) )*fxp
-
-        ! Interpolate term2:
-        term2i = ( den(ijn)*vv(ijn) + mutN*(dvdxi(2,ijn)+dvdxi(2,ijn)) )*fxn+ &
-                 ( den(ijp)*vv(ijp) + mutP*(dvdxi(2,ijp)+dvdxi(2,ijp)) )*fxp
-
-        ! Interpolate term3:
-        term3i = ( den(ijn)*vw(ijn) + mutN*(dvdxi(3,ijn)+dwdxi(2,ijn)) )*fxn+ &
-                 ( den(ijp)*vw(ijp) + mutP*(dudxi(3,ijp)+dwdxi(1,ijp)) )*fxp
-
-        sv(ijp) = sv(ijp) - ( term1i*arx(i) + term2i*ary(i) + term3i*arz(i) )
-        sv(ijn) = sv(ijn) + ( term1i*arx(i) + term2i*ary(i) + term3i*arz(i) )
-enddo
-
-
-!...sada isto za W komponentu
-do i=1,numInnerFaces
-  ijp = owner(i)
-  ijn = neighbour(i)
-
-  fxn = facint(ijp)
-  fxp = 1.0_dp-facint(ijp)
-
-  mutN = vis(ijn)-viscos
-  mutP = vis(ijp)-viscos
-
-        ! Interpolate term1:
-        term1i = ( den(ijn)*uw(ijn) + mutN*(dwdxi(1,ijn)+dudxi(3,ijn)) )*fxn+ &
-                 ( den(ijp)*uw(ijp) + mutP*(dwdxi(1,ijp)+dudxi(3,ijp)) )*fxp
-
-        ! Interpolate term2:
-        term2i = ( den(ijn)*vw(ijn) + mutN*(dwdxi(2,ijn)+dvdxi(3,ijn)) )*fxn+ &
-                 ( den(ijp)*vw(ijp) + mutP*(dwdxi(2,ijp)+dvdxi(3,ijp)) )*fxp
-
-        ! Interpolate term3:
-        term3i = ( den(ijn)*ww(ijn) + mutN*(dwdxi(3,ijn)+dwdxi(3,ijn)) )*fxn+ &
-                 ( den(ijp)*ww(ijp) + mutP*(dwdxi(3,ijp)+dwdxi(3,ijp)) )*fxp
-
-        sw(ijp) = sw(ijp) - ( term1i*arx(i) + term2i*ary(i) + term3i*arz(i) )
-        sw(ijn) = sw(ijn) + ( term1i*arx(i) + term2i*ary(i) + term3i*arz(i) )
-enddo
-
+  enddo
 
 end subroutine

@@ -46,6 +46,7 @@ subroutine calculate_temperature
   use gradients
   use linear_solvers
   use scalar_fluxes, only: facefluxsc  
+  use moving_mesh, only: vol_unsteady
 
   implicit none
 
@@ -85,7 +86,7 @@ subroutine calculate_temperature
     ! Unsteady Term
     if (ltransient) then
 
-      apotime = den(inp)*vol(inp)/timestep
+      apotime = den(inp)*vol_unsteady(inp)/timestep ! old volume on a moving mesh
 
       if( bdf .or. cn ) then
 

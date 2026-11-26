@@ -9,6 +9,7 @@ subroutine continuityErrors
   use sparse_matrix, only: su,apu
   use variables, only: flmass
   use fieldManipulation, only: volumeWeightedAverage
+  use moving_mesh, only: DynamicMesh, mm_pressure_source
 
   implicit none
 
@@ -52,10 +53,23 @@ subroutine continuityErrors
 
       enddo
 
+    elseif ( bctype(ib) == 'pressure' ) then
+
+      do i=1,nfaces(ib)
+
+        iface = startFace(ib) + i
+        ijp = owner(iface)
+        su(ijp)=su(ijp)-flmass(iface)
+
+      enddo
+
     endif
 
   enddo
 
+
+  ! Moving mesh: fluxes are relative to the moving grid, add the volume change of the cells.
+  if( DynamicMesh ) call mm_pressure_source( su )
 
   sumLocalContErr = volumeWeightedAverage( abs(su*apu) )
 

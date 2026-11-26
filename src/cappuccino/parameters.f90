@@ -48,16 +48,16 @@ module parameters
   ! Logicals, mostly read from simulation-input file:
   logical :: lturb,lread,lwrite,ltest   ! turbulent simulation, read restart file, write restart file, print residual of the linear solver,.,..      
   logical :: ltransient                 ! LTRANSIENT is TRUE for transient (non-stationary) simulations              
-  logical :: lasm,lsgdh,lggdh,lafm      ! eddy-viscosity, algebraic stress model or LES, simple gradient or generalized gradient hypothesis, algerbaic flux model
+  logical :: lasm = .false., lsgdh, lggdh, lafm      ! eddy-viscosity, algebraic stress model or LES, simple gradient or generalized gradient hypothesis, algerbaic flux model
   logical :: bdf,bdf2,bdf3,cn           ! control for the time-stepping algorithm
   logical :: simple,piso                ! control for the velocity-pressure coupling algorithm
   logical :: compressible               ! If true together with SIMPLE, then pressure based algorithm for all speeds is activated.
   logical :: const_mflux                ! control for constant flow rate 
 
 
-  integer :: ncorr                   ! PISO control parameter: no. of Piso corrections.
+  integer :: ncorr = 1               ! PISO control parameter: no. of Piso corrections.
   integer :: icorr                   ! PISO iteration no.: icorr=1..ncorr
-  integer :: npcor                   ! No. of pressure-corrections; non-orthogonality correctors
+  integer :: npcor = 1               ! No. of pressure-corrections; non-orthogonality correctors
   integer :: ipcorr                  ! Iteration no.: ipcorr=1..npcor
   integer, parameter :: nipgrad = 2  ! No. of stages for 'pressure extrapolation at boundary + pressure gradient update' loop
 
@@ -65,7 +65,7 @@ module parameters
   real(dp), dimension(12) :: resor ! Normalized residuals for monitoring convergence of SIMPLE iterations.
 
   character(len=70) :: title         ! Case title-short description for monitor file.
-  character(len=20) :: input_file,monitor_file,restart_file
+  character(len=40) :: input_file,monitor_file,restart_file
 
   ! Referent values - initialized here, should be initialized through a configuration file
   real(dp) :: Rhoref = 1.0_dp  ! Reference density

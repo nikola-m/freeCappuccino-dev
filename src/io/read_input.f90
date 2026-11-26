@@ -14,6 +14,10 @@ subroutine read_input_file
   use nablap, only: pscheme
   use implicit_bc_compressible, only: cplbc_name, cplbc_kind, cplbc_p0, cplbc_T0, cplbc_mdot, cplbc_dirx, cplbc_diry, &
                                       cplbc_dirz, cplbc_urf
+  use simple_allspeeds, only: asimple, asimple_urfP, asimple_beta, asimple_lSolverP, asimple_maxitP, &
+                              asimple_tolRelP, asimple_tolAbsP, asimple_pseudoCFL, asimple_cflRamp, asimple_wallFunc, &
+                              pamg_theta, pamg_coarse_size, &
+                              pamg_nu1, pamg_nu2, pamg_max_levels, pamg_restart, pamg_verbose
   use coupled_pU, only: coupled, cpl_maxit, cpl_restart, cpl_tolRel, cpl_tolAbs, cpl_urfP, cpl_rebuild, cpl_contScale, &
                         cpl_rhoBlend, cpl_pseudoCFL, cpl_cflRamp, &
                         cpl_sutherland, cpl_Tref, cpl_Ssuth, &
@@ -25,7 +29,8 @@ subroutine read_input_file
                              nasa_lo, nasa_hi, nasa_R, shomate, shomate_M, sutherland, mu_Tref, mu_S
   use concentration
   use mhd
-  use TurbModelData, only: TurbModel,set_turb_scalar_solution_flags
+  use TurbModelData, only: TurbModel
+  use turbulence_registry, only: select_turbulence_model
   use rheology, only: npow, Consst, shearmin, Tau_0, megp,  &
                       muplastic, muzero, muinfty, lamtime, acy,&    
                       calcVis, urfVis, non_newtonian_model
@@ -34,6 +39,8 @@ subroutine read_input_file
                     cl_ab2, cl_harmonic, cl_ic, cl_inside, cl_center, cl_radius, cl_flow, cl_vel, cl_omega, cl_vcenter, &
                     cl_T, cl_inflowF
   use timescale, only: autotime, lenscale_option
+  use moving_mesh, only: DynamicMesh, mm_motion, mm_patch, mm_amp, mm_freq, mm_vel, mm_center, mm_axis, mm_omega, &
+                         mm_rbf, mm_radius, mm_epsilon
 
 
   implicit none
@@ -214,6 +221,26 @@ subroutine read_input_file
         npcor, &              ! Number of iterations for pressure/pressure correction equation, i.e. Number of Nonorthogonal corrections.
         pRefCell, &           ! Reference cell for setting pressure level (since we have pure Neumann problem)
         !
+        ! Alternative all-speeds SIMPLE (module simple_allspeeds) and its AMG for the pressure correction
+        !
+        asimple, &            !# |All-speeds SIMPLE (Przulj-Basara type) instead of SIMPLE/PISO, True/False.
+        asimple_urfP, &       ! Under-relaxation of the pressure update.
+        asimple_beta, &       ! Weight of the central part of the face density (0 = upwind density).
+        asimple_lSolverP, &   ! Solver for p': 'amg' (own AMG+FGMRES) or any name of csrsolve.
+        asimple_maxitP, &     ! Max. no. of iterations of the p' solver.
+        asimple_tolRelP, &    ! Relative residual drop of the p' solver.
+        asimple_tolAbsP, &    ! Absolute residual level of the p' solver.
+        asimple_pseudoCFL, &  ! Steady compressible: pseudo-time CFL of the density term in the p' equation (0 = off).
+        asimple_cflRamp, &    ! Iterations of the geometric ramp of the pseudo CFL from 1 to asimple_pseudoCFL.
+        asimple_wallFunc, &    ! Wall function: none, standard, reichardt, spl, compressible.
+        pamg_theta, &          ! AMG: strength-of-connection threshold.
+        pamg_coarse_size, &    ! AMG: direct solution if the number of unknowns is <= this.
+        pamg_nu1, &            ! AMG: pre-smoothing sweeps.
+        pamg_nu2, &            ! AMG: post-smoothing sweeps.
+        pamg_max_levels, &     ! AMG: max. no. of levels.
+        pamg_restart, &        ! AMG: FGMRES restart length.
+        pamg_verbose, &        ! AMG: print hierarchy.
+        !
         ! Block-coupled pressure-velocity solver and block AMG (used if coupled=T)
         !
         coupled, &            !# |Block-coupled p-U solver instead of SIMPLE/PISO, True/False.
@@ -285,6 +312,19 @@ subroutine read_input_file
         cl_T, &               ! Period of the reversing vortex test.
         cl_inflowF, &         ! Volume fraction entering by open boundaries (advection tests only).
         !
+        ! Moving (dynamic) mesh: deformation by radial basis functions (RBF), prescribed motion of the wall patches
+        !
+        DynamicMesh, &        ! Activate the moving mesh True/False.
+        mm_patch, &           ! Names of the wall patches that move.
+        mm_motion, &          ! Motion of the patches: oscillate, translate, rotate, user (edit mm_user_displacement).
+        mm_amp, mm_freq, &    ! oscillate: amplitude vector and frequency, d = amp*sin(2 pi freq t).
+        mm_vel, &             ! translate: velocity vector.
+        mm_center, mm_axis, & ! rotate: point on the axis and direction of the axis.
+        mm_omega, &           ! rotate: angular velocity [rad/s].
+        mm_rbf, &             ! RBF: wendland, gaussian, multiquadric, inverse_multiquadric, thin_plate.
+        mm_radius, &          ! wendland: support radius (<= 0: diagonal of the bounding box).
+        mm_epsilon, &         ! Shape parameter of gaussian, multiquadric, inverse_multiquadric.
+        !
         ! Reference values for reporting forces, fluxes, and coefficients.
         !
         rhoref, &  ! Reference density
@@ -314,7 +354,7 @@ subroutine read_input_file
   lturb =  .False.
   if( TurbModel%name /= 'none') then
     lturb = .True. 
-    call  set_turb_scalar_solution_flags
+    call select_turbulence_model
   endif
 
 

@@ -96,7 +96,7 @@ module implicit_bc_compressible
   real(dp), allocatable, save :: pbc0(:), Tbc0(:)   ! p_0, T_0 per patch
   logical, save :: bc_active = .false.
 
-  public :: bckind, bcmode, bc_active
+  public :: bckind, bcmode, bc_active, mdot_face, edir, U_set, p_set, T_set, pbc0, Tbc0
   public :: cplbc_name, cplbc_kind, cplbc_p0, cplbc_T0, cplbc_mdot, cplbc_dirx, cplbc_diry, cplbc_dirz, cplbc_urf
   public :: bc_setup, bc_prepare_face, bc_apply_face, bc_post_solve_face, bc_pressure_implicit
   public :: bc_is_riemann, bc_riemann_momentum

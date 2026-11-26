@@ -39,8 +39,8 @@ end type
 !
 
 type TurbulenceModel
-  character (len=20) :: name = 'none' ! Turbulence model name - unique identifier.
-  type(TurbScalar), dimension(4) :: Scalar ! Data for solution of discretized PDE for specific scalar
+  character (len=40) :: name = 'none' ! Turbulence model name - unique identifier.
+  type(TurbScalar), dimension(10) :: Scalar ! Data for solution of discretized PDE for specific scalar
   real(dp) :: urfVis = 1.0_dp ! Under-relaxation facotr for eddy-viscosity (if the model is eddy-viscosity model)
 end type
 
@@ -56,71 +56,9 @@ logical :: solveNuTilda = .False.
 public :: TurbModel ! params
 public :: solveTKE, solveEpsilon, solveOmega, solveNuTilda
 
-contains
 
 
-subroutine set_turb_scalar_solution_flags
-!
-! Parameters used in postprocessing phase
-!
 
-implicit none
-
-
-  select case ( TurbModel%name )
-
-    case ('k_epsilon_std')
-      solveTKE = .true.
-      solveEpsilon = .true.
-
-    case ('k_epsilon_rng')
-        solveTKE = .true.
-        solveEpsilon = .true.
-
-    case ('k_omega_sst') 
-        solveTKE = .true.
-        solveOmega = .true.
-
-    case ('Spalart_Allmaras')
-        solveNuTilda = .true.
-
-    case ('k_eqn_eddy')
-        solveTKE = .true.
-
-    case ('k_epsilon_std_2lewt')
-      solveTKE = .true.
-      solveEpsilon = .true.
-
-    case ('k_epsilon_rlzb')
-      solveTKE = .true.
-      solveEpsilon = .true.
-
-    case ('k_epsilon_rlzb_2lewt')
-      solveTKE = .true.
-      solveEpsilon = .true.
-
-    case ('k_epsilon_zeta_f')
-        solveTKE = .true.
-        solveEpsilon = .true.
-
-    case ('k_omega_EARSM_WJ') 
-        solveTKE = .true.
-        solveOmega = .true.
-
-    case ('DDES_k_omega_sst')
-        solveTKE = .true.
-        solveOmega = .true.
-
-    case ('IDDES_k_omega_sst')
-        solveTKE = .true.
-        solveOmega = .true.
-
-    case default
-      return
-      
-  end select
-
-end subroutine
 
 
 

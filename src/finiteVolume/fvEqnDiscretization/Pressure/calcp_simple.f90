@@ -50,6 +50,8 @@ subroutine calcp_simple
   use faceflux_mass
   use nablap
   use velocity, only: updateVelocityAtBoundary
+  use moving_mesh, only: DynamicMesh, flmass_grid, mm_pressure_source
+  
 #ifdef LIS  
   use LIS_linear_solvers, only: lis_spsolve
 #endif
@@ -89,6 +91,9 @@ subroutine calcp_simple
     ! One of these is the alternative - 2 is typical form from FVM papers, 3 is based on Fluent theory guide
     call facefluxmass2( i, ijp, ijn, arx(i), ary(i), arz(i), facint(i), cap, can, flmass(i) )
     ! call facefluxmass3( i, ijp, ijn, xf(i), yf(i), zf(i), arx(i), ary(i), arz(i), facint(i), cap, can, flmass(i) )
+
+    ! Moving mesh: mass flux relative to the moving face (the flux of the grid motion is subtracted).
+    if( DynamicMesh ) flmass(i) = flmass(i) - flmass_grid(i)
 
 
     ! > Off-diagonal elements:
@@ -233,6 +238,9 @@ subroutine calcp_simple
 
   enddo 
 
+
+  ! Moving mesh: volume change of the cells in the source, den/dt*(volo-vol), so that the absolute mass flux is divergence free.
+  if( DynamicMesh ) call mm_pressure_source( su )
 
   !
   ! > Additional matrix and RHS terms for compressible flows.

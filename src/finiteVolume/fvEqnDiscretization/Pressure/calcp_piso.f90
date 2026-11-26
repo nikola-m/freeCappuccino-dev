@@ -62,6 +62,7 @@ subroutine calcp_piso
   use faceflux_mass
   use nablap
   use velocity, only: updateVelocityAtBoundary
+  use moving_mesh, only: DynamicMesh, flmass_grid, mm_pressure_source
 #ifdef LIS  
   use LIS_linear_solvers, only: lis_spsolve
 #endif
@@ -152,6 +153,9 @@ subroutine calcp_piso
                               arx(i), ary(i), arz(i), facint(i), &
                               cap, can, flmass(i) )
                               !, flmasso(i), flmassoo(i),flmassooo(i) )
+
+      ! Moving mesh: mass flux relative to the moving face (the flux of the grid motion is subtracted).
+      if( DynamicMesh ) flmass(i) = flmass(i) - flmass_grid(i)
 
       ! > Off-diagonal elements:
 
@@ -297,6 +301,9 @@ subroutine calcp_piso
 
     enddo 
 
+
+    ! Moving mesh: volume change of the cells in the source, den/dt*(volo-vol), so that the absolute mass flux is divergence free.
+    if( DynamicMesh ) call mm_pressure_source( su )
 
     !~~~~ Non orthogonal corrections loop ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

@@ -27,6 +27,7 @@ subroutine writefiles
   use clsvof, only: twoPhase, vof, lsf, kappa
   use velocity, only: calc_wall_shear
   use node_interpolation, only: interpolate_to_nodes
+  use moving_mesh, only: DynamicMesh, mm_write_points
 
   implicit none
 !
@@ -200,6 +201,17 @@ subroutine writefiles
       exit mesh_data_loop
     else
       write ( output_unit, '(a)' ) adjustl( line )
+
+      ! Moving mesh: current nodal coordinates instead of the points of the template.
+      if ( DynamicMesh .and. index( line, 'Name="Points"' ) > 0 ) then
+        call mm_write_points( output_unit, 0 )
+        do ! skip the points of the template up to the closing tag
+          read( mesh_file, '(a)' ) line
+          if ( index( line, '</DataArray>' ) > 0 ) exit
+        enddo
+        write ( output_unit, '(a)' ) adjustl( line )
+      endif
+      
       cycle mesh_data_loop
     endif
  
@@ -334,6 +346,17 @@ subroutine writefiles
         exit mesh_data_loop2
       else
         write ( output_unit, '(a)' ) adjustl( line )
+
+        ! Moving mesh: current coordinates of the points of the region instead of the points of the template.
+        if ( DynamicMesh .and. index( line, 'Name="Points"' ) > 0 ) then
+          call mm_write_points( output_unit, ib )
+          do ! skip the points of the template up to the closing tag
+            read( mesh_file, '(a)' ) line
+            if ( index( line, '</DataArray>' ) > 0 ) exit
+          enddo
+          write ( output_unit, '(a)' ) adjustl( line )
+        endif
+
         cycle mesh_data_loop2
       endif
    

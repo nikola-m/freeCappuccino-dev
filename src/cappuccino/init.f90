@@ -28,6 +28,8 @@ subroutine init
   use TurbModelData
   use mhd
   use clsvof, only: twoPhase, clsvof_init
+  use coupled_pU, only: coupled
+  use moving_mesh, only: DynamicMesh, mm_init, mm_unsupported
   use wall_distance
   use node_interpolation
 
@@ -314,6 +316,20 @@ subroutine init
 ! > Two-phase flow: interface initialization (volume fraction, level set), density, viscosity, forces.
 !
   if( twoPhase ) call clsvof_init
+
+!
+! > Moving mesh: check of the setup, control points and RBF matrix, old coordinates and volumes. In a restarted run the mesh
+!   is moved to the time of the restart file.
+!
+  if( DynamicMesh ) then
+    if( coupled )   call mm_unsupported('the block-coupled p-U solver (coupled = T)')
+    if( twoPhase )  call mm_unsupported('two-phase flow (twoPhase = T)')
+    if( calcEn )    call mm_unsupported('the energy equation (calcEn = T)')
+    if( calcEpot )  call mm_unsupported('magnetohydrodynamics (calcEpot = T)')
+    if( lstsq .or. lstsq_qr .or. lstsq_dm .or. lstsq_fw .or. node_gauss ) &
+                    call mm_unsupported('least-squares or node based gradients (use gauss = T)')
+    call mm_init
+  endif
 
 
 end subroutine

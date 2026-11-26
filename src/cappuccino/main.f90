@@ -69,6 +69,7 @@ program cappuccino
   use pressure
   use clsvof, only: twoPhase, clsvof_advance, clsvof_monitor
   use twophase_pressure, only: calcp_twophase
+  use moving_mesh, only: DynamicMesh, mm_advance
   use temperature
   use energy_equation, only: calc_energy, calcEn
   use concentration
@@ -77,11 +78,14 @@ program cappuccino
   use statistics
   use monitors
   use coupled_pU, only: coupled, calc_coupled_pU
+  use simple_allspeeds, only: asimple, calc_simple_allspeeds
   use timescale
+  use utils, only: show_logo, say_goodbye
+  
 #ifdef LIS
   use LIS_linear_solvers, only: lis_destroy_solver
 #endif
-  use utils, only: show_logo, say_goodbye
+
 
   implicit none
 
@@ -145,6 +149,9 @@ program cappuccino
       ! Courant number report:
       call CourantNo
 
+      ! Moving mesh: new nodal coordinates (RBF), swept volumes and new cell volumes (GCL), geometry, mass fluxes relative to grid.
+      if( DynamicMesh ) call mm_advance
+
       ! Two-phase flow: advance the interface to the new time level, set density, viscosity and forces.
       if( twoPhase ) call clsvof_advance
 
@@ -167,6 +174,11 @@ program cappuccino
 
         ! Block-coupled pressure-velocity solver: momentum and continuity solved simultaneously.
         call calc_coupled_pU
+
+      elseif ( asimple ) then
+
+        ! Alternative all-speeds SIMPLE (Przulj-Basara type): momentum predictor, pressure correction with AMG, corrections.
+        call calc_simple_allspeeds
 
       else
 
@@ -195,8 +207,9 @@ program cappuccino
 
       ! Temperature or Total energy/Internal energy/Enhtalpy as energy variables
       if( calcT )   call calculate_temperature
+      
       ! The all-speeds coupled solver always solves the energy equation (total enthalpy by default)
-      if( calcEn .or. ( coupled .and. compressible ) ) call calc_energy
+      if( calcEn .or. ( ( coupled .or. asimple ) .and. compressible ) ) call calc_energy
       
       ! Concentration of the passive scalar
       if( calcCon )  call calculate_concentration_field
